@@ -24,7 +24,7 @@
 
 ## 证据
 
-- Git commit：待项目所有者手动创建
+- Git commit：`fd9faf4`（`feat: establish M0 engineering baseline`）
 - 会话记录：`../../progress/sessions/2026-07-21-m0-engineering-baseline.md`
 
 ## 进入 M1 前仍需满足

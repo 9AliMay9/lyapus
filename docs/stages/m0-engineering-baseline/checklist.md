@@ -11,4 +11,4 @@
 - [x] 写 ADR-0001。
 - [x] 在全新 shell 中执行全部验收命令。
 - [x] 更新 `progress/current.md` 与会话记录。
-- [ ] 创建 M0 第一个可运行 commit。
+- [x] 创建 M0 第一个可运行 commit。

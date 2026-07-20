@@ -66,6 +66,6 @@ curl -fsS http://127.0.0.1:8080/readyz
 
 ## 交付证据
 
-- Git commit：待填写
+- Git commit：`fd9faf4`（`feat: establish M0 engineering baseline`）
 - 会话记录：待填写
 - ADR：`../../architecture/decisions/ADR-0001-modular-monolith.md`

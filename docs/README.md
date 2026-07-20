@@ -84,6 +84,7 @@ docs/
 | 学习或实现陌生技术 | 对应 `knowledge/` 笔记 | 先建立原理模型，再写代码。 |
 | 出现重要技术选择 | `architecture/proposals/`；确认后看/写 ADR | 留下取舍理由，避免以后只记得结论。 |
 | 运行容器、迁移数据或排障 | 对应 `runbooks/` | 只执行已经验证的操作步骤。 |
+| 准备手动提交或推送到 GitHub | `runbooks/github-ssh.md` | 恢复本会话的 SSH agent，并验证 GitHub 身份后再推送。 |
 | 做压测、故障实验或阶段收尾 | `benchmarks/`、`postmortems/`、`outcome.md` | 保存可解释的证据和实际结果。 |
 
 ## 方案解释规则

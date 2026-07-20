@@ -1,3 +1,5 @@
 # Runbook
 
 每份 runbook 是经过验证的操作手册，至少包含前置条件、风险、命令、预期结果、失败处理和回滚步骤。未实际验证的命令只能放在阶段计划中，不得标为 runbook。
+
+- [GitHub SSH 推送](github-ssh.md)：在新的 SSH 终端中恢复 GitHub 身份并安全推送。

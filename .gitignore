@@ -1,0 +1,20 @@
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# Go build and test artifacts
+bin/
+coverage.out
+*.test
+*.out
+
+# Temporary files and logs
+tmp/
+*.log
+
+# Editor files
+*.swp
+*.swo
+.idea/
+.vscode/

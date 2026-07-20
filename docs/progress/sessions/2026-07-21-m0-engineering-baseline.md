@@ -52,6 +52,7 @@
 - M0 验收已通过；首个 Git commit 与 GitHub 建仓/推送尚未执行。
 - 提交前隐私与敏感信息检查已通过；GitHub 操作仍由项目所有者手动执行。
 - M0 首个可运行 commit：`fd9faf4`（`feat: establish M0 engineering baseline`）。
+- M0 提交已手动推送到 `origin/main`；推送后 `origin/main` 指向 `c3f1f90`。
 
 ## 下一次从这里继续
 

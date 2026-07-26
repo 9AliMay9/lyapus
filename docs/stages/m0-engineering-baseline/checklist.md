@@ -13,4 +13,4 @@
 - [x] 更新 `progress/current.md` 与会话记录。
 - [x] 创建 M0 第一个可运行 commit。
 
-本清单的全部项目均已完成。原始 v3.1 方案书中更宽口径的工程证据（CI、漏洞扫描、全新机器复现与资源基线等）不属于本施工包的初始验收，收口状态以 `../../knowledge/go/m0-engineering-baseline.md` 和 `../../progress/current.md` 为准。
+本清单的全部项目均已完成。原始 v3.1 方案书中更宽口径的工程证据（CI 漏洞扫描、全新机器复现、资源基线与 CI 分支保护门禁等）不属于本施工包的初始验收，收口状态以 `../../knowledge/go/m0-engineering-baseline.md` 和 `../../progress/current.md` 为准。

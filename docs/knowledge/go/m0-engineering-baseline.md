@@ -12,10 +12,10 @@ M0 的价值不是“启动了一个 HTTP 端口”，而是把一个进程变�
 | --- | --- | --- |
 | 配置、结构化日志、优雅退出、`/livez`、`/readyz` | `config`、`health`、`transport/http`、`cmd/apiserver` 已实现并完成真实启动验证 | 已完成 |
 | README、`.gitignore`、公开 `.env.example`、ADR | 工程文件、公开/私有边界和 ADR-0001 已提交 | 核心完成；PostgreSQL 理由与 ADR-0002 尚未进入当前施工包 |
-| 单元测试、静态检查、一键校验 | 配置、健康检查、HTTP server 单测；`make verify` 执行格式化、`go vet`、普通测试、race 与 integration 入口验证 | 已完成当前施工包要求 |
-| race detector、漏洞扫描、CI | 重装匹配的官方 Go 1.26.5 工具链后，`go test -race ./...` 已通过；漏洞扫描与 CI 尚未建立 | race 已完成；其余未闭环 |
+| 单元测试、静态检查、一键校验 | 配置、健康检查、HTTP server 单测；`make verify` 执行格式化、`go vet`、普通测试、race、integration 入口与漏洞扫描验证 | 已完成当前施工包要求 |
+| race detector、漏洞扫描、CI | 重装匹配的官方 Go 1.26.5 工具链后，`go test -race ./...` 已通过；GitHub Actions `Verify` 在 `9af1a16` 上成功运行；`govulncheck@v1.6.0` 已通过 `make vuln` 扫描源码且未发现漏洞，尚未接入 CI；分支保护门禁尚未建立 | race、CI 执行与本地扫描已完成；CI 扫描与门禁待闭环 |
 | `fmt`、`lint`、`test`、`integration`、`run`、`verify` 入口 | Makefile 已提供全部入口；M0 的 `integration` 仅是为 M1 预留的 tag 测试入口，尚无外部依赖测试 | 入口已完成；集成测试内容待 M1 |
-| 全新机器 15 分钟启动、CI 阻止合并 | 已在现有 Linux 主机和新 shell 验证运行，尚未验证全新机器与 CI 门禁 | 未验证 |
+| 全新机器 15 分钟启动、CI 阻止合并 | 已在现有 Linux 主机和新 shell 验证运行；GitHub Actions 已成功运行，但尚未验证全新机器复现与分支保护门禁 | 部分完成 |
 | 空闲资源基线与公开资源口径 | 尚未形成可提交的资源基线证据 | 未完成 |
 
 仓库内阶段施工包是日常执行真源；原方案书用于检查路线有没有被过度缩减。二者不一致时，应明确写成“当前阶段已验收、原方案证据待补”，而不是互相覆盖。
@@ -66,7 +66,7 @@ M0 先固定了命令名、默认地址、环境变量、构造函数和健康�
 
 ### 6. 证据把“能运行”变成“可信”
 
-M0 已形成三层证据：单元测试验证纯行为；`make verify` 验证格式、全部测试与静态检查；真实进程实验验证两个 HTTP 端点、JSON 日志和 `Ctrl-C` 关闭路径。提交前又检查了暂存范围、空白错误和敏感信息，并用 Git commit 固化结果。
+M0 已形成三层证据：单元测试验证纯行为；`make verify` 验证格式、全部测试、静态检查、race 和漏洞扫描；真实进程实验验证两个 HTTP 端点、JSON 日志和 `Ctrl-C` 关闭路径。提交前又检查了暂存范围、空白错误和敏感信息，并用 Git commit 固化结果。
 
 最初的 `go test -race ./...` 因 Go 安装的二进制与标准库元数据不匹配而失败；重装匹配的官方 Go 1.26.5 工具链后已通过。这个过程说明：工具命令失败时应先区分项目错误与工具链错误；只有重跑成功后才能把 race detector 写为已通过。
 
@@ -90,11 +90,11 @@ curl -i http://127.0.0.1:8080/readyz
 
 确认两个端点返回 `200` 和 `{"status":"ok"}`，再向前台进程发送 `Ctrl-C`，观察 `shutdown_signal_received` 与 `http_server_stopped` 日志。
 
-待补实验：在全新 Ubuntu 环境按 README 计时复现；增加 CI、漏洞扫描和空闲资源基线。
+待补实验：在 CI 中安装并验证固定版本的漏洞扫描器；在全新 Ubuntu 环境按 README 计时复现；记录空闲资源基线；配置并验证失败 CI 会阻止合并的分支保护门禁。
 
 ## 面试表达
 
-可以这样概括 M0：我先用模块化单体建立 Go 服务的工程外壳，把配置校验、健康语义、HTTP 组装和进程生命周期拆到明确边界；使用标准库 `slog`、`net/http`、`signal.NotifyContext` 和 `Server.Shutdown`，并用单元测试、`go vet`、race detector、真实 curl 与信号实验保存证据。我也明确保留了尚未完成的 CI、漏洞扫描和全新机器复现，避免把最小骨架描述成生产就绪系统。
+可以这样概括 M0：我先用模块化单体建立 Go 服务的工程外壳，把配置校验、健康语义、HTTP 组装和进程生命周期拆到明确边界；使用标准库 `slog`、`net/http`、`signal.NotifyContext` 和 `Server.Shutdown`，并用单元测试、`go vet`、race detector、本地漏洞扫描、GitHub Actions、真实 curl 与信号实验保存证据。我也明确保留了尚未完成的 CI 漏洞扫描验证、全新机器复现和分支保护门禁，避免把最小骨架描述成生产就绪系统。
 
 ## 延伸阅读
 

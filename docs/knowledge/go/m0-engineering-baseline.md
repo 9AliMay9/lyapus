@@ -13,9 +13,9 @@ M0 的价值不是“启动了一个 HTTP 端口”，而是把一个进程变�
 | 配置、结构化日志、优雅退出、`/livez`、`/readyz` | `config`、`health`、`transport/http`、`cmd/apiserver` 已实现并完成真实启动验证 | 已完成 |
 | README、`.gitignore`、公开 `.env.example`、ADR | 工程文件、公开/私有边界和 ADR-0001 已提交 | 核心完成；PostgreSQL 理由与 ADR-0002 尚未进入当前施工包 |
 | 单元测试、静态检查、一键校验 | 配置、健康检查、HTTP server 单测；`make verify` 执行格式化、`go vet`、普通测试、race、integration 入口与漏洞扫描验证 | 已完成当前施工包要求 |
-| race detector、漏洞扫描、CI | 重装匹配的官方 Go 1.26.5 工具链后，`go test -race ./...` 已通过；GitHub Actions `Verify` 在 `9af1a16` 上成功运行；`govulncheck@v1.6.0` 已通过 `make vuln` 扫描源码且未发现漏洞，并在 `fe1ab2e` 的 CI 中成功运行；分支保护门禁尚未建立 | race、CI 执行与漏洞扫描已完成；门禁待闭环 |
+| race detector、漏洞扫描、CI | 重装匹配的官方 Go 1.26.5 工具链后，`go test -race ./...` 已通过；GitHub Actions `Verify` 在 `9af1a16` 上成功运行；`govulncheck@v1.6.0` 已通过 `make vuln` 扫描源码且未发现漏洞，并在 `fe1ab2e` 的 CI 中成功运行；`a05ff0f` 的 `verify` 与 clean-runner `smoke` 均成功；分支保护门禁尚未建立 | race、CI 执行、漏洞扫描和启动烟雾测试已完成；门禁待闭环 |
 | `fmt`、`lint`、`test`、`integration`、`run`、`verify` 入口 | Makefile 已提供全部入口；M0 的 `integration` 仅是为 M1 预留的 tag 测试入口，尚无外部依赖测试 | 入口已完成；集成测试内容待 M1 |
-| 全新机器 15 分钟启动、CI 阻止合并 | 已在现有 Linux 主机和新 shell 验证运行；GitHub Actions 已成功运行，但尚未验证全新机器复现与分支保护门禁 | 部分完成 |
+| 全新机器 15 分钟启动、CI 阻止合并 | 已在现有 Linux 主机和新 shell 验证运行；`a05ff0f` 的 GitHub-hosted clean Ubuntu `smoke` job 已成功启动服务并检查两个健康端点；尚未验证手工全新机器复现与分支保护门禁 | 部分完成 |
 | 空闲资源基线与公开资源口径 | 已记录脱敏的 [M0 空闲资源基线](../../benchmarks/m0-idle-resource-baseline.md)：7.5 GiB 内存、178 GiB 根盘、无 Swap 使用且 memory PSI 为 0 | 已完成单次空闲基线；后续阶段须重复采样 |
 
 仓库内阶段施工包是日常执行真源；原方案书用于检查路线有没有被过度缩减。二者不一致时，应明确写成“当前阶段已验收、原方案证据待补”，而不是互相覆盖。

@@ -32,4 +32,4 @@
 - [x] M0 `checklist.md` 的所有必需项完成。
 - [x] 新 shell 下可重复通过验收命令。
 
-这些条件仅表示当前施工包已验收；CI 漏洞扫描、全新机器复现、资源基线和 CI 分支保护门禁仍在 M0 宽口径收口中，不得提前写成已完成。`go test -race ./...` 已在匹配的 Go 1.26.5 工具链上通过，本地 `govulncheck@v1.6.0` 扫描未发现漏洞，GitHub Actions `Verify` 也已成功运行。
+这些条件仅表示当前施工包已验收；全新机器复现和 CI 分支保护门禁仍在 M0 宽口径收口中，不得提前写成已完成。`go test -race ./...` 已在匹配的 Go 1.26.5 工具链上通过，`govulncheck@v1.6.0` 在本地与 GitHub Actions `Verify` 中均未发现漏洞；空闲资源基线见 `../../benchmarks/m0-idle-resource-baseline.md`。

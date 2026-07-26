@@ -52,7 +52,7 @@
 - M0 验收与提交前隐私检查均已通过。
 - M0 首个可运行 commit：`fd9faf4`（`feat: establish M0 engineering baseline`）。
 - 该提交随后已手动推送到 GitHub；发布记录由后续提交补充。
-- 原始 v3.1 方案书中更宽口径的 CI 漏洞扫描、全新机器复现、资源基线和 CI 分支保护门禁尚待收口；race 已在后续恢复匹配 Go 工具链后通过，本地 `govulncheck@v1.6.0` 扫描未发现漏洞，GitHub Actions `Verify` 也已成功运行。详情见 `../../knowledge/go/m0-engineering-baseline.md`。
+- 原始 v3.1 方案书中更宽口径的全新机器复现和 CI 分支保护门禁尚待收口；race 已在后续恢复匹配 Go 工具链后通过，`govulncheck@v1.6.0` 在本地和 GitHub Actions `Verify` 中均未发现漏洞，空闲资源基线已记录。详情见 `../../knowledge/go/m0-engineering-baseline.md`。
 
 ## 下一次从这里继续
 

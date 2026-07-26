@@ -1,6 +1,6 @@
 # M0 实际实施结果
 
-> 在 M0 验收结束时填写。计划不等于结果；未完成项必须如实保留。
+> 本文件记录仓库内 M0 施工包的实际结果。原始 v3.1 方案书的更宽工程证据另见 `../../knowledge/go/m0-engineering-baseline.md`。
 
 ## 实际完成
 
@@ -27,7 +27,9 @@
 - Git commit：`fd9faf4`（`feat: establish M0 engineering baseline`）
 - 会话记录：`../../progress/sessions/2026-07-21-m0-engineering-baseline.md`
 
-## 进入 M1 前仍需满足
+## 施工包进入 M1 的条件
 
-- M0 `checklist.md` 的所有必需项完成。
-- 新 shell 下可重复通过验收命令。
+- [x] M0 `checklist.md` 的所有必需项完成。
+- [x] 新 shell 下可重复通过验收命令。
+
+这些条件仅表示当前施工包已验收；CI、漏洞扫描、全新机器复现和资源基线仍在 M0 宽口径收口中，不得提前写成已完成。`go test -race ./...` 已在匹配的 Go 1.26.5 工具链上通过。

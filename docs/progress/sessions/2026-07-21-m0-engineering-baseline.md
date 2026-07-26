@@ -49,14 +49,14 @@
 
 ## 偏差、风险或待确认事项
 
-- M0 验收已通过；首个 Git commit 与 GitHub 建仓/推送尚未执行。
-- 提交前隐私与敏感信息检查已通过；GitHub 操作仍由项目所有者手动执行。
+- M0 验收与提交前隐私检查均已通过。
 - M0 首个可运行 commit：`fd9faf4`（`feat: establish M0 engineering baseline`）。
-- M0 提交已手动推送到 `origin/main`；推送后 `origin/main` 指向 `c3f1f90`。
+- 该提交随后已手动推送到 GitHub；发布记录由后续提交补充。
+- 原始 v3.1 方案书中更宽口径的 CI、漏洞扫描、全新机器复现和资源基线尚待收口；race 已在后续恢复匹配 Go 工具链后通过。详情见 `../../knowledge/go/m0-engineering-baseline.md`。
 
 ## 下一次从这里继续
 
-- 具体文件：`docs/progress/current.md`、`docs/stages/m0-engineering-baseline/outcome.md`。
-- 具体任务：完成隐私检查，手动创建首个 Git commit；确认后进入 M1 施工包。
-- 验收命令：`git status --short`、`git diff --cached --check`、`make verify`。
-- 不要做：在 M1 开始前引入 PostgreSQL、Kafka、Kubernetes、OpenTelemetry、前端或 AI 以外的实现。
+- 具体文件：`docs/progress/current.md`。
+- 具体任务：以当前交接页为准，继续 M0 宽口径工程证据收口或进入 M1 施工包。
+- 验收命令：以当前施工任务指定的命令为准。
+- 不要做：不要把未验证的工程证据写成已完成。

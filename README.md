@@ -2,7 +2,7 @@
 
 一个以 Go 为主语言、以 OpenTelemetry 为遥测标准、以 SLO 与故障闭环为可靠性核心，并逐步演化为平台工程与 AI 可观测性实践的项目。
 
-当前处于 M0（工程基线）：正在建立可运行的 Go 服务骨架。此阶段只实现配置、结构化日志、HTTP 健康检查、优雅关闭和测试；不引入数据库、消息队列、容器编排、OpenTelemetry、前端或 AI 功能。
+M0（工程基线）已经完成：当前仓库包含可运行、可测试的 Go 服务骨架，以及配置、结构化日志、HTTP 健康检查和优雅关闭。M1 业务后端尚未开始；当前没有数据库、消息队列、容器编排、OpenTelemetry、前端或 AI 功能。
 
 ## 前置条件
 
@@ -11,13 +11,16 @@
 
 ## 开发命令
 
-M0 完成后，以下命令应可在仓库根目录执行：
+以下命令可在仓库根目录执行：
 
 ```bash
 make fmt
+make lint
 make test
+make race
+make integration
 make verify
-go run ./cmd/apiserver
+make run
 ```
 
 服务默认监听 `127.0.0.1:8080`。验证健康检查：

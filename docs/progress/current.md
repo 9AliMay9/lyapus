@@ -1,9 +1,32 @@
 # 当前施工状态
 
-- 当前阶段：M0 宽口径工程证据收口
-- 状态：仓库内 M0 施工包已完成并推送到 GitHub；M0 学习笔记已由项目所有者审阅。race、GitHub Actions CI、漏洞扫描、clean-runner 启动烟雾测试、空闲资源基线和 CI 合并门禁已验证；现在继续补齐原始 v3.1 方案书的剩余工程证据；M1 尚未开始。
-- 已完成：初始化 Go module；建立文档结构、规范、知识笔记地图、M0 施工包、技术提案/ADR 流程和阅读提醒规则；实现 `internal/platform/config` 的 HTTP 地址加载与校验；实现 `internal/platform/health` 的 `/livez`、`/readyz` 处理逻辑；实现 `internal/platform/transport/http` 的路由注册与请求完成日志；实现 `cmd/apiserver` 的 JSON 日志初始化、启动和信号关闭；对照原方案书生成 `../knowledge/go/m0-engineering-baseline.md` 学习笔记
-- 已验证：`make verify` 通过；它执行 `gofmt`、`go vet ./...`、`go test ./...`、`go test -race ./...`、`go test -tags=integration -count=1 ./...` 和 `make vuln`。后者使用固定的 `govulncheck@v1.6.0` 安装位置扫描源码，结果为 `No vulnerabilities found.`；integration 目前只验证预留入口，M0 尚无数据库或容器集成测试。`go run ./cmd/apiserver` 启动成功；`curl -i http://127.0.0.1:8080/livez` 与 `curl -i http://127.0.0.1:8080/readyz` 均返回 `200` 和 `{"status":"ok"}`；`Ctrl-C` 输出关闭信号与 server 已停止的 JSON 日志；提交前扫描未发现强凭据特征，公开地址仅为 `127.0.0.1` 本地回环地址；重装匹配的官方 Go 1.26.5 工具链后，`go test -race ./...` 已通过；GitHub Actions 的 [Verify run 30190218910](https://github.com/9AliMay9/lyapus/actions/runs/30190218910) 在 commit `9af1a16` 上成功完成，耗时 57 秒；在 commit `fe1ab2e` 上，安装 `govulncheck@v1.6.0` 后运行同一 `Verify` job 成功完成，耗时 26 秒；commit `a05ff0f` 的 CI 同时通过 `verify`（18 秒）和干净 GitHub-hosted Ubuntu runner 上的 `smoke`（10 秒），后者启动服务并检查 `/livez`、`/readyz`；[M0 空闲资源基线](../benchmarks/m0-idle-resource-baseline.md) 已记录。
-- 当前阻塞：手工全新机器复现尚未验证。
-- 下一步：完成手工全新机器复现；后续改动经分支、PR 与 `verify`、`smoke` 两个检查合并。每批完成后更新本页和 M0 学习笔记。源码由项目所有者手敲，协作助手提供完整代码块和验收命令。
-- 本阶段不要做：PostgreSQL、Kafka、Kubernetes、OpenTelemetry、前端或 AI 功能
+## 当前落点
+
+- 当前阶段：M0 已完成终局审计，下一次从 M1 施工包设计开始。
+- M0 结论：真实实现完整满足仓库内施工包，并基本符合原始 v3.1 工程基线预期，可以进入 M1。
+- M1 状态：业务源码尚未开始；进入前必须先建立并审阅 `plan.md`、`contracts.md`、`checklist.md` 和 `outcome.md`。
+- 本次终局审计所依据的已合并门禁基线：commit `6306d4b`（`docs: verify M0 merge gate (#1)`）。
+
+## M0 已验证事实
+
+- 服务实现：配置加载与校验、JSON 结构化日志、HTTP server、`/livez`、`/readyz`、`SIGINT`/`SIGTERM` 优雅关闭。
+- 本地校验：`gofmt`、`go vet ./...`、`go test ./...`、`go test -race ./...`、`go test -tags=integration -count=1 ./...` 和固定版本 `govulncheck@v1.6.0`。
+- 真实运行：两个健康端点均返回 `200` 与 `{"status":"ok"}`；`Ctrl-C` 记录关闭信号和 server 停止日志。
+- CI：GitHub Actions 的 `verify` 与 clean-runner `smoke` 已通过；smoke 在干净 Ubuntu runner 启动服务并检查两个健康端点。
+- 合并门禁：`protect-main` ruleset 要求 PR、最新分支、`verify` 与 `smoke`；故意失败的测试曾使 PR 明确不可合并，修复后两个检查通过并以 squash merge 进入 `main`。
+- 工程证据：脱敏的 M0 空闲资源基线、公开/私有信息边界、ADR-0001/0002/0003 和系统化 M0 学习笔记已经建立。
+
+## 明确延期与边界
+
+- 没有在另一台全新 Ubuntu 主机上手工计时完成“按 README 15 分钟启动”。当前主机、新 shell 和 GitHub clean-runner smoke 提供了近似证据，但不能写成该项已经实测完成。
+- `make integration` 目前只有测试入口；M0 没有数据库、容器或跨服务依赖，因此没有真实集成测试内容。
+- M0 没有 PostgreSQL、Kafka、OpenTelemetry、Kubernetes、前端或 AI 功能，也不声明生产容量、高可用或生产就绪。
+
+## 下一次从这里开始
+
+1. 阅读本页、`../knowledge/go/m0-engineering-baseline.md`、ADR-0002 和 ADR-0003。
+2. 回读原始 v3.1 的 M1 近期最小版与深度增强边界。
+3. 从模板建立 M1 的 `plan.md`、`contracts.md`、`checklist.md` 和 `outcome.md`，先确定数据模型、PostgreSQL/迁移版本、API 契约与验收证据。
+4. 由项目所有者审阅 M1 施工包；确认后再开始手敲业务源码。
+
+不要在施工包确认前提前实现 PostgreSQL、CRUD、鉴权、Compose 或其他 M1 功能。

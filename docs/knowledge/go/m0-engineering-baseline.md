@@ -1,104 +1,165 @@
-# M0：从空仓库到可控的 Go 服务进程
+# M0：从空仓库到受控的 Go 服务工程
 
 ## 一句话模型
 
-M0 的价值不是“启动了一个 HTTP 端口”，而是把一个进程变成可配置、可诊断、可测试、能安全退出且有证据可复现的服务，为 M1 业务代码提供稳定外壳。
+M0 的价值不是“启动了一个 HTTP 端口”，而是建立一条可信的工程控制链：先固定契约，再实现可控进程，用本地测试、CI、真实运行、资源证据和合并门禁证明它能被长期维护。
 
-## 对照原始方案书的结论
+## 终局判断
 
-当前实现完整满足仓库内 M0 施工包的核心契约，并覆盖原始 v3.1 方案书最重要的服务骨架。若按原方案书的宽口径衡量，工程证据仍有缺口，因此准确结论是“核心实现基本符合预期”，不是“原方案 M0 全部完成”。
+当前实现完整满足仓库内 M0 施工包，并基本符合原始 v3.1 方案书的工程基线预期，可以进入 M1。它不是生产系统，也没有逐字完成原方案的每项证据：另一台全新 Ubuntu 主机上的手工 15 分钟计时复现被明确延期。
 
-| 原始方案要求 | 当前证据 | 结论 |
+M0 没有“近期最小版/深度增强”拆分；这种 release 分层从 M1 开始。M0 本身是后续所有阶段共用的工程底座，因此本次补齐了 CI、race、漏洞扫描、资源基线、ADR 和合并门禁，而没有给服务添加超出阶段的业务功能。
+
+## 原始方案逐项对照
+
+| 原始 M0 要求 | 当前事实 | 结论 |
 | --- | --- | --- |
-| 配置、结构化日志、优雅退出、`/livez`、`/readyz` | `config`、`health`、`transport/http`、`cmd/apiserver` 已实现并完成真实启动验证 | 已完成 |
-| README、`.gitignore`、公开 `.env.example`、ADR | 工程文件、公开/私有边界和 ADR-0001 已提交 | 核心完成；PostgreSQL 理由与 ADR-0002 尚未进入当前施工包 |
-| 单元测试、静态检查、一键校验 | 配置、健康检查、HTTP server 单测；`make verify` 执行格式化、`go vet`、普通测试、race、integration 入口与漏洞扫描验证 | 已完成当前施工包要求 |
-| race detector、漏洞扫描、CI | 重装匹配的官方 Go 1.26.5 工具链后，`go test -race ./...` 已通过；GitHub Actions `Verify` 在 `9af1a16` 上成功运行；`govulncheck@v1.6.0` 已通过 `make vuln` 扫描源码且未发现漏洞，并在 `fe1ab2e` 的 CI 中成功运行；`a05ff0f` 的 `verify` 与 clean-runner `smoke` 均成功；`protect-main` ruleset 已要求 PR、`verify`、`smoke` 和最新分支，故意失败的 `verify` PR 已被 GitHub 阻止合并 | 已完成 |
-| `fmt`、`lint`、`test`、`integration`、`run`、`verify` 入口 | Makefile 已提供全部入口；M0 的 `integration` 仅是为 M1 预留的 tag 测试入口，尚无外部依赖测试 | 入口已完成；集成测试内容待 M1 |
-| 全新机器 15 分钟启动、CI 阻止合并 | 已在现有 Linux 主机和新 shell 验证运行；`a05ff0f` 的 GitHub-hosted clean Ubuntu `smoke` job 已成功启动服务并检查两个健康端点；`protect-main` ruleset 已实测阻止失败 CI 合并；尚未验证手工全新机器复现 | 部分完成 |
-| 空闲资源基线与公开资源口径 | 已记录脱敏的 [M0 空闲资源基线](../../benchmarks/m0-idle-resource-baseline.md)：7.5 GiB 内存、178 GiB 根盘、无 Swap 使用且 memory PSI 为 0 | 已完成单次空闲基线；后续阶段须重复采样 |
+| README、路线、贡献约定、ADR 模板 | 根 README、`docs/stages/`、协作规范、ADR 规则和模板均存在 | 已完成 |
+| `fmt`、`lint`、`test`、`integration`、`run`、`verify` | Makefile 提供全部入口，并额外提供 `race`、`vuln` | 已完成；integration 只有预留入口 |
+| 配置、结构化日志、优雅退出、健康检查 | `config`、`health`、`transport/http`、`cmd/apiserver` 已实现并做真实进程验证 | 已完成 |
+| 单元测试、race、静态检查、漏洞扫描、CI | 普通测试、`go vet`、race、固定 `govulncheck@v1.6.0`、GitHub Actions `verify`/`smoke` 均有成功证据 | 已完成 |
+| `.gitignore`、公开 `.env.example`、secret scan 和私密边界 | 忽略规则、示例配置、公开/私有边界与提交前凭据检查已建立 | 基本完成；未引入独立自动化 secret scanner |
+| 模块化单体与 PostgreSQL 决策 | ADR-0001 记录模块化单体；为不改写已接受 ADR，ADR-0003 单独记录 PostgreSQL 主库 | 已完成，编号形式与原文不同 |
+| 公开资源口径与 M0–M3 磁盘控制 | 根 README 记录通用规格、容器内存目标、磁盘停止线和阶段数据边界 | 已完成规划口径；容量仍待各阶段实测 |
+| ADR-0002 四条执行护栏 | 双压测拓扑、公开/私有边界、M2-min 声明、Compose/k3s 状态隔离均已记录 | 已完成 |
+| 空闲资源基线 | `free`、`vmstat`、memory PSI、`ps`、磁盘与 `docker stats` 已脱敏保存 | 已完成单次基线 |
+| 一条命令校验 | `make verify` 覆盖格式、vet、普通测试、race、integration 入口和漏洞扫描 | 已完成 |
+| CI 失败阻止合并 | `protect-main` 要求 PR、最新分支、`verify`、`smoke`；故意失败 PR 已被阻止，修复后才可 squash merge | 已完成 |
+| 全新机器 15 分钟启动 | 现有主机、新 shell 和 GitHub clean runner 均成功；没有另一台全新主机的手工计时 | 延期，不能写成已完成 |
 
-仓库内阶段施工包是日常执行真源；原方案书用于检查路线有没有被过度缩减。二者不一致时，应明确写成“当前阶段已验收、原方案证据待补”，而不是互相覆盖。
-
-## 项目如何演化到当前形态
-
-### 1. 先固定契约，再写实现
-
-M0 先固定了命令名、默认地址、环境变量、构造函数和健康检查响应。这样做把“调用方可以依赖什么”与“内部如何实现”分开：内部可以重构，`config.Load()`、`http.NewServer(...)` 和端点语义不能随手漂移。
-
-对应位置：M0 的 [契约](../../stages/m0-engineering-baseline/contracts.md) 与 [ADR-0001](../../architecture/decisions/ADR-0001-modular-monolith.md)。
-
-### 2. 配置是进程启动的第一道边界
-
-`config.Load()` 把环境变量转换成经过校验的 `Config`。缺省值保证本地可直接运行；`net.SplitHostPort` 和端口范围检查让非法配置在监听端口前失败；`fmt.Errorf(... %w ...)` 保留底层原因并补充调用上下文。
-
-关键认识：配置解析成功不等于服务启动成功，但配置错误应尽可能早、尽可能明确地失败。把原始环境变量散落在业务包中，会让测试、错误定位和未来配置迁移都变困难。
-
-### 3. 健康语义独立于 HTTP 组装
-
-`health.Handler` 只处理健康语义和 JSON 响应，路由注册留给 transport 包。`Livez` 与 `Readyz` 当前共用 `respondOK`，但名称分别对应两个已经不同的契约：liveness 只证明进程存活；readiness 证明当前可接收流量。M0 没有外部依赖，所以两者结果相同。
-
-单元测试使用 `httptest` 直接调用 handler，不需要占用真实端口。这证明业务边界可以在进程外壳之外独立验证。
-
-### 4. transport 层负责协议装配
-
-`transport/http.NewServer` 组合配置、健康处理器、标准库 `ServeMux` 和请求日志中间件。选择标准库而非 Web 框架，是因为 M0 只有两个端点，没有路由参数、复杂中间件或框架生态需求。
-
-`ReadHeaderTimeout` 限制读取请求头的等待时间，避免一个连接无限占用 server 资源。请求日志通过注入的 `*slog.Logger` 输出稳定字段，避免业务包依赖全局 logger。
-
-当前日志仍有明确边界：只记录 method、path 和 duration，没有捕获响应状态码、响应大小或 request ID；这些应由真实诊断需求驱动，而不是在 M0 提前造完整日志框架。
-
-### 5. `main` 只负责进程生命周期
-
-`cmd/apiserver` 完成依赖装配，不承载健康或传输逻辑。启动错误通过带缓冲的 channel 返回主 goroutine；`signal.NotifyContext` 把 `SIGINT`/`SIGTERM` 转换为取消信号；`Server.Shutdown` 给已有请求最多 10 秒完成时间；`http.ErrServerClosed` 被识别为正常关闭结果。
-
-这条生命周期可以压缩为：
+## 工程控制链
 
 ```text
-加载配置 → 组装依赖 → 启动监听
-                    ↓
-          监听失败或退出信号
-                    ↓
-         限时 Shutdown → 返回结果
+契约与规范
+    ↓
+源码与单元测试
+    ↓
+make verify
+    ↓
+GitHub Actions verify
+    ↓
+clean-runner smoke
+    ↓
+protect-main required checks
+    ↓
+PR 合并后的 Git 真源
 ```
 
-关键认识：优雅关闭不是“收到信号后立即退出”，而是停止接收新连接、等待在途请求，并为等待设置明确上限。
+每一层解决的问题不同：
 
-### 6. 证据把“能运行”变成“可信”
+- 契约防止名称和语义随实现漂移。
+- 单元测试证明包内行为。
+- `make verify` 统一开发者与 CI 的校验入口。
+- clean-runner smoke 证明服务能在仓库外的干净 runner 上构建、启动并响应健康检查。
+- ruleset 把“建议运行 CI”变成“失败就不能合并”的工程约束。
+- 文档只记录已验证事实和明确边界，不能替代源码与 Git commit。
 
-M0 已形成三层证据：单元测试验证纯行为；`make verify` 验证格式、全部测试、静态检查、race 和漏洞扫描；真实进程实验验证两个 HTTP 端点、JSON 日志和 `Ctrl-C` 关闭路径。提交前又检查了暂存范围、空白错误和敏感信息，并用 Git commit 固化结果。
+## 代码结构与 Go 认识
 
-最初的 `go test -race ./...` 因 Go 安装的二进制与标准库元数据不匹配而失败；重装匹配的官方 Go 1.26.5 工具链后已通过。这个过程说明：工具命令失败时应先区分项目错误与工具链错误；只有重跑成功后才能把 race detector 写为已通过。
+### 配置边界
+
+`config.Load()` 只读取 `LYAPUS_HTTP_ADDR`，缺省为 `127.0.0.1:8080`。它用 `net.SplitHostPort` 和端口范围检查让非法配置在监听前失败，并用 `%w` 保留底层错误链。
+
+重要认识：配置解析成功不等于服务一定能监听成功，但配置错误应尽早、明确地失败。环境变量不能散落在业务包中，否则测试和未来迁移都会变困难。
+
+### 健康语义
+
+`health.Handler` 把健康语义从 HTTP server 装配中分离。`Livez` 表示进程是否存活；`Readyz` 表示实例是否能接收流量。M0 没有外部依赖，所以二者现在返回相同的 `200` 与 `{"status":"ok"}`，但契约已经不同。
+
+`httptest.NewRequest` 与 `httptest.NewRecorder` 可以直接验证 handler，不占真实端口。`json.Encoder.Encode` 会追加换行，因此测试期望包含 `\n`。
+
+### HTTP 装配
+
+`transport/http.NewServer` 组合 `config.Config`、健康 handler、标准库 `http.ServeMux` 和请求日志中间件。M0 只有两个静态端点，标准库足够；此时引入 Web 框架只会增加依赖和隐式行为。
+
+`ReadHeaderTimeout` 限制读取请求头的等待时间。logger 通过 `*slog.Logger` 注入而非使用全局变量，便于测试和未来装配。当前请求日志只记录 method、path、duration，没有状态码、响应大小或 request ID；这是一条明确边界，不是遗漏的生产日志平台。
+
+### 进程生命周期
+
+`cmd/apiserver` 只负责依赖装配和生命周期：
+
+```text
+加载配置 → 组装 server → goroutine 启动监听
+                         ↓
+               监听失败或收到退出信号
+                         ↓
+                10 秒限时 Shutdown
+                         ↓
+                 等待 server 返回结果
+```
+
+带缓冲的 `serverErr` channel 把监听结果传回主 goroutine；`signal.NotifyContext` 把 `SIGINT`/`SIGTERM` 转成取消；`http.ErrServerClosed` 是正常 Shutdown 的结果，不能记录成启动故障。
+
+优雅关闭不是立即杀掉进程，而是停止接受新连接、等待在途请求，并为等待设置上限。当前关闭路径由真实 `Ctrl-C` 实验验证，尚没有 `main` 包自动化测试。
+
+## 测试与 CI 的准确含义
+
+- `go test ./...`：执行当前单元测试；通过不代表真实监听和信号路径已经覆盖。
+- `go test -race ./...`：在测试执行路径中检测数据竞争；不能证明未执行路径无竞争。
+- `go vet ./...`：发现一类静态可疑模式；不是完整形式化验证。
+- `go test -tags=integration -count=1 ./...`：保留 M1 的 integration 入口并禁用测试缓存；M0 没有真正跨外部依赖的测试。
+- `govulncheck ./...`：按可达调用关系检查已知 Go 漏洞；“No vulnerabilities found”只代表当时工具、数据库和源码范围内未发现。
+- `smoke`：在 GitHub-hosted clean Ubuntu runner 构建并启动进程，轮询 `/livez` 后检查两个端点；它不验证手工安装速度，也不验证 `Ctrl-C` 日志。
+
+CI 页面最初只有一个绿色 `verify`，因为 job 才是检查单位，job 内多个 step 不会各自显示为合并门禁。增加独立 `smoke` job 后，ruleset 才要求两个明确检查名。
+
+## 两次值得保留的工程教训
+
+### 工具链错误不等于项目错误
+
+最初 race 失败是 Go 二进制与标准库元数据不匹配。重新安装校验过摘要的官方 Go 1.26.5 后，`go list -race runtime/race` 和全仓 race 测试通过。
+
+排障顺序应是：读取原始错误 → 判断项目、工具链还是网络层 → 修复最小根因 → 重跑同一验收。没有成功重跑就不能把文档改成“已完成”。
+
+### 失败门禁必须做负向实验
+
+仅看到 CI 绿色不能证明失败会阻止合并。本项目在临时分支加入一个故意 `t.Fatal` 的测试：`verify` 失败、`smoke` 因依赖跳过、GitHub 明确显示 merge requirements 未满足；删除探针并让两个检查转绿后，PR 才能 squash merge。
+
+负向实验完成后，临时故障代码不进入 `main`，但文档和 GitHub PR 保留门禁证据。
 
 ## 容易混淆或踩坑
 
-- `/livez` 与 `/readyz` 当前响应相同，不代表语义相同；以后也不能让 liveness 依赖数据库等外部系统。
-- `json.Encoder.Encode` 会在 JSON 后追加换行，所以测试期望值是 `{"status":"ok"}\n`。
-- `ListenAndServe` 在正常 `Shutdown` 后返回 `http.ErrServerClosed`，不能把它记录成启动故障。
-- `go test` 通过只覆盖测试实际执行的路径；真实监听、信号和 shell 命令仍需单独验收。
-- 结构化日志是字段稳定、机器可解析，不只是把普通文本包进 JSON。
-- 文档中的“已完成”必须区分当前施工包验收与原始方案书的更宽要求。
+- `/livez` 与 `/readyz` 当前响应相同，不代表语义相同；未来不能让 liveness 依赖数据库。
+- `ListenAndServe` 在正常 Shutdown 后返回 `http.ErrServerClosed`。
+- `make verify` 当前包含会写回格式的 `gofmt`；提交前仍要检查 diff，避免忽略格式化产生的变更。
+- CI 的“step”与 ruleset 要求的“job/check”不是同一层。
+- GitHub clean runner 是很强的可复现证据，但不是“另一台新服务器上由人按 README 15 分钟完成”的同义词。
+- M0 只证明工程外壳可信，不证明 API 容量、数据库正确性、生产可用性或高可用。
+- 公开资源数字必须附带环境和限制；私有实例、IP、账单、代理和密钥不能进入 Git。
 
 ## 最小复现实验
 
 ```bash
+go install golang.org/x/vuln/cmd/govulncheck@v1.6.0
 make verify
 go run ./cmd/apiserver
 curl -i http://127.0.0.1:8080/livez
 curl -i http://127.0.0.1:8080/readyz
 ```
 
-确认两个端点返回 `200` 和 `{"status":"ok"}`，再向前台进程发送 `Ctrl-C`，观察 `shutdown_signal_received` 与 `http_server_stopped` 日志。
+确认两个端点返回 `200` 和 `{"status":"ok"}`，再向前台进程发送 `Ctrl-C`，观察 `shutdown_signal_received` 与 `http_server_stopped`。
 
-待补实验：在全新 Ubuntu 环境按 README 计时复现。
+仍未完成的实验：在另一台全新 Ubuntu 主机上从获取仓库开始计时，按 README 在 15 分钟内完成工具准备、统一校验和服务启动。
+
+## 带入 M1 的稳定边界
+
+- 保留模块化单体，不为展示微服务提前拆分。
+- `cmd/` 继续只做装配；业务进入新的明确包边界。
+- PostgreSQL 是 M1 主库，但版本、迁移工具、测试隔离和数据模型必须在 M1 施工包中先锁定。
+- M1 开始区分“近期最小 release”和“深度增强”；鉴权、复杂 RBAC、审计和性能增强不能反向阻塞最小版。
+- M1 引入数据库与 Compose 后，必须重复空闲/运行资源采样，并第一次形成真实 integration test。
 
 ## 面试表达
 
-可以这样概括 M0：我先用模块化单体建立 Go 服务的工程外壳，把配置校验、健康语义、HTTP 组装和进程生命周期拆到明确边界；使用标准库 `slog`、`net/http`、`signal.NotifyContext` 和 `Server.Shutdown`，并用单元测试、`go vet`、race detector、固定版本漏洞扫描、GitHub Actions、真实 curl 与信号实验保存证据。`protect-main` ruleset 要求 PR、通过 `verify` 与 `smoke`，且已实测拦截失败 CI；我仍明确保留尚未完成的手工全新机器复现，避免把最小骨架描述成生产就绪系统。
+可以这样概括 M0：我从空仓库建立了一个模块化单体 Go 服务外壳，把配置、健康语义、HTTP 装配和进程生命周期拆成清晰边界；使用标准库 `slog`、`net/http`、`signal.NotifyContext` 和 `Server.Shutdown`，并用单元测试、vet、race、固定版本漏洞扫描、clean-runner smoke 和真实进程实验保存证据。我还通过一次故意失败的 PR 验证 required checks 确实阻止合并。对于没有做过的全新机 15 分钟复现、真实集成测试和生产容量，我在文档中明确保留边界，而不把工程骨架包装成生产系统。
 
 ## 延伸阅读
 
 - [M0 施工计划](../../stages/m0-engineering-baseline/plan.md)
 - [M0 实际结果](../../stages/m0-engineering-baseline/outcome.md)
+- [M0 空闲资源基线](../../benchmarks/m0-idle-resource-baseline.md)
+- [ADR-0001：模块化单体](../../architecture/decisions/ADR-0001-modular-monolith.md)
+- [ADR-0002：执行护栏](../../architecture/decisions/ADR-0002-execution-guardrails.md)
+- [ADR-0003：PostgreSQL 主库](../../architecture/decisions/ADR-0003-postgresql-primary-database.md)
 - [当前架构](../../architecture/overview.md)
 - [Go 实现规范](../../standards/go.md)

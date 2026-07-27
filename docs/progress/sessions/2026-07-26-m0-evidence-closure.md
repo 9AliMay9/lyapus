@@ -12,6 +12,7 @@
 - 固定使用 `govulncheck@v1.6.0`，本机和 CI 扫描均返回 `No vulnerabilities found.`。
 - 记录 M0 空闲资源基线，详见 `../../benchmarks/m0-idle-resource-baseline.md`。
 - 添加 GitHub-hosted clean Ubuntu 的服务启动与健康检查 smoke job；commit `a05ff0f` 的 `verify`（18 秒）与 `smoke`（10 秒）均已成功。
+- 建立 `protect-main` ruleset：要求 PR、`verify`、`smoke` 与最新目标分支；故意失败的 `verify` PR 已显示为不可合并。
 
 ## 验证证据
 
@@ -33,17 +34,19 @@
 
 命令：GitHub Actions verify 与 smoke（commit a05ff0f）
 结果：均成功，总计 28 秒；smoke 在 clean Ubuntu runner 启动服务并检查 /livez、/readyz
+
+命令：故意失败的 branch-protection probe PR
+结果：verify 失败（18 秒），smoke 跳过；GitHub 显示因失败的 merge requirements 而禁止合并
 ```
 
 ## 偏差、风险或待确认事项
 
 - GitHub-hosted smoke job 仅验证干净 runner 上的构建、启动和两个健康端点；它不等同于手工全新 Ubuntu 的 15 分钟复现。
-- 尚未配置或验证“失败 CI 阻止合并”的 GitHub 分支保护门禁。
-- 不要将上述两项待确认事项写成已完成。
+- 不要把 smoke 或本次分支门禁实验写成手工全新机复现已完成。
 
 ## 下一次从这里继续
 
 - 具体文件：`docs/progress/current.md` 和 `docs/knowledge/go/m0-engineering-baseline.md`。
-- 具体任务：进行手工全新机器复现，或配置并验证 GitHub 分支保护门禁。
+- 具体任务：删除临时失败探针，使本 PR 的检查通过并经门禁合并；随后进行手工全新机器复现。
 - 验收命令：以选择的收口任务为准；提交前执行 `make verify` 与 `git diff --check`。
-- 不要做：不要把 clean-runner smoke 等同于手工全新 Ubuntu 的 15 分钟复现，也不要在未验证前勾选分支保护门禁。
+- 不要做：不要把 clean-runner smoke 等同于手工全新 Ubuntu 的 15 分钟复现，也不要把临时失败探针合并进 `main`。

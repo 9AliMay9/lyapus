@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/9Alimay/lyapus/internal/platform/config"
-	"github.com/9Alimay/lyapus/internal/platform/health"
+	"github.com/9AliMay9/lyapus/internal/platform/config"
+	"github.com/9AliMay9/lyapus/internal/platform/health"
 )
 
 func NewServer(cfg config.Config, logger *slog.Logger) *http.Server {

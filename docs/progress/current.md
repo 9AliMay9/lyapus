@@ -6,7 +6,7 @@
 - M0 结论：真实实现完整满足仓库内施工包，并基本符合原始 v3.1 工程基线预期，可以进入 M1。
 - M1 状态：业务源码尚未开始；进入前必须先建立并审阅 `plan.md`、`contracts.md`、`checklist.md` 和 `outcome.md`。
 - 本次终局审计所依据的已合并门禁基线：commit `6306d4b`（`docs: verify M0 merge gate (#1)`）。
-- 仓库标识待校正：远端规范地址为 `github.com/9AliMay9/lyapus`，而当前 `go.mod` 和 4 处内部 import 仍使用 `github.com/9Alimay/lyapus`。这是已确认的一致性缺陷，必须在 M1 施工包前用独立小 PR 更正并运行 `make verify`。
+- 仓库标识修正：当前 `chore/normalize-module-path` 分支已将 `go.mod` 与 5 处内部 import 统一为远端规范地址 `github.com/9AliMay9/lyapus`；`make verify` 已通过。该独立小 PR 尚待提交、门禁和合并，完成前不开始 M1 施工包。
 
 ## M0 已验证事实
 
@@ -26,7 +26,7 @@
 
 ## 下一次从这里开始
 
-1. 建立短生命周期分支，统一 `go.mod`、全部内部 import 与文档中的仓库地址为 `github.com/9AliMay9/lyapus`；运行 `make verify`，再按 PR 门禁合并。
+1. 提交并创建仅含 module/import 路径规范化与进度文档的 PR；等待 `verify`、`smoke` 和受保护分支门禁通过后合并。
 2. 阅读本页、`../knowledge/go/m0-engineering-baseline.md`、ADR-0002 和 ADR-0003。
 3. 回读原始 v3.1 的 M1 近期最小版与深度增强边界。
 4. 从模板建立 M1 的 `plan.md`、`contracts.md`、`checklist.md` 和 `outcome.md`，先确定数据模型、PostgreSQL/迁移版本、API 契约与验收证据。

@@ -1,4 +1,4 @@
-# GitHub SSH 推送
+# GitHub Git 与 PR 工作流
 
 ## 用途
 
@@ -55,6 +55,32 @@ git status --short
 ```
 
 确认工作区干净后，再删除已完成的本地与远程分支。若是 squash merge，本地 Git 可能不会把原分支识别为已合并；确认 PR 已合并且分支只含该任务后，才使用 `git branch -D <branch>` 清理本地引用。
+
+## 可选：GitHub CLI
+
+`gh` 是当前远程开发主机上的协作工具，不是项目依赖，也不进入应用镜像。它适合在终端查看 PR、required checks 和 Actions 日志，减少在远程终端与本地浏览器之间切换。
+
+Git 仍使用本 runbook 的 SSH key；不要执行 `gh auth setup-git` 改写现有 Git 凭据链。`gh` 单独使用 GitHub API 登录：
+
+```bash
+gh auth login --hostname github.com --git-protocol ssh --skip-ssh-key
+gh auth status
+```
+
+选择浏览器登录并完成一次性验证码授权。`gh` 可能将 API token 存在 `~/.config/gh/hosts.yml`；该文件必须只允许当前用户读取。不要运行 `gh auth token`，不要把 token 放进 shell 配置、`.env`、Git 或聊天记录。
+
+日常最小命令集：
+
+```bash
+gh pr status
+gh pr create --base main --fill
+gh pr checks --required --watch
+gh run list --limit 5
+gh run watch <run-id> --compact --exit-status
+gh run view <run-id> --log-failed
+```
+
+`gh pr create` 只创建 PR，不替代变更范围审阅；`gh pr checks --required --watch` 只显示门禁检查；`gh run view --log-failed` 只在失败时读取日志。需要撤销 CLI API 授权时，先运行 `gh auth logout`，再在 GitHub 账号的 Applications 页面撤销 GitHub CLI 访问。
 
 ## 常见失败处理
 

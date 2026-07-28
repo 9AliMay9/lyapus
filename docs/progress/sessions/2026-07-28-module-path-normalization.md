@@ -8,7 +8,8 @@
 
 - 在 `chore/normalize-module-path` 分支将 `go.mod` 和 5 处内部 Go import 从 `github.com/9Alimay/lyapus` 统一为 `github.com/9AliMay9/lyapus`。
 - 修正上一份交接记录中“4 处内部 import”的计数；实际为 5 处，分布在 3 个源码文件。
-- 更新当前进度页：路径修正已完成本地验证，下一步是提交并按受保护分支流程合并该独立小 PR。
+- 更新当前进度页：路径修正已完成本地验证。
+- PR #5 的 `verify` 与 `smoke` 均成功后，已以 squash merge 合并至 `main`；GitHub CLI 已删除本地和远端短生命周期分支，本地 `main` 已 fast-forward 至 `2b3764b`。
 
 ## 修改的文件
 
@@ -37,6 +38,12 @@
 
 命令：git diff --check
 结果：通过
+
+命令：gh pr checks --required --watch
+结果：PR #5 的 Verify/verify（57 秒）与 Verify/smoke（15 秒）均成功。
+
+命令：git pull --ff-only
+结果：本地 `main` 从 `f76e174` fast-forward 至 `2b3764b`。
 ```
 
 ## 偏差、风险或待确认事项
@@ -46,7 +53,7 @@
 
 ## 下一次从这里继续
 
-- 具体文件：本次变更涉及的 7 个文件。
-- 具体任务：审阅 diff，提交并创建路径规范化 PR；required checks 通过后合并。
-- 验收命令：`make verify`、`git diff --check`、PR required checks（`verify` 与 `smoke`）。
-- 不要做：不要将 M1 实现混入此 PR；合并前不要创建 M1 施工包。
+- 具体文件：`docs/progress/current.md`、M0 知识笔记、ADR-0002、ADR-0003 与 M1 施工包模板。
+- 具体任务：建立并审阅 M1 施工包。
+- 验收命令：先完成 Markdown 链接、范围审阅与项目所有者确认；再由施工包定义代码验收命令。
+- 不要做：不要在施工包确认前实现 PostgreSQL、CRUD、鉴权、Compose 或其他 M1 功能。

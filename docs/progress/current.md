@@ -2,11 +2,14 @@
 
 ## 当前落点
 
-- 当前阶段：M0 已完成终局审计，下一次从 M1 施工包设计开始。
+- 当前阶段：M0 已完成终局审计，M1 施工包已由项目所有者确认；合并本次文档 PR 后开始实施。
 - M0 结论：真实实现完整满足仓库内施工包，并基本符合原始 v3.1 工程基线预期，可以进入 M1。
-- M1 状态：业务源码尚未开始；进入前必须先建立并审阅 `plan.md`、`contracts.md`、`checklist.md` 和 `outcome.md`。
+- M1 状态：`../stages/m1-go-backend/` 已建立 `plan.md`、`contracts.md`、`checklist.md` 和 `outcome.md`；业务源码尚未开始。
+- M1 最小范围：Team、Service、Environment CRUD，PostgreSQL migration/约束/事务/并发正确性，单元与真实数据库测试，Compose 空环境复现，以及一份查询计划优化记录。
+- M1 默认实现：PostgreSQL 16.14、`pgx/v5` + `pgxpool`、chi/v5、sqlc 1.31.1、手写 SQL + repository adapter、identity bigint 和不透明游标。chi 保持标准 HTTP handler；sqlc 生成类型不越过 PostgreSQL adapter。选择理由与适用边界见施工包。
+- Migration 尚未最终决策：先执行 `../architecture/proposals/P-0001-atlas-migration-workflow.md` 的 Atlas Community 免费版实验；通过后写 ADR，任何退出条件触发则回退 `golang-migrate`。
 - 本次终局审计所依据的已合并门禁基线：commit `6306d4b`（`docs: verify M0 merge gate (#1)`）。
-- 仓库标识修正：commit `2b3764b`（`chore: normalize module path (#5)`）已将 `go.mod` 与 5 处内部 import 统一为远端规范地址 `github.com/9AliMay9/lyapus`，并经 `verify` 与 `smoke` 门禁后 squash merge 至 `main`。M1 施工包现在可以开始设计。
+- 仓库标识修正：commit `2b3764b`（`chore: normalize module path (#5)`）已将 `go.mod` 与 5 处内部 import 统一为远端规范地址 `github.com/9AliMay9/lyapus`；commit `d96946d`（`docs: record module path merge (#6)`）完成合并事实记录。
 
 ## M0 已验证事实
 
@@ -26,12 +29,12 @@
 
 ## 下一次从这里开始
 
-1. 阅读本页、`../knowledge/go/m0-engineering-baseline.md`、ADR-0002 和 ADR-0003。
-2. 回读原始 v3.1 的 M1 近期最小版与深度增强边界。
-3. 从模板建立 M1 的 `plan.md`、`contracts.md`、`checklist.md` 和 `outcome.md`，先确定数据模型、PostgreSQL/迁移版本、API 契约与验收证据。
-4. 由项目所有者审阅 M1 施工包；确认后再开始手敲业务源码。
+1. 将 `docs/plan-m1-go-backend` 文档分支经 required checks 后 squash merge，并确认本地回到同步的 `main`。
+2. 建立短生命周期实验分支，执行 P-0001 的 Atlas Community 小实验，不先写 catalog 业务源码。
+3. 根据实验结果建立 migration ADR 和实测 runbook，固定工具精确版本与命令。
+4. 再按 `plan.md` 顺序，由数据库配置、连接池和 readiness 开始逐段手敲核心代码。
 
-不要在施工包确认前提前实现 PostgreSQL、CRUD、鉴权、Compose 或其他 M1 功能。
+不要把 Atlas 实验与未合并的施工包混在同一分支；不要让 Atlas Cloud/Pro、鉴权、RBAC、k6、OpenTelemetry 或其他后续增强进入 M1 v0.1 的阻塞路径。
 
 ## 协作审阅约定
 

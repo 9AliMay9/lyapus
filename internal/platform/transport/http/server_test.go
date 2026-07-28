@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/9Alimay/lyapus/internal/platform/config"
+	"github.com/9AliMay9/lyapus/internal/platform/config"
 )
 
 func TestNewServerRegistersHealthChecks(t *testing.T) {

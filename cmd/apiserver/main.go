@@ -11,8 +11,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/9Alimay/lyapus/internal/platform/config"
-	transporthttp "github.com/9Alimay/lyapus/internal/platform/transport/http"
+	"github.com/9AliMay9/lyapus/internal/platform/config"
+	transporthttp "github.com/9AliMay9/lyapus/internal/platform/transport/http"
 )
 
 const shutdownTimeout = 10 * time.Second

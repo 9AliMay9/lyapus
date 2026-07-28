@@ -12,3 +12,7 @@
 4. 将实施任务写入当前阶段施工包；实施完成后链接 benchmark、runbook 或 postmortem 证据。
 
 临时、低影响的想法可先写入当前阶段 `plan.md` 的“待确认事项”；一旦影响公共接口或成本/安全边界，就升级为提案。
+
+## 当前提案
+
+- `P-0001-atlas-migration-workflow.md`：用一个有通过和退出条件的小实验决定 M1 使用 Atlas Community 还是回退 `golang-migrate`。

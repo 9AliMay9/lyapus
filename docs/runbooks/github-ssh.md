@@ -82,6 +82,23 @@ gh run view <run-id> --log-failed
 
 `gh pr create` 只创建 PR，不替代变更范围审阅；`gh pr checks --required --watch` 只显示门禁检查；`gh run view --log-failed` 只在失败时读取日志。需要撤销 CLI API 授权时，先运行 `gh auth logout`，再在 GitHub 账号的 Applications 页面撤销 GitHub CLI 访问。
 
+## 使用 GitHub CLI 合并与收尾
+
+确认 Files changed 范围正确且 required checks 均成功后，使用以下命令完成 squash merge 与短生命周期分支清理：
+
+```bash
+gh pr merge --squash --delete-branch
+git status --short --branch
+git log -1 --oneline
+```
+
+`gh pr merge --squash --delete-branch` 负责合并 PR，并在正常情况下同步默认分支、切换回 `main`、删除本地与远端的 PR 分支。后两条不改变状态，是必要的收尾验收：
+
+- `git status --short --branch` 应显示 `## main...origin/main` 且没有其他输出，确认已回到干净、同步的 `main`。
+- `git log -1 --oneline` 应显示刚合入主线的 squash commit，确认当前 HEAD 已包含该 PR。
+
+若 CLI 明确报告未能同步默认分支或删除本地分支，再按“受保护 main 的 Pull Request 流程”中的手动收尾步骤执行 `git switch main`、`git pull --ff-only`、`git branch -D <branch>` 或 `git fetch --prune`；不要在 CLI 已成功完成这些操作后重复执行删除命令。
+
 ## 常见失败处理
 
 `Permission denied (publickey)` 通常表示当前终端没有启动 agent、私钥未加入 agent，或 GitHub 账号尚未添加对应公钥。重新执行“恢复 SSH agent”中的三条命令；不要改用明文密码、上传私钥，或关闭 SSH 主机验证。若网页已删除远程分支而本地仍显示 `remotes/origin/<branch>`，恢复 SSH 身份后执行 `git fetch --prune` 清理过期远程引用。

@@ -36,7 +36,7 @@
 | 驱动与连接池 | `pgx/v5`、`pgxpool` | PostgreSQL 原生、支持 context、事务和 SQLSTATE；实际 patch 版本由 `go.mod` 固定。 |
 | 数据访问 | `sqlc` 1.31.1 + 手写 SQL + repository adapter | SQL 仍由项目所有者编写和解释；sqlc 生成 pgx/v5 类型安全调用，repository 负责事务、业务类型映射和错误分类。生成代码不越过 adapter。 |
 | 标识符 | PostgreSQL `bigint generated always as identity` | 简单、无额外生成依赖，便于解释索引与游标；顺序 ID 不是授权边界，未来事件 ID 可独立设计。 |
-| 迁移 | Atlas Community 候选：声明式期望 schema 生成 versioned SQL | 同时练习 schema-as-code 和可审阅迁移；不在应用启动时自动迁移，不依赖 Atlas Cloud/Pro。候选须先通过 P-0001，失败则回退 `golang-migrate`。 |
+| 迁移 | Atlas Community 1.2.0：声明式期望 schema 生成 versioned SQL | P-0001 已通过并由 ADR-0004 接受；同时保留 schema-as-code 和可审阅迁移，不在应用启动时自动迁移，不依赖 Atlas Cloud/Pro。 |
 | 测试数据库 | Compose 独立 project + 名称带 `_test` 的一次性数据库 | 与开发数据隔离；migration 前重建，测试后删除卷。测试代码必须拒绝非测试库。 |
 
 这些是当前阶段的最优默认项，不代表工具流行度或生产能力已经被本项目证明。
@@ -73,9 +73,9 @@
 
 每一段先阅读相应契约，由项目所有者手敲核心代码，完成本段验证后再进入下一段。
 
-1. **迁移工具小实验**：按 P-0001 在空 PostgreSQL 16.14 上完成 diff、人工审阅、apply、status、重复执行和校验；随后接受 ADR 或切换 fallback。
+1. **迁移工具小实验（已完成）**：P-0001 已在空 PostgreSQL 16.14 上完成 diff、人工审阅、apply、status、重复执行和完整性校验，并由 ADR-0004 接受 Atlas Community。
 2. **数据库基础设施**：扩展配置，建立 `pgxpool`，启动时显式连接检查，关闭时释放连接；把 `/readyz` 接到有超时的数据库 ping。
-3. **schema 与 migrations**：先写期望 schema，再生成并逐句解释首个 versioned migration；验证空库迁移、约束和重复 apply。
+3. **schema 与 migrations（基线已完成）**：期望 schema、两份 versioned migration、空库与前滚路径已建立；具体约束成功/失败行为仍须由真实 PostgreSQL 集成测试验证。
 4. **queries 与 repository**：先手写 Team SQL，运行 sqlc、阅读生成的 pgx 调用，再实现 repository adapter；随后按同一路径完成 Service 和 Environment、错误分类和真实数据库集成测试。
 5. **业务服务**：集中放置校验、归属规则和“Service + 初始 Environments”事务；完成并发唯一性测试。
 6. **HTTP transport**：实现请求 ID、JSON/错误工具、`/v1` 路由、CRUD、游标分页和归属过滤；先单元测试 handler，再接真实 repository。
@@ -133,7 +133,7 @@ docs/benchmarks/m1-service-list-query-plan.md
 
 ## 验收命令
 
-具体 migration 与 Compose 命令必须在 P-0001 和 runbook 实测后补入，当前不得把猜测性命令当成已验证 runbook。最终至少能够从仓库根目录安全执行：
+Migration 命令以 ADR-0004 与已实测 runbook 为准；Compose 命令仍须在对应交付路径完成后实测。最终至少能够从仓库根目录安全执行：
 
 ```bash
 make fmt
@@ -152,8 +152,8 @@ docker compose up --build
 ## 交付证据
 
 - M1 v0.1 Git commit 与 release：待完成。
-- 迁移工具 ADR：P-0001 验证后建立。
-- 数据库 migration runbook：待实测。
+- 迁移工具 ADR：ADR-0004 已 accepted。
+- 数据库 migration runbook：核心 diff/apply/status 路径已在本机与 required CI 实测。
 - PostgreSQL 集成与并发测试：待实现。
 - Compose 空环境记录：待验证。
 - 查询计划对比：待实验。

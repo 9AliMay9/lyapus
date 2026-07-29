@@ -1,6 +1,6 @@
 # P-0001：验证 Atlas Community migration 工作流
 
-- 状态：experiment required
+- 状态：experiment in progress
 - 日期：2026-07-28
 - 影响范围：M1 PostgreSQL schema、migration、CI 与开发者工作流
 
@@ -39,6 +39,8 @@ Atlas 是否会成为必然主流、以及特定大厂是否采用它，都没�
 
 在写第一行业务源码前，用固定版本的 Atlas Community 和 PostgreSQL 16.14 完成：
 
+实验前提是当前 shell 能经其本地私有网络配置访问所需的 Go module、镜像或上游下载地址。若失败，先按文档规范区分 DNS、TLS、代理/隧道和上游服务问题；仓库只记录脱敏诊断结论，不记录真实代理配置。
+
 1. 从一份含 Team、Service、Environment 的最小 `schema.sql` 生成首个 versioned SQL，并确认同一文件可被固定版本 sqlc 解析。
 2. 人工逐句解释生成 SQL，并确认没有意外删除、非预期 extension 或不可解释语句。
 3. 对空库 apply，检查 revision 状态和实际表/约束。
@@ -48,6 +50,15 @@ Atlas 是否会成为必然主流、以及特定大厂是否采用它，都没�
 7. 全程断网登录态、Cloud token 和 Pro 功能均不应成为核心路径前提。
 
 实验只使用可丢弃的 `_test` 数据库；删除或重建前必须验证数据库名。
+
+## 已验证的前置证据
+
+- 固定 tag `v1.2.0` 的 Atlas Community CLI 已从上游源码树的独立 `cmd/atlas` module 构建，`atlas version` 输出 `atlas community version v1.2.0`。直接对根 module 使用 `go install ariga.io/atlas/cmd/atlas@v1.2.0` 不成立，因为 CLI 不是该根 module 中可安装的 package；这不是 Atlas 功能失败。
+- Docker Hub 拉取曾在认证 token 阶段超时/EOF。确认 Docker 与独立 containerd systemd service 都使用私有代理、且无容器受重启影响后，`postgres:16.14` 拉取成功，manifest digest 为 `sha256:33f923b05f64ca54ac4401c01126a6b92afe839a0aa0a52bc5aeb5cc958e5f20`。
+- `db/schema.sql` 已生成两份 versioned migration；在可丢弃 PostgreSQL 16.14 `_test` 数据库上验证了空库 apply、status、重复 apply、无变更 diff、已有库前滚和 `atlas.sum` 对已应用历史篡改的拦截。生成 SQL 仅含预期表、约束与索引变更。
+- 固定 `sqlc` 1.31.1 已成功解析同一 `db/schema.sql` 并生成 pgx/v5 代码；`go test ./...` 通过。该结果证明 schema 真源没有分叉，不证明 repository 或业务实现已完成。
+- 项目内 `scripts/install-atlas-community.sh` 使用固定 tag 与 commit 构建 Community CLI 到被忽略的 `.tools/bin/atlas`，已在当前主机经临时代理成功执行。GitHub Actions workflow 已加入同一脚本和空 PostgreSQL 上的 hash/diff/apply/status job；尚待该 PR 实际运行验证。
+- 网络修复 runbook 见 `../../runbooks/docker-daemon-proxy.md`，交互 shell 下载前缀见 `../../runbooks/temporary-proxy-downloads.md`；它们只保存脱敏步骤。
 
 ## 通过条件
 

@@ -24,11 +24,80 @@ jobs:
           go-version-file: go.mod
           cache: true
 
+      - name: Install sqlc
+        run: go install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.31.1
+
       - name: Install govulncheck
         run: go install golang.org/x/vuln/cmd/govulncheck@v1.6.0
 
       - name: Verify
         run: make verify
+
+  atlas-community:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Build pinned Atlas Community
+        run: ./scripts/install-atlas-community.sh
+
+      - name: Verify versioned migrations
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          ./.tools/bin/atlas migrate hash --dir "file://db/migrations"
+          ./.tools/bin/atlas migrate diff schema_unchanged \
+            --dir "file://db/migrations" \
+            --to "file://db/schema.sql" \
+            --dev-url "docker://postgres/16.14/dev?search_path=public"
+
+          container_name='lyapus-atlas-ci-pg'
+          cleanup() {
+            docker rm --force "$container_name" >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+
+          docker run --detach --name "$container_name" \
+            --env POSTGRES_USER=atlas \
+            --env POSTGRES_PASSWORD=atlas \
+            --env POSTGRES_DB=lyapus_atlas_test \
+            --publish 127.0.0.1:55432:5432 \
+            postgres:16.14 >/dev/null
+
+          ready=false
+          for _ in $(seq 1 30); do
+            if docker exec "$container_name" \
+              pg_isready -U atlas -d lyapus_atlas_test >/dev/null; then
+              ready=true
+              break
+            fi
+            sleep 1
+          done
+
+          if [ "$ready" != true ]; then
+            docker logs "$container_name"
+            exit 1
+          fi
+
+          database_url='postgres://atlas:atlas@127.0.0.1:55432/lyapus_atlas_test?sslmode=disable'
+
+          ./.tools/bin/atlas migrate apply \
+            --dir "file://db/migrations" \
+            --url "$database_url"
+
+          ./.tools/bin/atlas migrate status \
+            --dir "file://db/migrations" \
+            --url "$database_url"
 
   smoke:
     needs: verify

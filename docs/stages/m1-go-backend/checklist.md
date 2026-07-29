@@ -7,21 +7,21 @@
 - [x] 对照原始 v3.1 方案书确定 M1 v0.1 七项最小交付。
 - [x] 建立 `plan.md`、`contracts.md`、`checklist.md` 和 `outcome.md`。
 - [x] 项目所有者审阅并确认施工包边界。
-- [ ] 完成 P-0001 Atlas Community 小实验。
-- [ ] 将 migration 选择写成 accepted ADR；若实验失败，记录原因并采用 fallback。
+- [x] 完成 P-0001 Atlas Community 小实验。
+- [x] 将 migration 选择写成 accepted ADR；若实验失败，记录原因并采用 fallback。
 
 ## PostgreSQL 与 migration
 
 - [ ] Compose 固定 PostgreSQL 16.14，不使用 `latest`。
 - [ ] 配置并校验 `LYAPUS_DATABASE_URL`，且不在日志输出连接串。
 - [ ] 建立 `pgxpool`，启动 Ping、关闭和错误路径均有测试或运行证据。
-- [ ] 固定 sqlc 1.31.1，`sqlc.yaml` 使用 `pgx/v5` 并只生成到 `sqlcgen`。
-- [ ] `db/schema.sql` 同时供 Atlas 与 sqlc 使用，没有第二份漂移 schema。
-- [ ] `make generate` 与 `make generate-check` 完成并进入 required CI。
+- [x] 固定 sqlc 1.31.1，`sqlc.yaml` 使用 `pgx/v5` 并只生成到 `sqlcgen`。
+- [x] `db/schema.sql` 同时供 Atlas 与 sqlc 使用，没有第二份漂移 schema。
+- [x] `make generate` 与 `make generate-check` 完成并进入 required CI。
 - [ ] `/livez` 保持进程语义；`/readyz` 真实反映数据库可用性和超时。
-- [ ] 建立 `db/schema.sql`、首个 versioned migration 和完整性校验文件。
-- [ ] 空库 apply、重复 apply、status 与约束验证通过。
-- [ ] migration runbook 已按实际工具命令验证。
+- [x] 建立 `db/schema.sql`、首个 versioned migration 和完整性校验文件。
+- [x] 空库 apply、重复 apply、status 与约束验证通过。
+- [x] migration runbook 已按实际工具命令验证。
 
 ## 数据模型与业务
 

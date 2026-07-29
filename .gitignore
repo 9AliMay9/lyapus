@@ -5,6 +5,7 @@
 
 # Go build and test artifacts
 bin/
+.tools/
 coverage.out
 *.test
 *.out

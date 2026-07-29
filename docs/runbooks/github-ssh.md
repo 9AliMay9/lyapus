@@ -40,11 +40,11 @@ git push -u origin <branch>
 
 ## 受保护 main 的 Pull Request 流程
 
-`protect-main` ruleset 要求变更经 Pull Request 合并，并要求目标分支最新、`verify` 和 `smoke` 都通过。推送分支后：
+`protect-main` ruleset 要求变更经 Pull Request 合并，并要求目标分支最新、`verify`、`smoke` 和 `atlas-community` 都通过。推送分支后：
 
 1. 在 GitHub 页面创建以 `main` 为 base 的 Pull Request。
 2. 确认 Files changed 只包含本次预期范围；不要把临时探针、凭据或无关格式化混入。
-3. 等待 `verify` 和 `smoke` 成功。若失败，修复同一分支后再次推送；不要绕过 required checks。
+3. 等待全部 required checks 成功。若失败，修复同一分支后再次推送；不要绕过 required checks。
 4. 选择适合本次变更的合并方式；短生命周期、多个临时 commit 的分支通常使用 squash merge。
 5. 合并后在本地执行：
 

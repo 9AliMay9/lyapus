@@ -55,7 +55,6 @@ jobs:
         run: |
           set -euo pipefail
 
-          ./.tools/bin/atlas migrate hash --dir "file://db/migrations"
           ./.tools/bin/atlas migrate diff schema_unchanged \
             --dir "file://db/migrations" \
             --to "file://db/schema.sql" \

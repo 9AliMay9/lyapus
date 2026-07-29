@@ -61,7 +61,7 @@ curl -fsS http://127.0.0.1:8080/readyz
 
 ## 贡献与合并
 
-对 `main` 的改动使用短生命周期分支和 Pull Request。`protect-main` ruleset 要求分支与目标分支保持最新，并要求 `verify`、`smoke` 两个检查通过；不要绕过检查或直接向 `main` 推送。完整操作见 [GitHub SSH 与 PR runbook](docs/runbooks/github-ssh.md)。
+对 `main` 的改动使用短生命周期分支和 Pull Request。`protect-main` ruleset 要求分支与目标分支保持最新，并要求 `verify`、`smoke`、`atlas-community` 三个检查通过；不要绕过检查或直接向 `main` 推送。完整操作见 [GitHub SSH 与 PR runbook](docs/runbooks/github-ssh.md)。
 
 ## 文档
 

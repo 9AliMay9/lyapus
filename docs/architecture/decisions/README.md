@@ -9,3 +9,4 @@
 - [ADR-0001：从模块化单体开始](ADR-0001-modular-monolith.md)
 - [ADR-0002：跨阶段执行护栏](ADR-0002-execution-guardrails.md)
 - [ADR-0003：PostgreSQL 作为项目主库](ADR-0003-postgresql-primary-database.md)
+- [ADR-0004：采用 Atlas Community 管理 M1 versioned migrations](ADR-0004-atlas-community-migrations.md)

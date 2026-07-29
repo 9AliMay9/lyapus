@@ -1,6 +1,6 @@
 # P-0001：验证 Atlas Community migration 工作流
 
-- 状态：experiment in progress
+- 状态：resolved by ADR-0004
 - 日期：2026-07-28
 - 影响范围：M1 PostgreSQL schema、migration、CI 与开发者工作流
 
@@ -57,7 +57,7 @@ Atlas 是否会成为必然主流、以及特定大厂是否采用它，都没�
 - Docker Hub 拉取曾在认证 token 阶段超时/EOF。确认 Docker 与独立 containerd systemd service 都使用私有代理、且无容器受重启影响后，`postgres:16.14` 拉取成功，manifest digest 为 `sha256:33f923b05f64ca54ac4401c01126a6b92afe839a0aa0a52bc5aeb5cc958e5f20`。
 - `db/schema.sql` 已生成两份 versioned migration；在可丢弃 PostgreSQL 16.14 `_test` 数据库上验证了空库 apply、status、重复 apply、无变更 diff、已有库前滚和 `atlas.sum` 对已应用历史篡改的拦截。生成 SQL 仅含预期表、约束与索引变更。
 - 固定 `sqlc` 1.31.1 已成功解析同一 `db/schema.sql` 并生成 pgx/v5 代码；`go test ./...` 通过。该结果证明 schema 真源没有分叉，不证明 repository 或业务实现已完成。
-- 项目内 `scripts/install-atlas-community.sh` 使用固定 tag 与 commit 构建 Community CLI 到被忽略的 `.tools/bin/atlas`，已在当前主机经临时代理成功执行。GitHub Actions workflow 已加入同一脚本和空 PostgreSQL 上的 hash/diff/apply/status job；尚待该 PR 实际运行验证。
+- 项目内 `scripts/install-atlas-community.sh` 使用固定 tag 与 commit 构建 Community CLI 到被忽略的 `.tools/bin/atlas`，已在当前主机经临时代理成功执行。PR #8 的 GitHub Actions 已使用同一脚本在空 PostgreSQL 上成功执行 diff/apply/status；该 job 现为 required check。
 - 网络修复 runbook 见 `../../runbooks/docker-daemon-proxy.md`，交互 shell 下载前缀见 `../../runbooks/temporary-proxy-downloads.md`；它们只保存脱敏步骤。
 
 ## 通过条件
@@ -82,14 +82,14 @@ Atlas 是否会成为必然主流、以及特定大厂是否采用它，都没�
 
 ## 决策产物
 
-实验通过后新建 ADR，固定：
+实验已通过，决策记录在 [ADR-0004](../decisions/ADR-0004-atlas-community-migrations.md)：
 
 - Atlas Community 精确版本与安装校验方式。
 - `schema.sql`、migration 目录和完整性文件路径。
 - diff、人工评审、apply、status 和 CI 命令。
 - 已应用 migration 的不可修改规则和 dev/test 恢复边界。
 
-实验不通过则在同一 ADR 记录退出证据，并固定 `golang-migrate` 版本与手写 SQL 工作流。提案在 ADR 接受后改为 resolved 并互相链接。
+若未来触发退出条件，新建 ADR 记录证据，并固定 `golang-migrate` 版本与手写 SQL 工作流；不原地改写本提案或 ADR-0004。
 
 ## 上游依据
 

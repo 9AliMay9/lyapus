@@ -1,6 +1,6 @@
 # M1 清单
 
-状态：施工包已设计，以下实现项均未完成。
+状态：按实际完成证据持续维护；勾选只代表对应条目本身已验证，不代表 M1 v0.1 已完成。
 
 ## 施工包与决策门
 
@@ -20,12 +20,13 @@
 - [x] `make generate` 与 `make generate-check` 完成并进入 required CI。
 - [ ] `/livez` 保持进程语义；`/readyz` 真实反映数据库可用性和超时。
 - [x] 建立 `db/schema.sql`、首个 versioned migration 和完整性校验文件。
-- [x] 空库 apply、重复 apply、status 与约束验证通过。
+- [x] 空库 apply、重复 apply 与 status 验证通过。
+- [ ] 在真实 PostgreSQL 上验证外键、唯一、格式与时间检查约束的成功/失败行为。
 - [x] migration runbook 已按实际工具命令验证。
 
 ## 数据模型与业务
 
-- [ ] Team、Service、Environment 表、关系和约束与 `contracts.md` 一致。
+- [x] Team、Service、Environment 表、关系和声明式约束与 `contracts.md` 一致。
 - [ ] Team CRUD 完成。
 - [ ] Service CRUD 与 `team_id` 过滤完成。
 - [ ] Environment CRUD 与 `service_id` 过滤完成。
@@ -43,7 +44,7 @@
 - [ ] 单元测试覆盖关键校验、业务服务和 handler。
 - [ ] PostgreSQL integration tests 使用独立 `_test` 数据库且不会静默跳过。
 - [ ] `make fmt`、`make generate-check`、`make test`、`make race`、`make integration`、`make verify` 全部通过。
-- [ ] required `verify` 与 `smoke` checks 覆盖 M1 的数据库依赖和 API 最小路径。
+- [ ] required `verify`、`smoke` 与 `atlas-community` checks 覆盖 M1 的数据库依赖和 API 最小路径。
 
 ## 可复现交付与证据
 

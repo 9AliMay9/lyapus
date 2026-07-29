@@ -2,9 +2,9 @@
 
 ## 当前落点
 
-- 当前阶段：M0 已完成终局审计；M1 的 Atlas migration 决策已完成，当前在 `spike/atlas-community-workflow` 为 PR #8 补充决策与 runbook 事实记录。
+- 当前阶段：M0 已完成终局审计；PR #8 已以 squash commit `b4d095e` 合入 `main`，M1 正式进入数据库基础设施实现。
 - M0 结论：真实实现完整满足仓库内施工包，并基本符合原始 v3.1 工程基线预期，可以进入 M1。
-- M1 状态：`../stages/m1-go-backend/` 已建立 `plan.md`、`contracts.md`、`checklist.md` 和 `outcome.md`；业务源码尚未开始。
+- M1 状态：施工包、Atlas 决策、schema、两份 versioned migration、sqlc 基线与 CI 门禁已完成；连接池、readiness、repository、业务服务与 HTTP CRUD 尚未开始。
 - M1 最小范围：Team、Service、Environment CRUD，PostgreSQL migration/约束/事务/并发正确性，单元与真实数据库测试，Compose 空环境复现，以及一份查询计划优化记录。
 - M1 默认实现：PostgreSQL 16.14、`pgx/v5` + `pgxpool`、chi/v5、sqlc 1.31.1、手写 SQL + repository adapter、identity bigint 和不透明游标。chi 保持标准 HTTP handler；sqlc 生成类型不越过 PostgreSQL adapter。选择理由与适用边界见施工包。
 - Migration 已由 ADR-0004 最终确定：P-0001 完成固定 Atlas Community v1.2.0 的两次 migration（空库 apply、已有库前滚、重复 apply、status 与完整性篡改拦截）、同一 `db/schema.sql` 的 sqlc 1.31.1 解析/生成、本机可复现 Community 构建，以及 PR #8 中 required `atlas-community` CI 实跑。未来触发退出条件时才以新 ADR 记录并回退 `golang-migrate`。
@@ -17,7 +17,7 @@
 - 本地校验：`gofmt`、`go vet ./...`、`go test ./...`、`go test -race ./...`、`go test -tags=integration -count=1 ./...` 和固定版本 `govulncheck@v1.6.0`。
 - 真实运行：两个健康端点均返回 `200` 与 `{"status":"ok"}`；`Ctrl-C` 记录关闭信号和 server 停止日志。
 - CI：GitHub Actions 的 `verify` 与 clean-runner `smoke` 已通过；smoke 在干净 Ubuntu runner 启动服务并检查两个健康端点。
-- 合并门禁：`protect-main` ruleset 要求 PR、最新分支、`verify` 与 `smoke`；故意失败的测试曾使 PR 明确不可合并，修复后两个检查通过并以 squash merge 进入 `main`。
+- 合并门禁：M0 曾以 `verify` 与 `smoke` 实测失败阻止合并；当前 `protect-main` 进一步要求 PR、最新分支以及 `verify`、`smoke`、`atlas-community` 三项检查。
 - 工程证据：脱敏的 M0 空闲资源基线、公开/私有信息边界、ADR-0001/0002/0003 和系统化 M0 学习笔记已经建立。
 - 协作工具：当前远程开发主机已配置可选的 GitHub CLI；Git 继续使用 SSH，CLI API 登录与最小命令见 `../runbooks/github-ssh.md`。
 
@@ -29,10 +29,11 @@
 
 ## 下一次从这里开始
 
-1. 提交 ADR-0004、migration runbook、P-0001 resolved 状态和 CI 完整性语义修正到 PR #8，并等待三项 required checks 重跑成功。
-2. squash merge PR #8 后，按 `plan.md` 顺序，由数据库配置、连接池和 readiness 开始逐段手敲核心代码。
+1. 从同步的 `main` 创建短生命周期分支，先扩展 `LYAPUS_DATABASE_URL` 配置与测试。
+2. 建立 `internal/platform/database` 的 `pgxpool` 初始化、有限时 Ping 与关闭路径。
+3. 保持 `/livez` 进程语义，将 `/readyz` 接到有短超时的数据库检查；完成对应单元测试后再进入 repository。
 
-不要把 Atlas 实验与未合并的施工包混在同一分支；不要让 Atlas Cloud/Pro、鉴权、RBAC、k6、OpenTelemetry 或其他后续增强进入 M1 v0.1 的阻塞路径。
+不要在应用启动路径自动执行 migration；不要让 Atlas Cloud/Pro、鉴权、RBAC、k6、OpenTelemetry 或其他后续增强进入 M1 v0.1 的阻塞路径。
 
 ## 协作审阅约定
 

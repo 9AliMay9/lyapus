@@ -67,3 +67,7 @@ esac
 ## 已验证证据
 
 Atlas Community v1.2.0、PostgreSQL 16.14 与本 runbook 的 diff/apply/status 核心路径已在 P-0001 和 GitHub-hosted CI 实测。细节见 [ADR-0004](../architecture/decisions/ADR-0004-atlas-community-migrations.md)。
+
+### CI 中的 PostgreSQL 启动稳定性
+
+在 GitHub-hosted runner 上，不能把一次 `pg_isready` 成功直接视为数据库已可供 migration 使用：官方镜像的初始化路径可能先运行临时 PostgreSQL，再切换到正式服务。CI 先轮询 `pg_isready`，成功后短暂等待，再通过容器内 `psql -v ON_ERROR_STOP=1 -c 'SELECT 1'` 确认真实 SQL 往返；任一步失败都输出容器日志并失败。不要以盲目重试替代这个就绪确认。

@@ -22,7 +22,8 @@
 - `internal/platform/health/handler_test.go`
 - `internal/platform/transport/http/server.go`
 - `internal/platform/transport/http/server_test.go`
-- `go.mod`、`go.sum`
+- `.github/workflows/verify.yml`
+- `go.mod`
 
 ## 验证证据
 
@@ -38,6 +39,9 @@
 
 操作：向 API 进程发送 Ctrl-C，随后停止一次性数据库容器。
 结果：日志记录关闭信号与 HTTP server 停止；容器被自动删除。
+
+CI：PR #10 的 `verify`、`smoke` 与 `atlas-community` required checks 最终均通过。
+结果：smoke 现在以 PostgreSQL 16.14 service 和动态映射端口启动 API；Atlas job 以两阶段容器就绪检查完成 migration 验证。
 ```
 
 ## 偏差、风险或待确认事项
@@ -45,6 +49,7 @@
 - 一次性容器是本施工包的真实运行证据，不替代尚未建立的 Compose 空环境路径。
 - `/readyz` 暂以最小探针体返回 `{"status":"not_ready"}`；统一错误信封和 request ID 将在 HTTP transport 施工包实现后接入。
 - repository、真实 PostgreSQL 约束/并发集成测试、业务服务与 `/v1` API 均尚未实现。
+- 初始 smoke 曾因新增必填数据库配置但 clean runner 未提供数据库而失败；修复为 service 后通过。Atlas job 曾在 `pg_isready` 后遭遇连接重置；加入等待加真实 SQL 往返确认后通过。这两项均是 CI 环境契约和容器初始化边界，不是业务代码回归。
 
 ## 下一次从这里继续
 

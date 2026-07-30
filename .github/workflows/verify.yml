@@ -88,6 +88,15 @@ jobs:
             exit 1
           fi
 
+          sleep 2
+
+          if ! docker exec "$container_name" \
+            psql -U atlas -d lyapus_atlas_test \
+              -v ON_ERROR_STOP=1 -c 'SELECT 1' >/dev/null; then
+            docker logs "$container_name"
+            exit 1
+          fi
+
           database_url='postgres://atlas:atlas@127.0.0.1:55432/lyapus_atlas_test?sslmode=disable'
 
           ./.tools/bin/atlas migrate apply \
@@ -103,6 +112,21 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
+    services:
+      postgres:
+        image: postgres:16.14
+        env:
+          POSTGRES_USER: lyapus
+          POSTGRES_PASSWORD: lyapus
+          POSTGRES_DB: lyapus_smoke
+        ports:
+          - 5432/tcp
+        options: >-
+          --health-cmd "pg_isready -U lyapus -d lyapus_smoke"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 15
+
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
@@ -114,6 +138,8 @@ jobs:
           cache: true
 
       - name: Start service and check health endpoints
+        env:
+          LYAPUS_DATABASE_URL: "postgres://lyapus:lyapus@127.0.0.1:${{ job.services.postgres.ports[5432] }}/lyapus_smoke?sslmode=disable"
         shell: bash
         run: |
           set -euo pipefail

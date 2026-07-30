@@ -13,12 +13,12 @@
 ## PostgreSQL 与 migration
 
 - [ ] Compose 固定 PostgreSQL 16.14，不使用 `latest`。
-- [ ] 配置并校验 `LYAPUS_DATABASE_URL`，且不在日志输出连接串。
-- [ ] 建立 `pgxpool`，启动 Ping、关闭和错误路径均有测试或运行证据。
+- [x] 配置并校验 `LYAPUS_DATABASE_URL`，且不在日志输出连接串。
+- [x] 建立 `pgxpool`，启动 Ping、关闭和错误路径均有测试或运行证据。
 - [x] 固定 sqlc 1.31.1，`sqlc.yaml` 使用 `pgx/v5` 并只生成到 `sqlcgen`。
 - [x] `db/schema.sql` 同时供 Atlas 与 sqlc 使用，没有第二份漂移 schema。
 - [x] `make generate` 与 `make generate-check` 完成并进入 required CI。
-- [ ] `/livez` 保持进程语义；`/readyz` 真实反映数据库可用性和超时。
+- [x] `/livez` 保持进程语义；`/readyz` 真实反映数据库可用性和超时。
 - [x] 建立 `db/schema.sql`、首个 versioned migration 和完整性校验文件。
 - [x] 空库 apply、重复 apply 与 status 验证通过。
 - [ ] 在真实 PostgreSQL 上验证外键、唯一、格式与时间检查约束的成功/失败行为。
@@ -49,7 +49,7 @@
 ## 可复现交付与证据
 
 - [ ] Dockerfile 与 Compose 可以从空 project/空卷建立数据库、迁移并启动 API。
-- [ ] 停止数据库后 `/livez` 仍成功而 `/readyz` 返回 503；恢复后 readiness 恢复。
+- [x] 停止数据库后 `/livez` 仍成功而 `/readyz` 返回 503；恢复后 readiness 恢复。
 - [ ] 根 README 包含数据模型、API 示例和五分钟演示路径。
 - [ ] Service 按 Team 列表查询有明确数据量与索引前后的 `EXPLAIN (ANALYZE, BUFFERS)` 证据。
 - [ ] 查询优化记录注明环境、数据量、SQL、参数、结果和限制。

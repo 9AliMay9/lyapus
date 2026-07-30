@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"net"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -11,7 +12,8 @@ import (
 const defaultHTTPAddr = "127.0.0.1:8080"
 
 type Config struct {
-	HTTPAddr string
+	HTTPAddr    string
+	DatabaseURL string
 }
 
 func Load() (Config, error) {
@@ -24,7 +26,15 @@ func Load() (Config, error) {
 		return Config{}, fmt.Errorf("validate LYAPUS_HTTP_ADDR: %w", err)
 	}
 
-	return Config{HTTPAddr: httpAddr}, nil
+	databaseURL := os.Getenv("LYAPUS_DATABASE_URL")
+	if err := validateDatabaseURL(databaseURL); err != nil {
+		return Config{}, fmt.Errorf("validate LYAPUS_DATABASE_URL: %w", err)
+	}
+
+	return Config{
+		HTTPAddr:    httpAddr,
+		DatabaseURL: databaseURL,
+	}, nil
 }
 
 func validateHTTPAddr(addr string) error {
@@ -46,4 +56,22 @@ func validateHTTPAddr(addr string) error {
 	}
 
 	return nil
+}
+
+func validateDatabaseURL(rawURL string) error {
+	if strings.TrimSpace(rawURL) == "" {
+		return fmt.Errorf("must not be empty")
+	}
+
+	parsedURL, err := url.ParseRequestURI(rawURL)
+	if err != nil {
+		return fmt.Errorf("must be a valid PostgreSQL connection URL: %w", err)
+	}
+
+	switch parsedURL.Scheme {
+	case "postgres", "postgresql":
+		return nil
+	default:
+		return fmt.Errorf("scheme must be postgres or postgresql")
+	}
 }

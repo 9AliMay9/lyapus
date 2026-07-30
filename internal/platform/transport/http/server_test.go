@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"io"
 	"log/slog"
 	"net/http"
@@ -10,9 +11,19 @@ import (
 	"github.com/9AliMay9/lyapus/internal/platform/config"
 )
 
+type successfulPinger struct{}
+
+func (successfulPinger) Ping(context.Context) error {
+	return nil
+}
+
 func TestNewServerRegistersHealthChecks(t *testing.T) {
 	logger := slog.New(slog.NewJSONHandler(io.Discard, nil))
-	server := NewServer(config.Config{HTTPAddr: "127.0.0.1:8080"}, logger)
+	server := NewServer(
+		config.Config{HTTPAddr: "127.0.0.1:8080"},
+		logger,
+		successfulPinger{},
+	)
 
 	if server.Addr != "127.0.0.1:8080" {
 		t.Fatalf("Addr = %q, want %q", server.Addr, "127.0.0.1:8080")

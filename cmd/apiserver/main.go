@@ -12,10 +12,14 @@ import (
 	"time"
 
 	"github.com/9AliMay9/lyapus/internal/platform/config"
+	"github.com/9AliMay9/lyapus/internal/platform/database"
 	transporthttp "github.com/9AliMay9/lyapus/internal/platform/transport/http"
 )
 
-const shutdownTimeout = 10 * time.Second
+const (
+	databaseStartupTimeout = 5 * time.Second
+	shutdownTimeout        = 10 * time.Second
+)
 
 func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
@@ -32,7 +36,15 @@ func run(logger *slog.Logger) error {
 		return fmt.Errorf("load config: %w", err)
 	}
 
-	server := transporthttp.NewServer(cfg, logger)
+	databaseCtx, cancelDatabase := context.WithTimeout(context.Background(), databaseStartupTimeout)
+	pool, err := database.Open(databaseCtx, cfg.DatabaseURL)
+	cancelDatabase()
+	if err != nil {
+		return fmt.Errorf("connect to PostgreSQL: %w", err)
+	}
+	defer pool.Close()
+
+	server := transporthttp.NewServer(cfg, logger, pool)
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
@@ -53,8 +65,8 @@ func run(logger *slog.Logger) error {
 		logger.Info("shutdown_signal_received")
 	}
 
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
-	defer cancel()
+	shutdownCtx, cancelShutdown := context.WithTimeout(context.Background(), shutdownTimeout)
+	defer cancelShutdown()
 
 	if err := server.Shutdown(shutdownCtx); err != nil {
 		return fmt.Errorf("shutdown HTTP server: %w", err)

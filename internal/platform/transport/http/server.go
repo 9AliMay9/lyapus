@@ -9,9 +9,9 @@ import (
 	"github.com/9AliMay9/lyapus/internal/platform/health"
 )
 
-func NewServer(cfg config.Config, logger *slog.Logger) *http.Server {
+func NewServer(cfg config.Config, logger *slog.Logger, pinger health.Pinger) *http.Server {
 	mux := http.NewServeMux()
-	healthHandler := health.NewHandler()
+	healthHandler := health.NewHandler(pinger)
 
 	mux.HandleFunc("/livez", healthHandler.Livez)
 	mux.HandleFunc("/readyz", healthHandler.Readyz)

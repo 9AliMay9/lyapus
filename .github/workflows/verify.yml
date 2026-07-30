@@ -88,6 +88,15 @@ jobs:
             exit 1
           fi
 
+          sleep 2
+
+          if ! docker exec "$container_name" \
+            psql -U atlas -d lyapus_atlas_test \
+              -v ON_ERROR_STOP=1 -c 'SELECT 1' >/dev/null; then
+            docker logs "$container_name"
+            exit 1
+          fi
+
           database_url='postgres://atlas:atlas@127.0.0.1:55432/lyapus_atlas_test?sslmode=disable'
 
           ./.tools/bin/atlas migrate apply \

@@ -45,7 +45,7 @@
 ## 偏差、风险或待确认事项
 
 - 当前仅完成 Team Create/Get repository，不代表 Team CRUD、分页或 HTTP API 完成。
-- local integration 路径已实测；本次 PR 的 GitHub-hosted `verify` integration 路径尚待 CI 结果确认。
+- local integration 路径与 PR #11 的 GitHub-hosted `verify` integration 路径均已通过；CI 在独立 PostgreSQL 16.14 service 上 apply/status migration 后执行真实测试。
 - 一次性容器不替代 Compose 交付路径。
 
 ## 下一次从这里继续

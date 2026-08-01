@@ -17,13 +17,13 @@
 - 保持 API 进程运行时停止数据库：`/livez` 仍返回 200，`/readyz` 返回 503；重新建立同配置数据库后，未重启 API 的 `/readyz` 恢复 200。
 - API 进程收到 `Ctrl-C` 后记录关闭信号与 HTTP server 停止；随后一次性数据库容器已停止并自动删除。
 - PR #10 的 `verify`、数据库感知 `smoke` 与 `atlas-community` required checks 均通过；smoke 在 PostgreSQL 16.14 service 上启动 API，Atlas job 在真实 SQL 就绪确认后验证 migration。
-- 在可丢弃 `_test` PostgreSQL 16.14 数据库中，显式 apply 两份 migration 后，Team repository integration test 已验证 Create、Get、唯一冲突和 not-found 映射；普通测试与 race 检测均通过。
+- 在可丢弃 `_test` PostgreSQL 16.14 数据库中，显式 apply 两份 migration 后，Team repository integration test 已验证 Create、Get、唯一冲突和 not-found 映射；普通测试与 race 检测均通过。PR #11 的 clean-runner `verify` 也在独立 PostgreSQL 16.14 service 上完成同一 integration 路径。
 
 ## 与计划的偏差
 
 - 尚未引入 Compose；本次使用一次性容器仅作为运行证据，不能替代最终 Compose 空环境验收。
 - `/readyz` 暂时返回最小探针体 `{"status":"not_ready"}`。请求 ID 与统一错误信封将在 HTTP transport 施工包实现后统一纳入，不能提前宣称该公共契约已完成。
-- Team 目前只有 Create/Get repository 路径；list/update/delete、游标分页、业务校验和 HTTP 资源契约仍未实现。`verify` job 已配置 integration service 与 migration 前置步骤，待本施工包 PR 的 CI 运行作为 clean-runner 证据。
+- Team 目前只有 Create/Get repository 路径；list/update/delete、游标分页、业务校验和 HTTP 资源契约仍未实现。
 
 ## 证据
 

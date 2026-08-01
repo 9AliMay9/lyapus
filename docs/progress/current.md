@@ -2,9 +2,9 @@
 
 ## 当前落点
 
-- 当前阶段：M0 已完成终局审计；PR #8 已以 squash commit `b4d095e` 合入 `main`，M1 正式进入数据库基础设施实现。
+- 当前阶段：M0 已完成终局审计；PR #10 已以 squash commit `df0154d` 合入 `main`，M1 已完成数据库基础设施，Team Create/Get 数据访问施工包已通过 PR #11 的 clean-runner CI。
 - M0 结论：真实实现完整满足仓库内施工包，并基本符合原始 v3.1 工程基线预期，可以进入 M1。
-- M1 状态：施工包、Atlas 决策、schema、两份 versioned migration、sqlc 基线与 CI 门禁已完成；`LYAPUS_DATABASE_URL`、`pgxpool` 启动 Ping/关闭路径及数据库感知 `/readyz` 已完成并作真实运行验证。repository、业务服务与 HTTP CRUD 尚未开始。
+- M1 状态：施工包、Atlas 决策、schema、两份 versioned migration、sqlc 基线与 CI 门禁已完成；`LYAPUS_DATABASE_URL`、`pgxpool` 启动 Ping/关闭路径及数据库感知 `/readyz` 已完成并作真实运行验证。Team 的 Create/Get repository、sqlc adapter 与本地及 clean-runner 真实 PostgreSQL integration test 已完成；其余 Team CRUD、业务服务与 HTTP CRUD 尚未开始。
 - M1 最小范围：Team、Service、Environment CRUD，PostgreSQL migration/约束/事务/并发正确性，单元与真实数据库测试，Compose 空环境复现，以及一份查询计划优化记录。
 - M1 默认实现：PostgreSQL 16.14、`pgx/v5` + `pgxpool`、chi/v5、sqlc 1.31.1、手写 SQL + repository adapter、identity bigint 和不透明游标。chi 保持标准 HTTP handler；sqlc 生成类型不越过 PostgreSQL adapter。选择理由与适用边界见施工包。
 - Migration 已由 ADR-0004 最终确定：P-0001 完成固定 Atlas Community v1.2.0 的两次 migration（空库 apply、已有库前滚、重复 apply、status 与完整性篡改拦截）、同一 `db/schema.sql` 的 sqlc 1.31.1 解析/生成、本机可复现 Community 构建，以及 PR #8 中 required `atlas-community` CI 实跑。未来触发退出条件时才以新 ADR 记录并回退 `golang-migrate`。
@@ -29,8 +29,8 @@
 
 ## 下一次从这里开始
 
-1. 完成当前数据库基础设施施工包的代码与文档提交；不要将本地一次性 PostgreSQL 容器视为 Compose 交付路径。
-2. 由 `contracts.md` 开始，补齐 Team 的手写查询并生成 sqlc 代码；随后建立 catalog domain、repository 接口和 PostgreSQL adapter。
+1. 合入当前 Team repository 施工包；保持本地一次性 `_test` 容器与最终 Compose 交付路径的边界。
+2. 扩展 Team 的 list/update/delete 与游标分页，再实现业务服务层的校验；Service/Environment 复用 repository 结构，并在 Service 阶段集中处理事务与并发。
 3. 保持 `/livez` 进程语义与 `/readyz` 的有界数据库 Ping；统一错误信封与 request-ID middleware 留待 HTTP transport 施工包一并完成。
 
 不要在应用启动路径自动执行 migration；不要让 Atlas Cloud/Pro、鉴权、RBAC、k6、OpenTelemetry 或其他后续增强进入 M1 v0.1 的阻塞路径。

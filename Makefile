@@ -33,6 +33,10 @@ race:
 	go test -race ./...
 
 integration:
+	@if [ -z "$$LYAPUS_TEST_DATABASE_URL" ]; then \
+		echo "LYAPUS_TEST_DATABASE_URL must be set to a disposable *_test database"; \
+		exit 1; \
+	fi
 	go test -tags=integration -count=1 ./...
 
 vuln:

@@ -42,7 +42,7 @@
 - [ ] cursor 分页、稳定排序与 limit 边界完成。
 - [ ] HTTP 日志包含同一 request ID、方法、路由/路径、状态和耗时，不泄漏敏感值。
 - [ ] 单元测试覆盖关键校验、业务服务和 handler。
-- [ ] PostgreSQL integration tests 使用独立 `_test` 数据库且不会静默跳过。
+- [x] PostgreSQL integration tests 使用独立 `_test` 数据库且不会静默跳过。
 - [ ] `make fmt`、`make generate-check`、`make test`、`make race`、`make integration`、`make verify` 全部通过。
 - [ ] required `verify`、`smoke` 与 `atlas-community` checks 覆盖 M1 的数据库依赖和 API 最小路径。
 

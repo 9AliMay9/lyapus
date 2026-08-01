@@ -9,6 +9,30 @@ import (
 	"context"
 )
 
+const createTeam = `-- name: CreateTeam :one
+INSERT INTO teams (slug, name)
+VALUES ($1, $2)
+RETURNING id, slug, name, created_at, updated_at
+`
+
+type CreateTeamParams struct {
+	Slug string
+	Name string
+}
+
+func (q *Queries) CreateTeam(ctx context.Context, arg CreateTeamParams) (Team, error) {
+	row := q.db.QueryRow(ctx, createTeam, arg.Slug, arg.Name)
+	var i Team
+	err := row.Scan(
+		&i.ID,
+		&i.Slug,
+		&i.Name,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getTeamByID = `-- name: GetTeamByID :one
 SELECT id, slug, name, created_at, updated_at
 FROM teams

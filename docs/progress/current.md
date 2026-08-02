@@ -2,7 +2,7 @@
 
 ## 当前落点
 
-- 当前阶段：M0 已完成终局审计；PR #10 已以 squash commit `df0154d` 合入 `main`，M1 已完成数据库基础设施，Team Create/Get 数据访问施工包已通过 PR #11 的 clean-runner CI。
+- 当前阶段：M0 已完成终局审计；M1 已完成数据库基础设施，Team Create/Get 数据访问施工包已由 PR #11 以 squash commit `57f19d4` 合入 `main`，并通过 clean-runner CI。
 - M0 结论：真实实现完整满足仓库内施工包，并基本符合原始 v3.1 工程基线预期，可以进入 M1。
 - M1 状态：施工包、Atlas 决策、schema、两份 versioned migration、sqlc 基线与 CI 门禁已完成；`LYAPUS_DATABASE_URL`、`pgxpool` 启动 Ping/关闭路径及数据库感知 `/readyz` 已完成并作真实运行验证。Team 的 Create/Get repository、sqlc adapter 与本地及 clean-runner 真实 PostgreSQL integration test 已完成；其余 Team CRUD、业务服务与 HTTP CRUD 尚未开始。
 - M1 最小范围：Team、Service、Environment CRUD，PostgreSQL migration/约束/事务/并发正确性，单元与真实数据库测试，Compose 空环境复现，以及一份查询计划优化记录。
@@ -24,13 +24,13 @@
 ## 明确延期与边界
 
 - 没有在另一台全新 Ubuntu 主机上手工计时完成“按 README 15 分钟启动”。当前主机、新 shell 和 GitHub clean-runner smoke 提供了近似证据，但不能写成该项已经实测完成。
-- `make integration` 目前只有测试入口；M0 没有数据库、容器或跨服务依赖，因此没有真实集成测试内容。
+- M0 验收时 `make integration` 只有测试入口；当时没有数据库、容器或跨服务依赖，因此没有真实集成测试内容。M1 现已加入 Team repository 的真实 PostgreSQL integration test。
 - M0 没有 PostgreSQL、Kafka、OpenTelemetry、Kubernetes、前端或 AI 功能，也不声明生产容量、高可用或生产就绪。
 
 ## 下一次从这里开始
 
-1. 合入当前 Team repository 施工包；保持本地一次性 `_test` 容器与最终 Compose 交付路径的边界。
-2. 扩展 Team 的 list/update/delete 与游标分页，再实现业务服务层的校验；Service/Environment 复用 repository 结构，并在 Service 阶段集中处理事务与并发。
+1. 从 `main` 建立短生命周期分支，扩展 Team 的 list/update/delete 与游标分页；继续用真实 `_test` 数据库验证 SQL、错误分类和稳定顺序。
+2. Team repository 完整后实现业务服务层校验；Service/Environment 复用 repository 结构，并在 Service 阶段集中处理事务与并发。
 3. 保持 `/livez` 进程语义与 `/readyz` 的有界数据库 Ping；统一错误信封与 request-ID middleware 留待 HTTP transport 施工包一并完成。
 
 不要在应用启动路径自动执行 migration；不要让 Atlas Cloud/Pro、鉴权、RBAC、k6、OpenTelemetry 或其他后续增强进入 M1 v0.1 的阻塞路径。

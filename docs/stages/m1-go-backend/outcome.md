@@ -27,7 +27,7 @@
 
 ## 证据
 
-- Git commit / release：数据库基础设施已由 `df0154d`（PR #10）合入；M1 release 待完成。
+- Git commit / release：数据库基础设施已由 `df0154d`（PR #10）合入；Team Create/Get repository 已由 `57f19d4`（PR #11）合入；M1 release 待完成。
 - Migration ADR 与 runbook：ADR-0004 与 migration runbook 已完成。
 - 查询计划 benchmark：待完成。
 - 会话与学习记录：数据库基础设施会话已记录；M1 总结待完成。

@@ -74,9 +74,9 @@
 每一段先阅读相应契约，由项目所有者手敲核心代码，完成本段验证后再进入下一段。
 
 1. **迁移工具小实验（已完成）**：P-0001 已在空 PostgreSQL 16.14 上完成 diff、人工审阅、apply、status、重复执行和完整性校验，并由 ADR-0004 接受 Atlas Community。
-2. **数据库基础设施**：扩展配置，建立 `pgxpool`，启动时显式连接检查，关闭时释放连接；把 `/readyz` 接到有超时的数据库 ping。
+2. **数据库基础设施（已完成）**：扩展配置，建立 `pgxpool`，启动时显式连接检查，关闭时释放连接；把 `/readyz` 接到有超时的数据库 ping。
 3. **schema 与 migrations（基线已完成）**：期望 schema、两份 versioned migration、空库与前滚路径已建立；具体约束成功/失败行为仍须由真实 PostgreSQL 集成测试验证。
-4. **queries 与 repository**：先手写 Team SQL，运行 sqlc、阅读生成的 pgx 调用，再实现 repository adapter；随后按同一路径完成 Service 和 Environment、错误分类和真实数据库集成测试。
+4. **queries 与 repository（进行中）**：Team Create/Get、错误分类和真实数据库集成测试已完成；下一步补齐 Team list/update/delete 与游标分页，再按同一路径完成 Service 和 Environment。
 5. **业务服务**：集中放置校验、归属规则和“Service + 初始 Environments”事务；完成并发唯一性测试。
 6. **HTTP transport**：实现请求 ID、JSON/错误工具、`/v1` 路由、CRUD、游标分页和归属过滤；先单元测试 handler，再接真实 repository。
 7. **交付路径**：建立 Dockerfile、Compose、migration runbook，确保空卷可以按顺序完成 migration、启动和 API 演示。
@@ -154,7 +154,7 @@ docker compose up --build
 - M1 v0.1 Git commit 与 release：待完成。
 - 迁移工具 ADR：ADR-0004 已 accepted。
 - 数据库 migration runbook：核心 diff/apply/status 路径已在本机与 required CI 实测。
-- PostgreSQL 集成与并发测试：待实现。
+- PostgreSQL 集成测试：Team Create/Get、唯一冲突和 not-found 映射已在本地与 clean-runner 验证；其余约束、事务与并发场景待实现。
 - Compose 空环境记录：待验证。
 - 查询计划对比：待实验。
 - M1 学习总结和会话记录：待完成。

@@ -17,10 +17,11 @@
 - `make generate-check`、`go test ./...`、`go test -race ./...` 均通过。
 - 设置隔离的 `LYAPUS_TEST_DATABASE_URL` 后，`make integration` 通过。
 - 2026-08-05 最终 `make verify` 通过，包含 `go vet`、生成检查、普通测试、race、真实 PostgreSQL integration test 与漏洞扫描；测试容器随后停止并由 `--rm` 删除。
+- PR #13 的 `verify`、`smoke` 与 `atlas-community` required checks 全部通过；squash commit `f4df01f` 已合入 `main`，临时分支已删除。
 
 ## 过程经验
 
-- `make generate-check` 当前是候选提交检查：它先执行生成，再要求 `sqlcgen` 没有未跟踪文件且工作区与 Git 暂存区一致。变更查询后应先 `make generate`，再显式暂存生成文件后运行该检查；其命名和是否拆分为纯新鲜度检查留待独立工作流决策，不在本施工包顺带修改。
+- 原 `make generate-check` 先生成，再比较工作区与 Git 暂存区，导致本地验证顺序反直觉。收尾审计确认 sqlc 1.31.1 原生 `sqlc diff` 能直接比较预期输出与磁盘生成代码；后续独立施工包改用 `sqlc diff --no-remote`，使生成新鲜度检查不再依赖暂存状态。
 - repository 层分页使用结构化 cursor；对外 HTTP 的不透明、URL-safe cursor 编解码属于后续 transport 契约，不能提前宣称完成。
 
 ## 下一步

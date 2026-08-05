@@ -37,7 +37,7 @@ cmd/apiserver
 - 业务查询由项目所有者手写在 `db/queries/*.sql`，使用 sqlc 命名注解生成 `pgx/v5` 调用。
 - sqlc 版本固定为 1.31.1，配置位于根目录 `sqlc.yaml`，生成目标为 `internal/catalog/postgres/sqlcgen`。
 - 生成代码提交到 Git，使普通构建不依赖本机已安装 sqlc；任何人不得手工编辑生成文件。
-- `make generate` 更新生成代码；`make generate-check` 在临时生成或生成后检查工作树无差异，防止 schema、query 与生成代码漂移。required CI 必须执行该检查。
+- `make generate` 更新生成代码；`make generate-check` 使用固定版本的本地 `sqlc diff --no-remote` 比较当前 schema/query 的预期生成结果与磁盘生成代码，防止漏生成或手改生成文件。该检查不读取 Git 暂存区，required CI 必须执行。
 - repository adapter 负责 sqlc 参数/行类型与 domain model 的映射、SQLSTATE 分类和事务边界；sqlc 不替代这些职责。
 - 初次生成每类查询时必须阅读对应生成函数，确认参数化 SQL、返回行和 `Scan` 顺序；“由工具生成”不是跳过理解的理由。
 

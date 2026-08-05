@@ -7,6 +7,8 @@ package sqlcgen
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createTeam = `-- name: CreateTeam :one
@@ -33,6 +35,19 @@ func (q *Queries) CreateTeam(ctx context.Context, arg CreateTeamParams) (Team, e
 	return i, err
 }
 
+const deleteTeam = `-- name: DeleteTeam :one
+DELETE FROM teams
+WHERE id = $1
+RETURNING id
+`
+
+func (q *Queries) DeleteTeam(ctx context.Context, id int64) (int64, error) {
+	row := q.db.QueryRow(ctx, deleteTeam, id)
+	var id_2 int64
+	err := row.Scan(&id_2)
+	return id_2, err
+}
+
 const getTeamByID = `-- name: GetTeamByID :one
 SELECT id, slug, name, created_at, updated_at
 FROM teams
@@ -41,6 +56,108 @@ WHERE id = $1
 
 func (q *Queries) GetTeamByID(ctx context.Context, id int64) (Team, error) {
 	row := q.db.QueryRow(ctx, getTeamByID, id)
+	var i Team
+	err := row.Scan(
+		&i.ID,
+		&i.Slug,
+		&i.Name,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const listTeamsAfterCursor = `-- name: ListTeamsAfterCursor :many
+SELECT id, slug, name, created_at, updated_at
+FROM teams
+WHERE created_at < $1
+  OR (created_at = $1 AND id < $2)
+ORDER BY created_at DESC, id DESC
+LIMIT $3
+`
+
+type ListTeamsAfterCursorParams struct {
+	CreatedAt pgtype.Timestamptz
+	ID        int64
+	Limit     int32
+}
+
+func (q *Queries) ListTeamsAfterCursor(ctx context.Context, arg ListTeamsAfterCursorParams) ([]Team, error) {
+	rows, err := q.db.Query(ctx, listTeamsAfterCursor, arg.CreatedAt, arg.ID, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Team
+	for rows.Next() {
+		var i Team
+		if err := rows.Scan(
+			&i.ID,
+			&i.Slug,
+			&i.Name,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listTeamsFirstPage = `-- name: ListTeamsFirstPage :many
+SELECT id, slug, name, created_at, updated_at
+FROM teams
+ORDER BY created_at DESC, id DESC
+LIMIT $1
+`
+
+func (q *Queries) ListTeamsFirstPage(ctx context.Context, limit int32) ([]Team, error) {
+	rows, err := q.db.Query(ctx, listTeamsFirstPage, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Team
+	for rows.Next() {
+		var i Team
+		if err := rows.Scan(
+			&i.ID,
+			&i.Slug,
+			&i.Name,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const updateTeam = `-- name: UpdateTeam :one
+UPDATE teams
+SET slug = $2,
+    name = $3,
+    updated_at = now()
+WHERE id = $1
+RETURNING id, slug, name, created_at, updated_at
+`
+
+type UpdateTeamParams struct {
+	ID   int64
+	Slug string
+	Name string
+}
+
+func (q *Queries) UpdateTeam(ctx context.Context, arg UpdateTeamParams) (Team, error) {
+	row := q.db.QueryRow(ctx, updateTeam, arg.ID, arg.Slug, arg.Name)
 	var i Team
 	err := row.Scan(
 		&i.ID,

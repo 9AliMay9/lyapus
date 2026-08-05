@@ -1,6 +1,6 @@
 # M1：常规 Go 后端
 
-状态：Atlas migration、schema/sqlc 基线、数据库基础设施和 Team Create/Get repository 纵切面已完成；下一步补齐 Team CRUD 与游标分页，M1 v0.1 尚未完成。
+状态：Atlas migration、schema/sqlc 基线、数据库基础设施和 Team repository CRUD（含稳定游标分页）已完成；下一步实现 Team 业务服务与 HTTP 纵切面，M1 v0.1 尚未完成。
 
 施工前依次阅读：
 

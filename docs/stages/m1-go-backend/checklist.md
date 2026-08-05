@@ -27,7 +27,7 @@
 ## 数据模型与业务
 
 - [x] Team、Service、Environment 表、关系和声明式约束与 `contracts.md` 一致。
-- [ ] Team CRUD 完成。
+- [x] Team repository CRUD、稳定游标分页与 PostgreSQL integration test 完成。
 - [ ] Service CRUD 与 `team_id` 过滤完成。
 - [ ] Environment CRUD 与 `service_id` 过滤完成。
 - [ ] Service + 初始 Environment 在一个事务内原子创建。
@@ -39,11 +39,11 @@
 - [ ] 使用 chi/v5 组织路由和 middleware，handler 保持标准 `net/http` 签名。
 - [ ] chi 与 sqlc 类型都没有进入 catalog domain 或公共 API 契约。
 - [ ] `/v1`、严格 JSON、1 MiB 上限、请求 ID 和统一错误完成。
-- [ ] cursor 分页、稳定排序与 limit 边界完成。
+- [x] repository 层 cursor 分页、稳定排序与 limit 边界完成。
 - [ ] HTTP 日志包含同一 request ID、方法、路由/路径、状态和耗时，不泄漏敏感值。
 - [ ] 单元测试覆盖关键校验、业务服务和 handler。
 - [x] PostgreSQL integration tests 使用独立 `_test` 数据库且不会静默跳过。
-- [ ] `make fmt`、`make generate-check`、`make test`、`make race`、`make integration`、`make verify` 全部通过。
+- [x] 本地 `make verify`（含生成检查、普通/竞态/真实 PostgreSQL integration test 与漏洞扫描）通过。
 - [ ] required `verify`、`smoke` 与 `atlas-community` checks 覆盖 M1 的数据库依赖和 API 最小路径。
 
 ## 可复现交付与证据

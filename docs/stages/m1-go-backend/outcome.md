@@ -8,7 +8,8 @@
 - `internal/platform/database.Open` 创建 `pgxpool.Pool` 后显式 Ping；Ping 失败时关闭 pool，调用方以五秒启动 context 约束等待时间。
 - HTTP 进程在收到 `SIGINT` 或 `SIGTERM` 后先停止接收 HTTP 流量，再关闭连接池。
 - `/livez` 不访问数据库；`/readyz` 以一秒有界 context 执行 Ping，成功返回 200，数据库不可用时返回 503。
-- Team 的 Create/Get 查询由 sqlc 生成 pgx 调用；PostgreSQL adapter 将生成行映射为 domain `catalog.Team`，并将 no rows 与 unique violation 分别映射为稳定的 `ErrNotFound`、`ErrConflict`。
+- Team 的 Create/Get/List/Update/Delete 查询由 sqlc 生成 pgx 调用；PostgreSQL adapter 将生成行映射为 domain `catalog.Team`。列表以 `(created_at DESC, id DESC)` 排序，以“多取一行”计算下一页游标；生成类型仍不越过 adapter。
+- PostgreSQL adapter 将 no rows 映射为稳定的 `ErrNotFound`，将 unique violation 与 foreign-key violation 映射为 `ErrConflict`；非法 repository 分页 limit 映射为 `ErrInvalidArgument`。
 
 ## 验证
 
@@ -17,13 +18,14 @@
 - 保持 API 进程运行时停止数据库：`/livez` 仍返回 200，`/readyz` 返回 503；重新建立同配置数据库后，未重启 API 的 `/readyz` 恢复 200。
 - API 进程收到 `Ctrl-C` 后记录关闭信号与 HTTP server 停止；随后一次性数据库容器已停止并自动删除。
 - PR #10 的 `verify`、数据库感知 `smoke` 与 `atlas-community` required checks 均通过；smoke 在 PostgreSQL 16.14 service 上启动 API，Atlas job 在真实 SQL 就绪确认后验证 migration。
-- 在可丢弃 `_test` PostgreSQL 16.14 数据库中，显式 apply 两份 migration 后，Team repository integration test 已验证 Create、Get、唯一冲突和 not-found 映射；普通测试与 race 检测均通过。PR #11 的 clean-runner `verify` 也在独立 PostgreSQL 16.14 service 上完成同一 integration 路径。
+- 在可丢弃 `_test` PostgreSQL 16.14 数据库中，显式 apply 两份 migration 后，Team repository integration test 已验证 Create、Get、List 分页、Update、Delete、唯一冲突、外键引用删除冲突与 not-found 映射；普通测试与 race 检测均通过。
+- 2026-08-05，本地 `make verify` 通过：生成检查、`go vet`、普通测试、race、真实 PostgreSQL integration test 与漏洞扫描均为成功。PR #11 的 clean-runner `verify` 已在独立 PostgreSQL 16.14 service 上完成此前的 Create/Get integration 路径；本施工包的 CI 结果待 PR 创建后确认。
 
 ## 与计划的偏差
 
 - 尚未引入 Compose；本次使用一次性容器仅作为运行证据，不能替代最终 Compose 空环境验收。
 - `/readyz` 暂时返回最小探针体 `{"status":"not_ready"}`。请求 ID 与统一错误信封将在 HTTP transport 施工包实现后统一纳入，不能提前宣称该公共契约已完成。
-- Team 目前只有 Create/Get repository 路径；list/update/delete、游标分页、业务校验和 HTTP 资源契约仍未实现。
+- Team repository 已完成 CRUD 与游标分页；业务校验、HTTP 资源契约、HTTP cursor 编解码与公开错误映射仍未实现。
 
 ## 证据
 

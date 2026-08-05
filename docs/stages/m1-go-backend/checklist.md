@@ -39,7 +39,7 @@
 - [ ] 使用 chi/v5 组织路由和 middleware，handler 保持标准 `net/http` 签名。
 - [ ] chi 与 sqlc 类型都没有进入 catalog domain 或公共 API 契约。
 - [ ] `/v1`、严格 JSON、1 MiB 上限、请求 ID 和统一错误完成。
-- [x] repository 层 cursor 分页、稳定排序与 limit 边界完成。
+- [ ] HTTP 不透明 cursor 编解码、分页响应、稳定排序与 1–100 limit 边界完成。
 - [ ] HTTP 日志包含同一 request ID、方法、路由/路径、状态和耗时，不泄漏敏感值。
 - [ ] 单元测试覆盖关键校验、业务服务和 handler。
 - [x] PostgreSQL integration tests 使用独立 `_test` 数据库且不会静默跳过。

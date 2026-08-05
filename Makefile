@@ -19,12 +19,17 @@ generate:
 	fi; \
 	"$$sqlc" generate
 
-generate-check: generate
-	@if [ -n "$$(git ls-files --others --exclude-standard -- internal/catalog/postgres/sqlcgen)" ] \
-			|| ! git diff --quiet -- internal/catalog/postgres/sqlcgen; then \
-			echo "generate sqlc code is stale or untracked; run: make generate and add the generated files"; \
-			exit 1; \
-	fi
+generate-check:
+	@sqlc="$$(go env GOPATH)/bin/sqlc"; \
+	if [ ! -x "$$sqlc" ]; then \
+		echo "sqlc is not installed; run: go install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.31.1"; \
+		exit 1; \
+	fi; \
+	if [ "$$($$sqlc version)" != "v1.31.1" ]; then \
+		echo "sqlc version must be v1.31.1"; \
+		exit 1; \
+	fi; \
+	"$$sqlc" diff --no-remote
 
 test:
 	go test ./...

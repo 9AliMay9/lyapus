@@ -1,6 +1,6 @@
 # M1 实际实施结果
 
-状态：M1 尚未完成；数据库基础设施施工包已完成，以下只记录已发生的事实。
+状态：M1 尚未完成；数据库基础设施和 Team repository 施工包已完成，以下只记录已发生的事实。
 
 ## 实际完成
 
@@ -19,7 +19,7 @@
 - API 进程收到 `Ctrl-C` 后记录关闭信号与 HTTP server 停止；随后一次性数据库容器已停止并自动删除。
 - PR #10 的 `verify`、数据库感知 `smoke` 与 `atlas-community` required checks 均通过；smoke 在 PostgreSQL 16.14 service 上启动 API，Atlas job 在真实 SQL 就绪确认后验证 migration。
 - 在可丢弃 `_test` PostgreSQL 16.14 数据库中，显式 apply 两份 migration 后，Team repository integration test 已验证 Create、Get、List 分页、Update、Delete、唯一冲突、外键引用删除冲突与 not-found 映射；普通测试与 race 检测均通过。
-- 2026-08-05，本地 `make verify` 通过：生成检查、`go vet`、普通测试、race、真实 PostgreSQL integration test 与漏洞扫描均为成功。PR #11 的 clean-runner `verify` 已在独立 PostgreSQL 16.14 service 上完成此前的 Create/Get integration 路径；本施工包的 CI 结果待 PR 创建后确认。
+- 2026-08-05，本地 `make verify` 通过：生成检查、`go vet`、普通测试、race、真实 PostgreSQL integration test 与漏洞扫描均为成功。PR #13 的 `verify`、`smoke` 与 `atlas-community` required checks 全部通过；clean-runner `verify` 在独立 PostgreSQL 16.14 service 上执行了完整 Team repository integration 路径。
 
 ## 与计划的偏差
 
@@ -29,7 +29,7 @@
 
 ## 证据
 
-- Git commit / release：数据库基础设施已由 `df0154d`（PR #10）合入；Team Create/Get repository 已由 `57f19d4`（PR #11）合入；M1 release 待完成。
+- Git commit / release：数据库基础设施已由 `df0154d`（PR #10）合入；Team Create/Get repository 已由 `57f19d4`（PR #11）合入；Team CRUD/稳定分页已由 `f4df01f`（PR #13）合入；M1 release 待完成。
 - Migration ADR 与 runbook：ADR-0004 与 migration runbook 已完成。
 - 查询计划 benchmark：待完成。
 - 会话与学习记录：数据库基础设施会话已记录；M1 总结待完成。

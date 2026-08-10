@@ -171,7 +171,25 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - name: Start service and check health endpoints
+      - name: Build pinned Atlas Community
+        run: ./scripts/install-atlas-community.sh
+
+      - name: Migrate smoke database
+        env:
+          LYAPUS_DATABASE_URL: "postgres://lyapus:lyapus@127.0.0.1:${{ job.services.postgres.ports[5432] }}/lyapus_smoke?sslmode=disable"
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          ./.tools/bin/atlas migrate apply \
+            --dir "file://db/migrations" \
+            --url "$LYAPUS_DATABASE_URL"
+
+          ./.tools/bin/atlas migrate status \
+            --dir "file://db/migrations" \
+            --url "$LYAPUS_DATABASE_URL"
+
+      - name: Start service and smoke-test catalog API
         env:
           LYAPUS_DATABASE_URL: "postgres://lyapus:lyapus@127.0.0.1:${{ job.services.postgres.ports[5432] }}/lyapus_smoke?sslmode=disable"
         shell: bash
@@ -205,3 +223,87 @@ jobs:
 
           curl --fail --silent --show-error http://127.0.0.1:8080/livez
           curl --fail --silent --show-error http://127.0.0.1:8080/readyz
+
+          invalid_status="$(
+            curl --silent --show-error \
+              --request POST \
+              --header 'Content-Type: application/json' \
+              --data '{"slug":"Invalid","name":"Invalid"}' \
+              --dump-header invalid.headers \
+              --output invalid.json \
+              --write-out '%{http_code}' \
+              http://127.0.0.1:8080/v1/teams
+          )"
+
+          if [ "$invalid_status" != 400 ]; then
+            cat invalid.headers invalid.json server.log
+            exit 1
+          fi
+
+          invalid_header_id="$(
+            grep --ignore-case '^x-request-id:' invalid.headers |
+              head -n 1 |
+              awk '{print $2}' |
+              tr -d '\r'
+          )"
+          invalid_body_id="$(
+            sed -n 's/.*"request_id":"\([^"]*\)".*/\1/p' invalid.json
+          )"
+
+          if [ -z "$invalid_header_id" ] ||
+            [ "$invalid_header_id" != "$invalid_body_id" ] ||
+            ! grep --fixed-strings --quiet '"code":"invalid_argument"' invalid.json; then
+            cat invalid.headers invalid.json server.log
+            exit 1
+          fi
+
+          created_status="$(
+            curl --silent --show-error \
+              --request POST \
+              --header 'Content-Type: application/json' \
+              --data '{"slug":"ci-smoke","name":"CI Smoke"}' \
+              --dump-header created.headers \
+              --output created.json \
+              --write-out '%{http_code}' \
+              http://127.0.0.1:8080/v1/teams
+          )"
+
+          if [ "$created_status" != 201 ] ||
+            ! grep --ignore-case --quiet '^x-request-id: [^[:space:]]' created.headers ||
+            ! grep --fixed-strings --quiet '"slug":"ci-smoke"' created.json; then
+            cat created.headers created.json server.log
+            exit 1
+          fi
+
+          conflict_status="$(
+            curl --silent --show-error \
+              --request POST \
+              --header 'Content-Type: application/json' \
+              --data '{"slug":"ci-smoke","name":"CI Smoke Again"}' \
+              --dump-header conflict.headers \
+              --output conflict.json \
+              --write-out '%{http_code}' \
+              http://127.0.0.1:8080/v1/teams
+          )"
+
+          if [ "$conflict_status" != 409 ]; then
+            cat conflict.headers conflict.json server.log
+            exit 1
+          fi
+
+          conflict_header_id="$(
+            grep --ignore-case '^x-request-id:' conflict.headers |
+              head -n 1 |
+              awk '{print $2}' |
+              tr -d '\r'
+          )"
+          conflict_body_id="$(
+            sed -n 's/.*"request_id":"\([^"]*\)".*/\1/p' conflict.json
+          )"
+
+          if [ -z "$conflict_header_id" ] ||
+            [ "$conflict_header_id" != "$conflict_body_id" ] ||
+            ! grep --fixed-strings --quiet '"code":"conflict"' conflict.json; then
+            cat conflict.headers conflict.json server.log
+            exit 1
+          fi

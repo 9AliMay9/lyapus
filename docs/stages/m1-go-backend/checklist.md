@@ -36,14 +36,14 @@
 
 ## HTTP 与工程质量
 
-- [ ] 使用 chi/v5 组织路由和 middleware，handler 保持标准 `net/http` 签名。
-- [ ] chi 与 sqlc 类型都没有进入 catalog domain 或公共 API 契约。
+- [x] 使用 chi/v5 组织已实现路由，handler 保持标准 `net/http` 签名。
+- [x] chi 与 sqlc 类型都没有进入 catalog domain 或公共 API 契约。
 - [ ] `/v1`、严格 JSON、1 MiB 上限、请求 ID 和统一错误完成。
 - [ ] HTTP 不透明 cursor 编解码、分页响应、稳定排序与 1–100 limit 边界完成。
-- [ ] HTTP 日志包含同一 request ID、方法、路由/路径、状态和耗时，不泄漏敏感值。
+- [x] HTTP 日志包含同一 request ID、方法、路由/路径、状态和耗时，不泄漏敏感值。
 - [ ] 单元测试覆盖关键校验、业务服务和 handler。
 - [x] PostgreSQL integration tests 使用独立 `_test` 数据库且不会静默跳过。
-- [x] 本地 `make verify`（含生成检查、普通/竞态/真实 PostgreSQL integration test 与漏洞扫描）通过。
+- [x] 当前分支本地 `make verify`（含生成检查、普通/竞态/真实 PostgreSQL integration test 与漏洞扫描）通过。
 - [ ] required `verify`、`smoke` 与 `atlas-community` checks 覆盖 M1 的数据库依赖和 API 最小路径。
 
 ## 可复现交付与证据

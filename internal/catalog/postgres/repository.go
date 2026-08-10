@@ -75,15 +75,26 @@ func (r *TeamRepository) ListTeams(ctx context.Context, input catalog.ListTeamsI
 
 func (r *TeamRepository) UpdateTeam(ctx context.Context, id int64, input catalog.UpdateTeamInput) (catalog.Team, error) {
 	row, err := r.queries.UpdateTeam(ctx, sqlcgen.UpdateTeamParams{
+		Slug: textFromStringPointer(input.Slug),
+		Name: textFromStringPointer(input.Name),
 		ID:   id,
-		Slug: input.Slug,
-		Name: input.Name,
 	})
 	if err != nil {
 		return catalog.Team{}, classifyTeamError("update team", err)
 	}
 
 	return teamFromRow(row)
+}
+
+func textFromStringPointer(value *string) pgtype.Text {
+	if value == nil {
+		return pgtype.Text{}
+	}
+
+	return pgtype.Text{
+		String: *value,
+		Valid:  true,
+	}
 }
 
 func (r *TeamRepository) DeleteTeam(ctx context.Context, id int64) error {

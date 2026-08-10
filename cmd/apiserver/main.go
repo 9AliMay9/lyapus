@@ -11,6 +11,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/9AliMay9/lyapus/internal/catalog"
+	catalogpostgres "github.com/9AliMay9/lyapus/internal/catalog/postgres"
+	cataloghttp "github.com/9AliMay9/lyapus/internal/catalog/transport/http"
 	"github.com/9AliMay9/lyapus/internal/platform/config"
 	"github.com/9AliMay9/lyapus/internal/platform/database"
 	transporthttp "github.com/9AliMay9/lyapus/internal/platform/transport/http"
@@ -44,7 +47,12 @@ func run(logger *slog.Logger) error {
 	}
 	defer pool.Close()
 
-	server := transporthttp.NewServer(cfg, logger, pool)
+	teamRepository := catalogpostgres.NewTeamRepository(pool)
+	teamService := catalog.NewTeamService(teamRepository)
+	catalogHandler := cataloghttp.NewHandler(teamService)
+
+	server := transporthttp.NewServer(cfg, logger, pool, catalogHandler)
+
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 

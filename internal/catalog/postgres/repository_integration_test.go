@@ -126,9 +126,9 @@ func TestTeamRepositoryIntegrationUpdateAndDelete(t *testing.T) {
 
 	created := createIntegrationTeam(t, ctx, repository, "platform", "Platform")
 
+	updatedName := "Platform Engineering"
 	updated, err := repository.UpdateTeam(ctx, created.ID, catalog.UpdateTeamInput{
-		Slug: "platform-engineering",
-		Name: "Platform Engineering",
+		Name: &updatedName,
 	})
 	if err != nil {
 		t.Fatalf("UpdateTeam() error = %v", err)
@@ -136,11 +136,11 @@ func TestTeamRepositoryIntegrationUpdateAndDelete(t *testing.T) {
 	if updated.ID != created.ID {
 		t.Fatalf("UpdateTeam() ID = %d, want %d", updated.ID, created.ID)
 	}
-	if updated.Slug != "platform-engineering" {
-		t.Fatalf("UpdateTeam() Slug = %q, want %q", updated.Slug, "platform-engineering")
+	if updated.Slug != created.Slug {
+		t.Fatalf("UpdateTeam() Slug = %q, want %q", updated.Slug, created.Slug)
 	}
-	if updated.Name != "Platform Engineering" {
-		t.Fatalf("UpdateTeam() Name = %q, want %q", updated.Name, "Platform Engineering")
+	if updated.Name != updatedName {
+		t.Fatalf("UpdateTeam() Name = %q, want %q", updated.Name, updatedName)
 	}
 	if updated.CreatedAt != created.CreatedAt {
 		t.Fatalf("UpdateTeam() CreatedAt = %s, want %s", updated.CreatedAt, created.CreatedAt)
@@ -158,17 +158,21 @@ func TestTeamRepositoryIntegrationUpdateAndDelete(t *testing.T) {
 	}
 
 	other := createIntegrationTeam(t, ctx, repository, "other", "Other")
+	duplicateSlug := updated.Slug
+	otherName := "Other"
 	_, err = repository.UpdateTeam(ctx, other.ID, catalog.UpdateTeamInput{
-		Slug: updated.Slug,
-		Name: "Other",
+		Slug: &duplicateSlug,
+		Name: &otherName,
 	})
 	if !errors.Is(err, catalog.ErrConflict) {
 		t.Fatalf("UpdateTeam() duplicate slug error = %v, want ErrConflict", err)
 	}
 
+	missingSlug := "missing"
+	missingName := "Missing"
 	_, err = repository.UpdateTeam(ctx, 999, catalog.UpdateTeamInput{
-		Slug: "missing",
-		Name: "Missing",
+		Slug: &missingSlug,
+		Name: &missingName,
 	})
 	if !errors.Is(err, catalog.ErrNotFound) {
 		t.Fatalf("UpdateTeam() missing error = %v, want ErrNotFound", err)

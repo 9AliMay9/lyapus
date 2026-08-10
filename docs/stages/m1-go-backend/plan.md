@@ -76,9 +76,9 @@
 1. **迁移工具小实验（已完成）**：P-0001 已在空 PostgreSQL 16.14 上完成 diff、人工审阅、apply、status、重复执行和完整性校验，并由 ADR-0004 接受 Atlas Community。
 2. **数据库基础设施（已完成）**：扩展配置，建立 `pgxpool`，启动时显式连接检查，关闭时释放连接；把 `/readyz` 接到有超时的数据库 ping。
 3. **schema 与 migrations（基线已完成）**：期望 schema、两份 versioned migration、空库与前滚路径已建立；具体约束成功/失败行为仍须由真实 PostgreSQL 集成测试验证。
-4. **queries 与 repository（进行中）**：Team Create/Get/List/Update/Delete、错误分类、基于 `(created_at, id)` 的稳定游标分页和真实数据库集成测试已完成；下一步实现 Team 业务服务，再按同一路径完成 Service 和 Environment。
-5. **业务服务**：集中放置校验、归属规则和“Service + 初始 Environments”事务；完成并发唯一性测试。
-6. **HTTP transport**：实现请求 ID、JSON/错误工具、`/v1` 路由、CRUD、游标分页和归属过滤；先单元测试 handler，再接真实 repository。
+4. **queries 与 repository（Team 已完成）**：Team Create/Get/List/Update/Delete、错误分类、基于 `(created_at, id)` 的稳定游标分页和真实数据库集成测试已完成；Service 和 Environment 仍按同一路径实施。
+5. **业务服务（Team 已完成）**：Team 的输入校验、分页默认值与 repository 调用边界已集中在 `catalog.TeamService`；后续集中处理 Service 归属规则、“Service + 初始 Environments”事务和并发唯一性测试。
+6. **HTTP transport（进行中）**：chi、全局 request ID、JSON/错误工具、完成日志与 `POST /v1/teams` 已接真实 repository；继续实现 Team 其余 CRUD、游标分页和归属过滤，再扩展到 Service/Environment。
 7. **交付路径**：建立 Dockerfile、Compose、migration runbook，确保空卷可以按顺序完成 migration、启动和 API 演示。
 8. **查询计划实验**：构造明确数据规模，对 Service 按 Team 的游标列表查询保存索引前后证据。
 9. **收口**：更新根 README、架构图、知识笔记、`outcome.md` 和当前进度；在 clean runner 与空 Compose project 上完成最终验收。
@@ -94,10 +94,10 @@ internal/platform/config/config_test.go
 internal/platform/database/postgres.go
 internal/platform/health/handler.go
 internal/platform/health/handler_test.go
+internal/platform/requestid/requestid.go
+internal/platform/requestid/requestid_test.go
 internal/platform/transport/http/server.go
 internal/platform/transport/http/server_test.go
-internal/platform/transport/http/middleware.go
-internal/platform/transport/http/response.go
 
 internal/catalog/model.go
 internal/catalog/errors.go

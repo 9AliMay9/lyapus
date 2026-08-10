@@ -18,6 +18,7 @@ cmd/apiserver
   ├── internal/platform/config
   ├── internal/platform/database
   ├── internal/platform/health
+  ├── internal/platform/requestid
   ├── internal/platform/transport/http
   └── internal/catalog
         ├── postgres
@@ -28,6 +29,7 @@ cmd/apiserver
 - `internal/catalog/postgres/sqlcgen` 只保存 sqlc 生成代码；生成类型不得出现在业务服务或 HTTP 公共契约中。
 - `internal/catalog/postgres` 用 adapter 实现 catalog repository，只向上返回 domain model、稳定业务错误或带上下文的未知错误。
 - `internal/catalog/transport/http` 负责 HTTP 解析与呈现，不包含 SQL。
+- `internal/platform/requestid` 为整个 HTTP mux 生成 request ID、写入响应头并通过 request context 提供同一 ID；它不依赖 catalog 或具体路由。
 - `cmd/apiserver` 只装配依赖、启动、等待信号和关闭，不放业务规则。
 - 不建立全局数据库连接、全局 service locator 或通用 CRUD/repository 泛型。
 
@@ -84,15 +86,16 @@ cmd/apiserver
 
 ## HTTP 通用契约
 
+- 以下资源、解码和错误信封规则适用于 `/v1` catalog API；健康探针的最小响应由“健康检查”一节单独定义。
 - API 前缀为 `/v1`，Content-Type 为 `application/json`。
 - 请求体最大 1 MiB；解码器拒绝未知字段、多个 JSON 值和类型不匹配。
 - ID 是十进制正整数；非法 ID 返回 `400 invalid_argument`。
 - 时间使用 UTC RFC 3339 字符串。
 - 创建成功返回 `201` 与资源；查询/更新成功返回 `200`；删除成功返回 `204` 且无响应体。
-- 每个请求生成新的请求 ID，在 `X-Request-ID` 响应头、错误体和完成日志中使用同一值。M1 不信任或透传外部传入的请求 ID。
+- 每个进入 HTTP server 的请求都生成新的请求 ID，并在 `X-Request-ID` 响应头和完成日志中使用同一值；catalog 错误体也使用该 ID。M1 不信任或透传外部传入的请求 ID。
 - 所有 handler 接收并向 repository 传递 `r.Context()`；不把 context 存入结构体。
 
-错误响应固定为：
+Catalog 资源错误响应固定为：
 
 ```json
 {
@@ -158,7 +161,7 @@ PostgreSQL 可识别的 unique violation、foreign key violation 等通过 SQLST
 | 路径 | 成功 | 失败 | 语义 |
 | --- | --- | --- | --- |
 | `/livez` | `200 {"status":"ok"}` | 仅进程无法服务时失败 | 不检查数据库。 |
-| `/readyz` | `200 {"status":"ok"}` | `503` 统一错误 | 在短超时 context 内检查 PostgreSQL。 |
+| `/readyz` | `200 {"status":"ok"}` | `503 {"status":"not_ready"}` | 在短超时 context 内检查 PostgreSQL。 |
 
 数据库暂时不可用不能使 `/livez` 失败。ready 检查不能无限等待或创建无界连接。
 

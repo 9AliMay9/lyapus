@@ -2,9 +2,9 @@
 
 ## 当前落点
 
-- 当前阶段：M0 已完成终局审计；M1 已完成数据库基础设施和 Team repository 数据访问层。Team CRUD/稳定分页施工包已由 PR #13 以 squash commit `f4df01f` 合入 `main`，并通过 required clean-runner CI。
+- 当前阶段：M0 已完成终局审计；M1 已完成数据库基础设施、Team repository 数据访问层，以及 Team 业务服务和首个 HTTP 创建纵切面。Team CRUD/稳定分页施工包已由 PR #13 以 squash commit `f4df01f` 合入 `main`，并通过 required clean-runner CI；当前 HTTP 施工仍在分支中，尚未合并。
 - M0 结论：真实实现完整满足仓库内施工包，并基本符合原始 v3.1 工程基线预期，可以进入 M1。
-- M1 状态：施工包、Atlas 决策、schema、两份 versioned migration、sqlc 基线与 CI 门禁已完成；`LYAPUS_DATABASE_URL`、`pgxpool` 启动 Ping/关闭路径及数据库感知 `/readyz` 已完成并作真实运行验证。Team repository 的 Create/Get/List/Update/Delete、`(created_at, id)` 稳定游标分页、sqlc adapter 与本地及 clean-runner 真实 PostgreSQL integration test 已完成；业务服务与 HTTP CRUD 尚未开始。
+- M1 状态：施工包、Atlas 决策、schema、两份 versioned migration、sqlc 基线与 CI 门禁已完成；`LYAPUS_DATABASE_URL`、`pgxpool` 启动 Ping/关闭路径及数据库感知 `/readyz` 已完成并作真实运行验证。Team repository 的 Create/Get/List/Update/Delete、`(created_at, id)` 稳定游标分页、sqlc adapter 与本地及 clean-runner 真实 PostgreSQL integration test 已完成。Team service 已集中实现输入校验与分页默认值；chi 的首个 `POST /v1/teams` 已接入真实 repository，并已实现严格 JSON、统一 catalog 错误与全局 request ID。当前分支的本地 `make verify` 已通过，并已扩展 clean-runner smoke 以 migration 后验证 400、201、409；PR required checks 尚待实跑。Team 其余 HTTP CRUD、Service、Environment、Compose 与查询计划实验仍待完成。
 - M1 最小范围：Team、Service、Environment CRUD，PostgreSQL migration/约束/事务/并发正确性，单元与真实数据库测试，Compose 空环境复现，以及一份查询计划优化记录。
 - M1 默认实现：PostgreSQL 16.14、`pgx/v5` + `pgxpool`、chi/v5、sqlc 1.31.1、手写 SQL + repository adapter、identity bigint 和不透明游标。chi 保持标准 HTTP handler；sqlc 生成类型不越过 PostgreSQL adapter。选择理由与适用边界见施工包。
 - Migration 已由 ADR-0004 最终确定：P-0001 完成固定 Atlas Community v1.2.0 的两次 migration（空库 apply、已有库前滚、重复 apply、status 与完整性篡改拦截）、同一 `db/schema.sql` 的 sqlc 1.31.1 解析/生成、本机可复现 Community 构建，以及 PR #8 中 required `atlas-community` CI 实跑。未来触发退出条件时才以新 ADR 记录并回退 `golang-migrate`。
@@ -29,9 +29,9 @@
 
 ## 下一次从这里开始
 
-1. 从 `main` 建立短生命周期分支，实现 Team 业务服务层的输入校验与 repository 调用边界；保持 PostgreSQL adapter 不承载 HTTP 或业务契约。
-2. 完成 Team HTTP 资源契约后，Service/Environment 复用 repository 结构，并在 Service 阶段集中处理事务与并发。
-3. 保持 `/livez` 进程语义与 `/readyz` 的有界数据库 Ping；统一错误信封与 request-ID middleware 留待 HTTP transport 施工包一并完成。
+1. 完成 Team 的 HTTP 查询、列表、PATCH、DELETE 及不透明 cursor 编解码；保持 PostgreSQL adapter 不承载 HTTP 或业务契约。
+2. 按同一分层完成 Service/Environment，并在 Service 阶段集中处理“Service + 初始 Environment”的事务与并发。
+3. 保持 `/livez` 进程语义与 `/readyz` 的有界数据库 Ping；已完成的 request-ID、统一 catalog 错误与完成日志须在后续端点保持一致。
 
 不要在应用启动路径自动执行 migration；不要让 Atlas Cloud/Pro、鉴权、RBAC、k6、OpenTelemetry 或其他后续增强进入 M1 v0.1 的阻塞路径。
 

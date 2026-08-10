@@ -143,21 +143,21 @@ func (q *Queries) ListTeamsFirstPage(ctx context.Context, limit int32) ([]Team, 
 
 const updateTeam = `-- name: UpdateTeam :one
 UPDATE teams
-SET slug = $2,
-    name = $3,
+SET slug = COALESCE($1::text, slug),
+    name = COALESCE($2::text, name),
     updated_at = now()
-WHERE id = $1
+WHERE id = $3
 RETURNING id, slug, name, created_at, updated_at
 `
 
 type UpdateTeamParams struct {
+	Slug pgtype.Text
+	Name pgtype.Text
 	ID   int64
-	Slug string
-	Name string
 }
 
 func (q *Queries) UpdateTeam(ctx context.Context, arg UpdateTeamParams) (Team, error) {
-	row := q.db.QueryRow(ctx, updateTeam, arg.ID, arg.Slug, arg.Name)
+	row := q.db.QueryRow(ctx, updateTeam, arg.Slug, arg.Name, arg.ID)
 	var i Team
 	err := row.Scan(
 		&i.ID,

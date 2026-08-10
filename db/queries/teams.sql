@@ -24,10 +24,10 @@ LIMIT $3;
 
 -- name: UpdateTeam :one
 UPDATE teams
-SET slug = $2,
-    name = $3,
+SET slug = COALESCE(sqlc.narg('slug')::text, slug),
+    name = COALESCE(sqlc.narg('name')::text, name),
     updated_at = now()
-WHERE id = $1
+WHERE id = sqlc.arg('id')
 RETURNING id, slug, name, created_at, updated_at;
 
 -- name: DeleteTeam :one

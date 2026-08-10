@@ -188,6 +188,39 @@ func TestTeamPageFromRowsWithoutExtraRow(t *testing.T) {
 	}
 }
 
+func TestTextFromStringPointer(t *testing.T) {
+	value := "platform"
+
+	tests := []struct {
+		name  string
+		value *string
+		want  pgtype.Text
+	}{
+		{
+			name: "nil",
+			want: pgtype.Text{},
+		},
+		{
+			name:  "value",
+			value: &value,
+			want: pgtype.Text{
+				String: "platform",
+				Valid:  true,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := textFromStringPointer(tt.value)
+
+			if got != tt.want {
+				t.Fatalf("textFromStringPointer() = %#v, want %#v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestClassifyTeamError(t *testing.T) {
 	unknownError := errors.New("connection lost")
 

@@ -26,6 +26,6 @@ type TeamPage struct {
 }
 
 type UpdateTeamInput struct {
-	Slug string
-	Name string
+	Slug *string
+	Name *string
 }

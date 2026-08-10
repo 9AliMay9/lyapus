@@ -1,6 +1,6 @@
 # M1 实际实施结果
 
-状态：M1 尚未完成；数据库基础设施和 Team repository 施工包已完成，以下只记录已发生的事实。
+状态：M1 尚未完成；数据库基础设施、Team repository、Team 业务服务与首个 HTTP 创建纵切面已完成，以下只记录已发生的事实。
 
 ## 实际完成
 
@@ -10,6 +10,9 @@
 - `/livez` 不访问数据库；`/readyz` 以一秒有界 context 执行 Ping，成功返回 200，数据库不可用时返回 503。
 - Team 的 Create/Get/List/Update/Delete 查询由 sqlc 生成 pgx 调用；PostgreSQL adapter 将生成行映射为 domain `catalog.Team`。列表以 `(created_at DESC, id DESC)` 排序，以“多取一行”计算下一页游标；生成类型仍不越过 adapter。
 - PostgreSQL adapter 将 no rows 映射为稳定的 `ErrNotFound`，将 unique violation 与 foreign-key violation 映射为 `ErrConflict`；非法 repository 分页 limit 映射为 `ErrInvalidArgument`。
+- `catalog.TeamService` 集中校验 Team ID、slug、name、更新输入与分页输入；它只依赖 domain repository 接口，不暴露 HTTP、pgx 或 sqlc 类型。
+- 首个 `POST /v1/teams` 已通过 chi 接到真实 Team service/repository；请求体使用 1 MiB 上限、拒绝未知字段和多个 JSON 值，并将 catalog 的参数、not-found、冲突与未知错误映射为稳定 JSON 错误信封。
+- request-ID 已提升至 `internal/platform/requestid`，包围整个服务 mux；健康检查与 `/v1` 都生成新的 ID，并在响应头、catalog 错误体和完成日志中复用。完成日志同时记录 method、path、status 和 duration。
 
 ## 验证
 
@@ -20,12 +23,14 @@
 - PR #10 的 `verify`、数据库感知 `smoke` 与 `atlas-community` required checks 均通过；smoke 在 PostgreSQL 16.14 service 上启动 API，Atlas job 在真实 SQL 就绪确认后验证 migration。
 - 在可丢弃 `_test` PostgreSQL 16.14 数据库中，显式 apply 两份 migration 后，Team repository integration test 已验证 Create、Get、List 分页、Update、Delete、唯一冲突、外键引用删除冲突与 not-found 映射；普通测试与 race 检测均通过。
 - 2026-08-05，本地 `make verify` 通过：生成检查、`go vet`、普通测试、race、真实 PostgreSQL integration test 与漏洞扫描均为成功。PR #13 的 `verify`、`smoke` 与 `atlas-community` required checks 全部通过；clean-runner `verify` 在独立 PostgreSQL 16.14 service 上执行了完整 Team repository integration 路径。
+- 2026-08-10，Team service、catalog HTTP、共享 request-ID 与 platform server 的普通测试及 `go test -race ./...` 通过。对可丢弃的本地 PostgreSQL 16.14 开发容器执行 migration 后，`/livez`、`/readyz`、Team 创建、非法 slug 与唯一冲突分别实测为 200、200、201、400、409；每条响应/错误与完成日志的 request ID 一致。验证后 API 进程和一次性容器均已停止。
+- 2026-08-11，在新建的可丢弃 `_test` PostgreSQL 16.14 数据库完成 migration dry-run、apply、status 后，当前分支的 `make verify` 通过：格式化、生成新鲜度、`go vet`、普通测试、race、真实 PostgreSQL integration test 与漏洞扫描均成功。CI smoke 已扩展为以同一版本化 migration 准备临时数据库后验证 `/livez`、`/readyz` 及 Team 的 400、201、409 路径；其 clean-runner 证据待 PR 产生。
 
 ## 与计划的偏差
 
 - 尚未引入 Compose；本次使用一次性容器仅作为运行证据，不能替代最终 Compose 空环境验收。
-- `/readyz` 暂时返回最小探针体 `{"status":"not_ready"}`。请求 ID 与统一错误信封将在 HTTP transport 施工包实现后统一纳入，不能提前宣称该公共契约已完成。
-- Team repository 已完成 CRUD 与游标分页；业务校验、HTTP 资源契约、HTTP cursor 编解码与公开错误映射仍未实现。
+- `/readyz` 暂时返回最小探针体 `{"status":"not_ready"}`；它已有全局 request-ID，但尚未改成 catalog 的错误信封，仍应保持健康探针的最小契约。
+- Team repository 与业务校验已完成；仅创建端点已实现。HTTP cursor 编解码、Team 的 list/get/update/delete、以及 Service/Environment HTTP 资源契约仍未实现。
 
 ## 证据
 

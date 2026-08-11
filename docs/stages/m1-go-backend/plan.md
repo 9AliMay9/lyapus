@@ -115,7 +115,6 @@ db/migrations/
 db/queries/teams.sql
 db/queries/services.sql
 db/queries/environments.sql
-atlas.hcl
 sqlc.yaml
 compose.yaml
 Dockerfile

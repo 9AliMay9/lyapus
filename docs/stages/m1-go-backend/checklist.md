@@ -43,8 +43,8 @@
 - [x] HTTP 日志包含同一 request ID、方法、路由/路径、状态和耗时，不泄漏敏感值。
 - [ ] 单元测试覆盖关键校验、业务服务和 handler。
 - [x] PostgreSQL integration tests 使用独立 `_test` 数据库且不会静默跳过。
-- [x] 当前分支本地 `make verify`（含生成检查、普通/竞态/真实 PostgreSQL integration test 与漏洞扫描）通过。
-- [ ] required `verify`、`smoke` 与 `atlas-community` checks 覆盖 M1 的数据库依赖和 API 最小路径。
+- [x] PR #15 合并前本地 `make verify`（含生成检查、普通/竞态/真实 PostgreSQL integration test 与漏洞扫描）通过。
+- [x] required `verify`、`smoke` 与 `atlas-community` checks 覆盖已实现 M1 路径的数据库依赖和 API 最小路径。
 
 ## 可复现交付与证据
 

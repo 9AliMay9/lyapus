@@ -24,7 +24,7 @@
 - 在可丢弃 `_test` PostgreSQL 16.14 数据库中，显式 apply 两份 migration 后，Team repository integration test 已验证 Create、Get、List 分页、Update、Delete、唯一冲突、外键引用删除冲突与 not-found 映射；普通测试与 race 检测均通过。
 - 2026-08-05，本地 `make verify` 通过：生成检查、`go vet`、普通测试、race、真实 PostgreSQL integration test 与漏洞扫描均为成功。PR #13 的 `verify`、`smoke` 与 `atlas-community` required checks 全部通过；clean-runner `verify` 在独立 PostgreSQL 16.14 service 上执行了完整 Team repository integration 路径。
 - 2026-08-10，Team service、catalog HTTP、共享 request-ID 与 platform server 的普通测试及 `go test -race ./...` 通过。对可丢弃的本地 PostgreSQL 16.14 开发容器执行 migration 后，`/livez`、`/readyz`、Team 创建、非法 slug 与唯一冲突分别实测为 200、200、201、400、409；每条响应/错误与完成日志的 request ID 一致。验证后 API 进程和一次性容器均已停止。
-- 2026-08-11，在新建的可丢弃 `_test` PostgreSQL 16.14 数据库完成 migration dry-run、apply、status 后，当前分支的 `make verify` 通过：格式化、生成新鲜度、`go vet`、普通测试、race、真实 PostgreSQL integration test 与漏洞扫描均成功。CI smoke 已扩展为以同一版本化 migration 准备临时数据库后验证 `/livez`、`/readyz` 及 Team 的 400、201、409 路径；其 clean-runner 证据待 PR 产生。
+- 2026-08-11，在新建的可丢弃 `_test` PostgreSQL 16.14 数据库完成 migration dry-run、apply、status 后，PR #15 合并前的本地 `make verify` 通过：格式化、生成新鲜度、`go vet`、普通测试、race、真实 PostgreSQL integration test 与漏洞扫描均成功。CI smoke 已扩展为以同一版本化 migration 准备临时数据库后验证 `/livez`、`/readyz` 及 Team 的 400、201、409 路径；PR #15 的 `verify`、`atlas-community` 与该 smoke 均在 clean runner 通过，squash commit `8e84c20` 已合入 `main`。
 
 ## 与计划的偏差
 

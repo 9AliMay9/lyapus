@@ -16,6 +16,7 @@ M1 采用 Atlas Community `v1.2.0`：
 - `scripts/install-atlas-community.sh` 从固定源码 tag `v1.2.0` 与 commit `47daa88aea519f7f4c4aab5adfde2beab9b10b13` 构建 Community CLI 到被忽略的 `.tools/bin/atlas`；本机和 GitHub Actions 使用同一脚本。
 - migration 由显式部署/运维步骤执行，`apiserver` 启动时绝不自动迁移。
 - 修改 schema 时先运行 `migrate diff`，人工审阅新增 SQL 与 `atlas.sum`，再对已验证目标运行 `migrate apply` 和 `migrate status`。
+- M1 的命令显式传入 `--dir`、`--to`、`--dev-url` 或 `--url`，不额外维护 `atlas.hcl`；只有出现多个长期环境或重复配置已经造成实际维护问题时才重新评估配置文件。
 - `protect-main` 要求 `Verify / atlas-community`、`Verify / verify` 与 `Verify / smoke` 都成功。
 
 实际命令与安全边界见 [数据库 migration](../../runbooks/database-migrations.md)。

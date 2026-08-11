@@ -22,7 +22,7 @@
 
 - 只实现了 Team 创建端点；Team 的 list/get/PATCH/DELETE、HTTP cursor 编解码以及 Service/Environment 仍未实现。
 - 健康检查复用全局 request ID，但保留其既有最小响应体；不把健康探针误写成 catalog 资源错误。
-- 2026-08-11 已在新建的可丢弃 `_test` PostgreSQL 16.14 数据库上完成 migration dry-run、apply、status 和完整 `make verify`；required CI 与 clean-runner API smoke 仍待 PR 实跑。
+- 2026-08-11 已在新建的可丢弃 `_test` PostgreSQL 16.14 数据库上完成 migration dry-run、apply、status 和完整 `make verify`；PR #15 的 required `verify`、`atlas-community` 与 clean-runner API smoke 随后全部通过，施工包以 squash commit `8e84c20` 合入 `main`。
 
 ## 与原始方案和施工包的对齐
 
@@ -36,4 +36,4 @@
 - Team HTTP 的 list/get/PATCH/DELETE 和不透明 cursor 尚未实现。
 - Service/Environment CRUD、归属过滤、“Service + 初始 Environment”事务与并发唯一性场景尚未实现。
 - Compose 空环境复现、完整约束行为验证、查询计划优化记录、README 五分钟演示和 M1 v0.1 release 尚未完成。
-- 当前分支已通过完整 `make verify`、手工 HTTP 纵切面验证，并已写入 clean-runner API smoke；required CI 尚待执行。
+- 当前实现已通过完整 `make verify`、手工 HTTP 纵切面验证和 PR clean-runner API smoke；下一施工包从 Team 的 HTTP 查询、列表、PATCH、DELETE 与不透明 cursor 开始。

@@ -2,6 +2,7 @@ package cataloghttp
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	stdhttp "net/http"
 	"net/url"
@@ -152,13 +153,17 @@ func parseListTeamsInput(r *stdhttp.Request) (catalog.ListTeamsInput, error) {
 		return catalog.ListTeamsInput{}, err
 	}
 	if hasLimit {
-		parsed, err := strconv.ParseInt(limit, 10, 32)
+		parsed, err := strconv.ParseInt(limit, 10, 64)
 		if err != nil {
+			message := "limit must be an integer"
+			if errors.Is(err, strconv.ErrRange) {
+				message = "limit must be between 1 and 100"
+			}
 			return catalog.ListTeamsInput{}, &catalog.InvalidArgumentError{
-				Message: "limit must be an integer",
+				Message: message,
 			}
 		}
-		if parsed < 1 {
+		if parsed < 1 || parsed > 100 {
 			return catalog.ListTeamsInput{}, &catalog.InvalidArgumentError{
 				Message: "limit must be between 1 and 100",
 			}

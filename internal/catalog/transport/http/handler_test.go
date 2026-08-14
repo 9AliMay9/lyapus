@@ -428,6 +428,16 @@ func TestHandlerListTeamsRejectsInvalidQuery(t *testing.T) {
 			path:        "/v1/teams?cursor=first&cursor=second",
 			wantMessage: "cursor must be provided once",
 		},
+		{
+			name:        "limit above maximum",
+			path:        "/v1/teams?limit=2147483648",
+			wantMessage: "limit must be between 1 and 100",
+		},
+		{
+			name:        "limit overflows int64",
+			path:        "/v1/teams?limit=9223372036854775808",
+			wantMessage: "limit must be between 1 and 100",
+		},
 	}
 
 	for _, tt := range tests {

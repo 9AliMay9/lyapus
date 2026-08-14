@@ -78,7 +78,7 @@
 3. **schema 与 migrations（基线已完成）**：期望 schema、两份 versioned migration、空库与前滚路径已建立；具体约束成功/失败行为仍须由真实 PostgreSQL 集成测试验证。
 4. **queries 与 repository（Team 已完成）**：Team Create/Get/List/Update/Delete、错误分类、基于 `(created_at, id)` 的稳定游标分页和真实数据库集成测试已完成；Service 和 Environment 仍按同一路径实施。
 5. **业务服务（Team 已完成）**：Team 的输入校验、分页默认值与 repository 调用边界已集中在 `catalog.TeamService`；后续集中处理 Service 归属规则、“Service + 初始 Environments”事务和并发唯一性测试。
-6. **HTTP transport（进行中）**：chi、全局 request ID、JSON/错误工具、完成日志与 `POST /v1/teams` 已接真实 repository；继续实现 Team 其余 CRUD、游标分页和归属过滤，再扩展到 Service/Environment。
+6. **HTTP transport（进行中）**：chi、全局 request ID、JSON/错误工具、完成日志、`POST /v1/teams`、`GET /v1/teams/{team_id}` 和 `GET /v1/teams` 已接真实 repository；Team list 使用不透明 cursor。继续实现 Team PATCH/DELETE 和归属过滤，再扩展到 Service/Environment。
 7. **交付路径**：建立 Dockerfile、Compose、migration runbook，确保空卷可以按顺序完成 migration、启动和 API 演示。
 8. **查询计划实验**：构造明确数据规模，对 Service 按 Team 的游标列表查询保存索引前后证据。
 9. **收口**：更新根 README、架构图、知识笔记、`outcome.md` 和当前进度；在 clean runner 与空 Compose project 上完成最终验收。
@@ -107,8 +107,14 @@ internal/catalog/service_test.go
 internal/catalog/postgres/repository.go
 internal/catalog/postgres/repository_integration_test.go
 internal/catalog/postgres/sqlcgen/
+internal/catalog/transport/http/decode.go
+internal/catalog/transport/http/decode_test.go
 internal/catalog/transport/http/handler.go
 internal/catalog/transport/http/handler_test.go
+internal/catalog/transport/http/response.go
+internal/catalog/transport/http/response_test.go
+internal/catalog/transport/http/cursor.go
+internal/catalog/transport/http/cursor_test.go
 
 db/schema.sql
 db/migrations/

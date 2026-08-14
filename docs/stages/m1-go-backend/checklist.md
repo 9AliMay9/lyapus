@@ -38,13 +38,13 @@
 
 - [x] 使用 chi/v5 组织已实现路由，handler 保持标准 `net/http` 签名。
 - [x] chi 与 sqlc 类型都没有进入 catalog domain 或公共 API 契约。
-- [ ] `/v1`、严格 JSON、1 MiB 上限、请求 ID 和统一错误完成。
-- [ ] HTTP 不透明 cursor 编解码、分页响应、稳定排序与 1–100 limit 边界完成。
+- [x] 已实现的 `/v1` Team 路由具备严格 JSON、1 MiB 上限、请求 ID 和统一错误。
+- [x] Team HTTP 不透明 cursor 编解码、分页响应与稳定排序已完成；仅未提供 `limit` 时使用默认值，显式空值、零值或重复的 `limit`/`cursor` 均返回 `400 invalid_argument`。
 - [x] HTTP 日志包含同一 request ID、方法、路由/路径、状态和耗时，不泄漏敏感值。
-- [ ] 单元测试覆盖关键校验、业务服务和 handler。
+- [x] Team 的关键校验、业务服务、repository 与已实现 handler 有单元/集成测试覆盖。
 - [x] PostgreSQL integration tests 使用独立 `_test` 数据库且不会静默跳过。
 - [x] PR #15 合并前本地 `make verify`（含生成检查、普通/竞态/真实 PostgreSQL integration test 与漏洞扫描）通过。
-- [x] required `verify`、`smoke` 与 `atlas-community` checks 覆盖已实现 M1 路径的数据库依赖和 API 最小路径。
+- [x] PR #15 的 required `verify`、`smoke` 与 `atlas-community` checks 覆盖数据库依赖和 Team 创建 API 最小路径；PR #17 的同三项 checks 已在 clean runner 验证 Team 单项读取与 `limit=1` 列表读取。
 
 ## 可复现交付与证据
 

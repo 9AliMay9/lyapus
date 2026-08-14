@@ -7,4 +7,4 @@
 - `checklist.md`：可勾选的完成项。
 - `outcome.md`：阶段结束后填写的实际结果与证据。
 
-M0 已完成并冻结实际结果。M1 已完成施工包、Atlas migration 决策、schema/sqlc 基线、数据库基础设施、Team repository CRUD/稳定分页、Team 业务服务与首个 HTTP 创建纵切面；下一步完成 Team 其余 HTTP CRUD 和 cursor，再进入 Service/Environment。状态与下一步以 `progress/current.md` 为准。M2–M8 继续只保留入口。
+M0 已完成并冻结实际结果。M1 已完成施工包、Atlas migration 决策、schema/sqlc 基线、数据库基础设施、Team repository CRUD/稳定分页、Team 业务服务，以及 Team 创建、单项读取和列表读取 HTTP 纵切面；下一步完成 Team PATCH/DELETE，再进入 Service/Environment。状态与下一步以 `progress/current.md` 为准。M2–M8 继续只保留入口。

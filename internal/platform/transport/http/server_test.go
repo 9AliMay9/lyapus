@@ -84,13 +84,15 @@ func TestRequestLoggerIncludesRequestIDAndStatus(t *testing.T) {
 	var output bytes.Buffer
 	logger := slog.New(slog.NewJSONHandler(&output, nil))
 
-	handler := requestLogger(
+	var contextID string
+	handler := requestid.Middleware(requestLogger(
 		logger,
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("X-Request-ID", "request-123")
+			contextID = requestid.FromContext(r.Context())
+			w.Header().Set(requestid.Header, "mutated-response-id")
 			w.WriteHeader(http.StatusCreated)
 		}),
-	)
+	))
 
 	request := httptest.NewRequest(http.MethodPost, "/v1/teams", nil)
 	recorder := httptest.NewRecorder()
@@ -102,8 +104,14 @@ func TestRequestLoggerIncludesRequestIDAndStatus(t *testing.T) {
 		t.Fatalf("decode log entry: %v", err)
 	}
 
-	if got := entry["request_id"]; got != "request-123" {
-		t.Fatalf("request_id = %#v, want %q", got, "request-123")
+	if contextID == "" {
+		t.Fatal("request ID in context = empty, want generated ID")
+	}
+	if got := entry["request_id"]; got != contextID {
+		t.Fatalf("request_id = %#v, want context ID %q", got, contextID)
+	}
+	if got := recorder.Header().Get(requestid.Header); got != "mutated-response-id" {
+		t.Fatalf("%s response header = %q, want %q", requestid.Header, got, "mutated-response-id")
 	}
 	if got := entry["method"]; got != http.MethodPost {
 		t.Fatalf("method = %#v, want %q", got, http.MethodPost)

@@ -25,7 +25,7 @@ func NewServer(
 
 	return &http.Server{
 		Addr:              cfg.HTTPAddr,
-		Handler:           requestLogger(logger, requestid.Middleware(mux)),
+		Handler:           requestid.Middleware(requestLogger(logger, mux)),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 }
@@ -70,9 +70,14 @@ func requestLogger(logger *slog.Logger, next http.Handler) http.Handler {
 			status = http.StatusOK
 		}
 
+		requestID := requestid.FromContext(r.Context())
+		if requestID == "" {
+			requestID = recorder.Header().Get(requestid.Header)
+		}
+
 		logger.Info(
 			"http_request_completed",
-			"request_id", recorder.Header().Get("X-Request-ID"),
+			"request_id", requestID,
 			"method", r.Method,
 			"path", r.URL.Path,
 			"status", status,

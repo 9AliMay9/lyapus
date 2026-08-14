@@ -27,6 +27,7 @@
 - 2026-08-11，在新建的可丢弃 `_test` PostgreSQL 16.14 数据库完成 migration dry-run、apply、status 后，PR #15 合并前的本地 `make verify` 通过：格式化、生成新鲜度、`go vet`、普通测试、race、真实 PostgreSQL integration test 与漏洞扫描均成功。CI smoke 已扩展为以同一版本化 migration 准备临时数据库后验证 `/livez`、`/readyz` 及 Team 的 400、201、409 路径；PR #15 的 `verify`、`atlas-community` 与该 smoke 均在 clean runner 通过，squash commit `8e84c20` 已合入 `main`。
 - 2026-08-13，在可丢弃 PostgreSQL 16.14 开发库完成 migration dry-run、apply、status 后，实测创建两个 Team、单项读取、`limit=1` 第一页和携带 `next_cursor` 的第二页；结果按 `(created_at DESC, id DESC)` 返回，cursor 分页无重复或遗漏。随后在独立 `_test` 库完成 migration dry-run、apply、status，并以该库运行 `make verify`；`go vet`、普通测试、race、真实 PostgreSQL integration test 与漏洞扫描均成功。待 PR 的 clean-runner 验收更新后的 smoke 断言。
 - 2026-08-14，`govulncheck` 识别出 Go 1.26.5 标准库中四个代码路径可达漏洞；本机工具链与 `go.mod` 均升级到 Go 1.26.6（扫描报告给出的修复版本）后，以同一独立 `_test` PostgreSQL 16.14 数据库重跑 `make verify`，普通/竞态/真实 integration test 通过，漏洞扫描恢复为 `No vulnerabilities found.`。
+- 2026-08-14，PR #17 的 required `verify`、`smoke` 与 `atlas-community` checks 全部通过；其中 clean-runner smoke 在版本化 migration 后验证 Team 创建、单项读取、`limit=1` 列表读取及既有错误路径。
 
 ## 与计划的偏差
 

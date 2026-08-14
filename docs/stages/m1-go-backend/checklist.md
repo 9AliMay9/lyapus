@@ -44,7 +44,7 @@
 - [x] Team 的关键校验、业务服务、repository 与已实现 handler 有单元/集成测试覆盖。
 - [x] PostgreSQL integration tests 使用独立 `_test` 数据库且不会静默跳过。
 - [x] PR #15 合并前本地 `make verify`（含生成检查、普通/竞态/真实 PostgreSQL integration test 与漏洞扫描）通过。
-- [x] PR #15 的 required `verify`、`smoke` 与 `atlas-community` checks 覆盖数据库依赖和 Team 创建 API 最小路径；当前 Team read smoke 扩展待本 PR clean-runner 验收。
+- [x] PR #15 的 required `verify`、`smoke` 与 `atlas-community` checks 覆盖数据库依赖和 Team 创建 API 最小路径；PR #17 的同三项 checks 已在 clean runner 验证 Team 单项读取与 `limit=1` 列表读取。
 
 ## 可复现交付与证据
 

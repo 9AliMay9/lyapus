@@ -22,4 +22,4 @@
 - 审计发现 `r.URL.Query().Get(...)` 无法区分未提供参数与显式空值：`limit=0` 会进入 service 的默认值路径，`limit=` 与 `cursor=` 会被当作未提供。这与公共契约“未提供 limit 时默认 20、显式 limit 范围 1–100、非法 cursor 返回 400”不完全一致。已在本 PR 内改为按 query key presence 判断，并覆盖零值、空值和重复参数；修复后的 catalog HTTP 包测试通过。
 - 原始方案书 Day 4 以 Service 创建/查询/更新为示例，但 Day 3 与 M1 最小交付同时要求 Team/Service/Environment 关系及完整 CRUD。先完成 Team 纵切面是施工顺序细化，用于稳定分层、错误和分页模板；没有删除或替代 Service/Environment 范围。
 - `statusRecorder` 通过 `Unwrap` 支持 `http.NewResponseController`。如未来引入 SSE、WebSocket、反向代理或其他依赖 optional `ResponseWriter` 接口的 handler，须先专项审查 `Flusher`、`Hijacker` 等接口透明性并补真实行为测试；当前 JSON REST API 不提前实现这些透传。
-- 更新后的 smoke 尚待此施工包 PR 的 clean-runner 运行确认；在成功前不声明该 CI 证据已完成。
+- 2026-08-14，PR #17 的 required `verify`、`smoke` 与 `atlas-community` checks 全部通过；clean-runner smoke 已验证创建后单项读取与 `limit=1` 列表读取。

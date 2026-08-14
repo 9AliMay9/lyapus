@@ -94,6 +94,7 @@ cmd/apiserver
 - 创建成功返回 `201` 与资源；查询/更新成功返回 `200`；删除成功返回 `204` 且无响应体。
 - 每个进入 HTTP server 的请求都生成新的请求 ID，并在 `X-Request-ID` 响应头和完成日志中使用同一值；catalog 错误体也使用该 ID。M1 不信任或透传外部传入的请求 ID。
 - 所有 handler 接收并向 repository 传递 `r.Context()`；不把 context 存入结构体。
+- 当前 HTTP 包装器以 `http.ResponseWriter.Unwrap` 支持 `http.NewResponseController` 到达底层 writer。若后续引入 SSE、WebSocket、反向代理或其他依赖 `Flusher`、`Hijacker` 等可选 `ResponseWriter` 接口的 handler，必须先专项审查包装器的接口透明性并补真实行为测试；M1 当前 REST JSON API 不提前实现这些接口透传。
 
 Catalog 资源错误响应固定为：
 

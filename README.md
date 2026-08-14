@@ -2,7 +2,7 @@
 
 一个以 Go 为主语言、以 OpenTelemetry 为遥测标准、以 SLO 与故障闭环为可靠性核心，并逐步演化为平台工程与 AI 可观测性实践的项目。
 
-M0（工程基线）已经完成。M1 正在施工：当前已有 PostgreSQL migration、`pgxpool` 启动与 readiness、sqlc 基线、Team repository CRUD/稳定游标分页及真实 PostgreSQL 集成测试，以及 Team 业务服务和 `POST /v1/teams`。Team 其余 HTTP API、Service/Environment、Compose、查询计划实验仍未完成；当前也没有消息队列、OpenTelemetry、前端或 AI 功能。
+M0（工程基线）已经完成。M1 正在施工：当前已有 PostgreSQL migration、`pgxpool` 启动与 readiness、sqlc 基线、Team repository CRUD/稳定游标分页及真实 PostgreSQL 集成测试，以及 Team 业务服务和 `POST /v1/teams`、`GET /v1/teams/{team_id}`、`GET /v1/teams`。Team PATCH/DELETE、Service/Environment、Compose、查询计划实验仍未完成；当前也没有消息队列、OpenTelemetry、前端或 AI 功能。
 
 ## 前置条件
 

@@ -6,7 +6,7 @@
 
 ## 当前范围
 
-- M0 工程基线已经完成终局审计；M1 已完成 migration、数据库基础设施、Team repository CRUD/稳定分页、Team 业务服务和首个 HTTP 创建端点；Team 其余 HTTP API 与 Service/Environment 继续施工。
+- M0 工程基线已经完成终局审计；M1 已完成 migration、数据库基础设施、Team repository CRUD/稳定分页、Team 业务服务，以及 Team 创建、单项读取和列表读取 HTTP 端点；Team PATCH/DELETE 与 Service/Environment 继续施工。
 - 近期可投递目标是 M1–M3；M4–M8 是后续演化路线，不是当前阻塞项。
 - 首先做模块化单体；不为制造“微服务感”提前拆分服务。
 - 当前主仓库的规范地址：`github.com/9AliMay9/lyapus`。

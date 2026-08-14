@@ -275,6 +275,47 @@ jobs:
             exit 1
           fi
 
+          created_id="$(
+            sed -n 's/.*"id":\([0-9][0-9]*\).*/\1/p' created.json
+          )"
+
+          if [ -z "$created_id" ]; then
+            cat created.headers created.json server.log
+            exit 1
+          fi
+
+          get_status="$(
+            curl --silent --show-error \
+              --dump-header get.headers \
+              --output get.json \
+              --write-out '%{http_code}' \
+              "http://127.0.0.1:8080/v1/teams/$created_id"
+          )"
+
+          if [ "$get_status" != 200 ] ||
+            ! grep --ignore-case --quiet '^x-request-id: [^[:space:]]' get.headers ||
+            ! grep --fixed-strings --quiet '"id":'"$created_id" get.json ||
+            ! grep --fixed-strings --quiet '"slug":"ci-smoke"' get.json; then
+            cat created.headers created.json get.headers get.json server.log
+            exit 1
+          fi
+
+          list_status="$(
+            curl --silent --show-error \
+              --dump-header list.headers \
+              --output list.json \
+              --write-out '%{http_code}' \
+              'http://127.0.0.1:8080/v1/teams?limit=1'
+          )"
+
+          if [ "$list_status" != 200 ] ||
+            ! grep --ignore-case --quiet '^x-request-id: [^[:space:]]' list.headers ||
+            ! grep --fixed-strings --quiet '"items":[{"id":'"$created_id" list.json ||
+            ! grep --fixed-strings --quiet '"next_cursor":""' list.json; then
+            cat created.headers created.json list.headers list.json server.log
+            exit 1
+          fi
+
           conflict_status="$(
             curl --silent --show-error \
               --request POST \

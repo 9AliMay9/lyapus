@@ -1,6 +1,6 @@
 # M1 实际实施结果
 
-状态：M1 尚未完成；数据库基础设施、Team repository、Team 业务服务与 Team HTTP 创建/读取纵切面已完成，以下只记录已发生的事实。
+状态：M1 尚未完成；数据库基础设施、Team repository、Team 业务服务与完整 Team HTTP CRUD 纵切面已完成，以下只记录已发生的事实。
 
 ## 实际完成
 
@@ -28,12 +28,13 @@
 - 2026-08-13，在可丢弃 PostgreSQL 16.14 开发库完成 migration dry-run、apply、status 后，实测创建两个 Team、单项读取、`limit=1` 第一页和携带 `next_cursor` 的第二页；结果按 `(created_at DESC, id DESC)` 返回，cursor 分页无重复或遗漏。随后在独立 `_test` 库完成 migration dry-run、apply、status，并以该库运行 `make verify`；`go vet`、普通测试、race、真实 PostgreSQL integration test 与漏洞扫描均成功。待 PR 的 clean-runner 验收更新后的 smoke 断言。
 - 2026-08-14，`govulncheck` 识别出 Go 1.26.5 标准库中四个代码路径可达漏洞；本机工具链与 `go.mod` 均升级到 Go 1.26.6（扫描报告给出的修复版本）后，以同一独立 `_test` PostgreSQL 16.14 数据库重跑 `make verify`，普通/竞态/真实 integration test 通过，漏洞扫描恢复为 `No vulnerabilities found.`。
 - 2026-08-14，PR #17 的 required `verify`、`smoke` 与 `atlas-community` checks 全部通过；其中 clean-runner smoke 在版本化 migration 后验证 Team 创建、单项读取、`limit=1` 列表读取及既有错误路径。
+- 2026-08-15，Team HTTP PATCH/DELETE 的普通与竞态测试通过；在可丢弃 PostgreSQL 16.14 开发库完成 migration dry-run、apply、status 后，实测 PATCH 成功、空更新 400、唯一 slug 冲突 409、DELETE 空 204 与删除后查询 404，响应与完成日志的 request ID 一致。独立 `_test` 库完成 migration dry-run、apply、status；`make verify` 通过。更新后的 CI smoke 待本施工包 PR 的 clean-runner 验收。
 
 ## 与计划的偏差
 
 - 尚未引入 Compose；本次使用一次性容器仅作为运行证据，不能替代最终 Compose 空环境验收。
 - `/readyz` 暂时返回最小探针体 `{"status":"not_ready"}`；它已有全局 request-ID，但尚未改成 catalog 的错误信封，仍应保持健康探针的最小契约。
-- Team repository 与业务校验已完成；Team 已实现创建、单项读取和列表读取。PATCH、DELETE、Service/Environment HTTP 资源契约仍未实现。
+- Team repository、业务校验和完整 Team HTTP CRUD 已完成；Service/Environment HTTP 资源契约仍未实现。
 
 ## 证据
 

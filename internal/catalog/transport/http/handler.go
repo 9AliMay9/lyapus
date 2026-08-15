@@ -1,7 +1,9 @@
 package cataloghttp
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	stdhttp "net/http"
@@ -18,6 +20,8 @@ type teamService interface {
 	CreateTeam(context.Context, catalog.CreateTeamInput) (catalog.Team, error)
 	GetTeamByID(context.Context, int64) (catalog.Team, error)
 	ListTeams(context.Context, catalog.ListTeamsInput) (catalog.TeamPage, error)
+	UpdateTeam(context.Context, int64, catalog.UpdateTeamInput) (catalog.Team, error)
+	DeleteTeam(context.Context, int64) error
 }
 
 type Handler struct {
@@ -27,6 +31,16 @@ type Handler struct {
 type createTeamRequest struct {
 	Slug string `json:"slug"`
 	Name string `json:"name"`
+}
+
+type updateTeamRequest struct {
+	Slug patchString `json:"slug"`
+	Name patchString `json:"name"`
+}
+
+type patchString struct {
+	value string
+	set   bool
 }
 
 type teamResponse struct {
@@ -71,6 +85,8 @@ func NewHandler(teams teamService) stdhttp.Handler {
 	router.Post("/v1/teams", handler.createTeam)
 	router.Get("/v1/teams", handler.listTeams)
 	router.Get("/v1/teams/{team_id}", handler.getTeam)
+	router.Patch("/v1/teams/{team_id}", handler.updateTeam)
+	router.Delete("/v1/teams/{team_id}", handler.deleteTeam)
 
 	return router
 }
@@ -114,6 +130,53 @@ func (h Handler) getTeam(w stdhttp.ResponseWriter, r *stdhttp.Request) {
 	}
 
 	writeJSON(w, stdhttp.StatusOK, teamResponseFromCatalog(team))
+}
+
+func (h Handler) updateTeam(w stdhttp.ResponseWriter, r *stdhttp.Request) {
+	id, err := parsePositiveTeamID(chi.URLParam(r, "team_id"))
+	if err != nil {
+		writeCatalogError(w, err, requestid.FromContext(r.Context()))
+		return
+	}
+
+	var request updateTeamRequest
+	if err := decodeJSONBody(w, r, &request); err != nil {
+		writeError(
+			w,
+			stdhttp.StatusBadRequest,
+			"invalid_argument",
+			"invalid request body",
+			requestid.FromContext(r.Context()),
+		)
+		return
+	}
+
+	team, err := h.teams.UpdateTeam(
+		r.Context(),
+		id,
+		updateTeamInputFromRequest(request),
+	)
+	if err != nil {
+		writeCatalogError(w, err, requestid.FromContext(r.Context()))
+		return
+	}
+
+	writeJSON(w, stdhttp.StatusOK, teamResponseFromCatalog(team))
+}
+
+func (h Handler) deleteTeam(w stdhttp.ResponseWriter, r *stdhttp.Request) {
+	id, err := parsePositiveTeamID(chi.URLParam(r, "team_id"))
+	if err != nil {
+		writeCatalogError(w, err, requestid.FromContext(r.Context()))
+		return
+	}
+
+	if err := h.teams.DeleteTeam(r.Context(), id); err != nil {
+		writeCatalogError(w, err, requestid.FromContext(r.Context()))
+		return
+	}
+
+	w.WriteHeader(stdhttp.StatusNoContent)
 }
 
 func (h Handler) listTeams(w stdhttp.ResponseWriter, r *stdhttp.Request) {
@@ -241,4 +304,29 @@ func teamResponseFromCatalog(team catalog.Team) teamResponse {
 		CreatedAt: team.CreatedAt.UTC(),
 		UpdatedAt: team.UpdatedAt.UTC(),
 	}
+}
+
+func (value *patchString) UnmarshalJSON(data []byte) error {
+	value.set = true
+
+	if bytes.Equal(bytes.TrimSpace(data), []byte("null")) {
+		return errors.New("string field must not be null")
+	}
+
+	return json.Unmarshal(data, &value.value)
+}
+
+func updateTeamInputFromRequest(request updateTeamRequest) catalog.UpdateTeamInput {
+	input := catalog.UpdateTeamInput{}
+
+	if request.Slug.set {
+		slug := request.Slug.value
+		input.Slug = &slug
+	}
+	if request.Name.set {
+		name := request.Name.value
+		input.Name = &name
+	}
+
+	return input
 }

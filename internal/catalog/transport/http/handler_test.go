@@ -464,6 +464,326 @@ func TestHandlerListTeamsRejectsInvalidQuery(t *testing.T) {
 	}
 }
 
+func TestHandlerUpdateTeam(t *testing.T) {
+	createdAt := time.Date(2026, time.August, 15, 12, 0, 0, 0, time.UTC)
+	updatedAt := createdAt.Add(time.Minute)
+
+	service := &recordingTeamService{
+		team: catalog.Team{
+			ID:        42,
+			Slug:      "platform-engineering",
+			Name:      "Platform Engineering",
+			CreatedAt: createdAt,
+			UpdatedAt: updatedAt,
+		},
+	}
+	handler := newTestHandler(service)
+
+	request := httptest.NewRequest(
+		stdhttp.MethodPatch,
+		"/v1/teams/42",
+		strings.NewReader(
+			`{"slug":"platform-engineering","name":"Platform Engineering"}`,
+		),
+	)
+	recorder := httptest.NewRecorder()
+
+	handler.ServeHTTP(recorder, request)
+
+	response := recorder.Result()
+	defer response.Body.Close()
+
+	if response.StatusCode != stdhttp.StatusOK {
+		t.Fatalf("status = %d, want %d", response.StatusCode, stdhttp.StatusOK)
+	}
+	if service.updateID == nil {
+		t.Fatal("UpdateTeam() was not called")
+	}
+	if *service.updateID != 42 {
+		t.Fatalf("UpdateTeam() ID = %d, want 42", *service.updateID)
+	}
+	if service.updateInput == nil {
+		t.Fatal("UpdateTeam() input = nil")
+	}
+	if service.updateInput.Slug == nil {
+		t.Fatal("UpdateTeam() slug = nil")
+	}
+	if *service.updateInput.Slug != "platform-engineering" {
+		t.Fatalf(
+			"UpdateTeam() slug = %q, want %q",
+			*service.updateInput.Slug,
+			"platform-engineering",
+		)
+	}
+	if service.updateInput.Name == nil {
+		t.Fatal("UpdateTeam() name = nil")
+	}
+	if *service.updateInput.Name != "Platform Engineering" {
+		t.Fatalf(
+			"UpdateTeam() name = %q, want %q",
+			*service.updateInput.Name,
+			"Platform Engineering",
+		)
+	}
+
+	var got teamResponse
+	if err := json.NewDecoder(response.Body).Decode(&got); err != nil {
+		t.Fatalf("decode response body: %v", err)
+	}
+	if got.ID != 42 {
+		t.Fatalf("response ID = %d, want 42", got.ID)
+	}
+	if got.Slug != "platform-engineering" {
+		t.Fatalf("response slug = %q, want %q", got.Slug, "platform-engineering")
+	}
+	if got.Name != "Platform Engineering" {
+		t.Fatalf("response name = %q, want %q", got.Name, "Platform Engineering")
+	}
+	if !got.UpdatedAt.Equal(updatedAt) {
+		t.Fatalf("response updated_at = %s, want %s", got.UpdatedAt, updatedAt)
+	}
+}
+
+func TestHandlerUpdateTeamPassesPartialInput(t *testing.T) {
+	service := &recordingTeamService{}
+	handler := newTestHandler(service)
+
+	request := httptest.NewRequest(
+		stdhttp.MethodPatch,
+		"/v1/teams/42",
+		strings.NewReader(`{"name":"Platform Engineering"}`),
+	)
+	recorder := httptest.NewRecorder()
+
+	handler.ServeHTTP(recorder, request)
+
+	if recorder.Code != stdhttp.StatusOK {
+		t.Fatalf("status = %d, want %d", recorder.Code, stdhttp.StatusOK)
+	}
+	if service.updateInput == nil {
+		t.Fatal("UpdateTeam() was not called")
+	}
+	if service.updateInput.Slug != nil {
+		t.Fatalf("UpdateTeam slug = %q, want nil", *service.updateInput.Slug)
+	}
+	if service.updateInput.Name == nil {
+		t.Fatal("UpdateTeam() name = nil")
+	}
+	if *service.updateInput.Name != "Platform Engineering" {
+		t.Fatalf(
+			"UpdateTeam() name = %q, want %q",
+			*service.updateInput.Name,
+			"Platform Engineering",
+		)
+	}
+}
+
+func TestHandlerUpdateTeamRejectsInvalidRequestBody(t *testing.T) {
+	tests := []struct {
+		name string
+		body string
+	}{
+		{
+			name: "null field",
+			body: `{"name":null}`,
+		},
+		{
+			name: "wrong field type",
+			body: `{"name":42}`,
+		},
+		{
+			name: "unknown field",
+			body: `{"description":"platform team"}`,
+		},
+		{
+			name: "multiple JSON values",
+			body: `{"name":"Platform"} {"slug":"platform"}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			service := &recordingTeamService{}
+			handler := newTestHandler(service)
+
+			request := httptest.NewRequest(
+				stdhttp.MethodPatch,
+				"/v1/teams/42",
+				strings.NewReader(tt.body),
+			)
+			recorder := httptest.NewRecorder()
+
+			handler.ServeHTTP(recorder, request)
+
+			if service.updateInput != nil {
+				t.Fatalf(
+					"UpdateTeam() input = %#v, want no call",
+					*service.updateInput,
+				)
+			}
+			assertErrorResponse(
+				t,
+				recorder,
+				stdhttp.StatusBadRequest,
+				"invalid_argument",
+				"invalid request body",
+			)
+		})
+	}
+}
+
+func TestHandlerUpdateTeamMapsCatalogErrors(t *testing.T) {
+	tests := []struct {
+		name        string
+		body        string
+		err         error
+		wantStatus  int
+		wantCode    string
+		wantMessage string
+	}{
+		{
+			name:        "empty update",
+			body:        `{}`,
+			err:         &catalog.InvalidArgumentError{Message: "at least one field must be provided"},
+			wantStatus:  stdhttp.StatusBadRequest,
+			wantCode:    "invalid_argument",
+			wantMessage: "at least one field must be provided",
+		},
+		{
+			name:        "not found",
+			body:        `{"name":"Platform Engineering"}`,
+			err:         catalog.ErrNotFound,
+			wantStatus:  stdhttp.StatusNotFound,
+			wantCode:    "not_found",
+			wantMessage: "resource not found",
+		},
+		{
+			name:        "conflict",
+			body:        `{"slug":"platform-engineering"}`,
+			err:         catalog.ErrConflict,
+			wantStatus:  stdhttp.StatusConflict,
+			wantCode:    "conflict",
+			wantMessage: "resource conflict",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			service := &recordingTeamService{
+				err: tt.err,
+			}
+			handler := newTestHandler(service)
+
+			request := httptest.NewRequest(
+				stdhttp.MethodPatch,
+				"/v1/teams/42",
+				strings.NewReader(tt.body),
+			)
+			recorder := httptest.NewRecorder()
+
+			handler.ServeHTTP(recorder, request)
+
+			if service.updateID == nil {
+				t.Fatal("UpdateTeam() was not called")
+			}
+			if *service.updateID != 42 {
+				t.Fatalf("UpdateTeam() ID = %d, want 42", *service.updateID)
+			}
+			assertErrorResponse(
+				t,
+				recorder,
+				tt.wantStatus,
+				tt.wantCode,
+				tt.wantMessage,
+			)
+		})
+	}
+}
+
+func TestHandlerDeleteTeam(t *testing.T) {
+	service := &recordingTeamService{}
+	handler := newTestHandler(service)
+
+	request := httptest.NewRequest(
+		stdhttp.MethodDelete,
+		"/v1/teams/42",
+		nil,
+	)
+	recorder := httptest.NewRecorder()
+
+	handler.ServeHTTP(recorder, request)
+
+	if recorder.Code != stdhttp.StatusNoContent {
+		t.Fatalf("status = %d, want %d", recorder.Code, stdhttp.StatusNoContent)
+	}
+	if recorder.Body.Len() != 0 {
+		t.Fatalf("response body = %q, want empty", recorder.Body.String())
+	}
+	if service.deleteID == nil {
+		t.Fatal("DeleteTeam() was not called")
+	}
+	if *service.deleteID != 42 {
+		t.Fatalf("DeleteTeam() ID = %d, want 42", *service.deleteID)
+	}
+}
+
+func TestHandlerDeleteTeamMapsCatalogErrors(t *testing.T) {
+	tests := []struct {
+		name        string
+		err         error
+		wantStatus  int
+		wantCode    string
+		wantMessage string
+	}{
+		{
+			name:        "not found",
+			err:         catalog.ErrNotFound,
+			wantStatus:  stdhttp.StatusNotFound,
+			wantCode:    "not_found",
+			wantMessage: "resource not found",
+		},
+		{
+			name:        "conflict",
+			err:         catalog.ErrConflict,
+			wantStatus:  stdhttp.StatusConflict,
+			wantCode:    "conflict",
+			wantMessage: "resource conflict",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			service := &recordingTeamService{
+				err: tt.err,
+			}
+			handler := newTestHandler(service)
+
+			request := httptest.NewRequest(
+				stdhttp.MethodDelete,
+				"/v1/teams/42",
+				nil,
+			)
+			recorder := httptest.NewRecorder()
+
+			handler.ServeHTTP(recorder, request)
+
+			if service.deleteID == nil {
+				t.Fatal("DeleteTeam() was not called")
+			}
+			if *service.deleteID != 42 {
+				t.Fatalf("DeleteTeam() ID = %d, want 42", *service.deleteID)
+			}
+			assertErrorResponse(
+				t,
+				recorder,
+				tt.wantStatus,
+				tt.wantCode,
+				tt.wantMessage,
+			)
+		})
+	}
+}
+
 func TestHandlerCreateTeamRejectsInvalidRequestBody(t *testing.T) {
 	service := &recordingTeamService{}
 	handler := newTestHandler(service)
@@ -635,6 +955,9 @@ type recordingTeamService struct {
 	createInput *catalog.CreateTeamInput
 	getID       *int64
 	listInput   *catalog.ListTeamsInput
+	updateID    *int64
+	updateInput *catalog.UpdateTeamInput
+	deleteID    *int64
 	team        catalog.Team
 	page        catalog.TeamPage
 	err         error
@@ -662,4 +985,22 @@ func (s *recordingTeamService) ListTeams(
 ) (catalog.TeamPage, error) {
 	s.listInput = &input
 	return s.page, s.err
+}
+
+func (s *recordingTeamService) UpdateTeam(
+	_ context.Context,
+	id int64,
+	input catalog.UpdateTeamInput,
+) (catalog.Team, error) {
+	s.updateID = &id
+	s.updateInput = &input
+	return s.team, s.err
+}
+
+func (s *recordingTeamService) DeleteTeam(
+	_ context.Context,
+	id int64,
+) error {
+	s.deleteID = &id
+	return s.err
 }

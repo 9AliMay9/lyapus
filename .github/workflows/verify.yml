@@ -316,6 +316,26 @@ jobs:
             exit 1
           fi
 
+          updated_status="$(
+            curl --silent --show-error \
+              --request PATCH \
+              --header 'Content-Type: application/json' \
+              --data '{"name":"CI Smoke Updated"}' \
+              --dump-header updated.headers \
+              --output updated.json \
+              --write-out '%{http_code}' \
+              "http://127.0.0.1:8080/v1/teams/$created_id"
+          )"
+
+          if [ "$updated_status" != 200 ] ||
+            ! grep --ignore-case --quiet '^x-request-id: [^[:space:]]' updated.headers ||
+            ! grep --fixed-strings --quiet '"id":'"$created_id" updated.json ||
+            ! grep --fixed-strings --quiet '"slug":"ci-smoke"' updated.json ||
+            ! grep --fixed-strings --quiet '"name":"CI Smoke Updated"' updated.json; then
+            cat created.headers created.json updated.headers updated.json server.log
+            exit 1
+          fi
+
           conflict_status="$(
             curl --silent --show-error \
               --request POST \
@@ -346,5 +366,48 @@ jobs:
             [ "$conflict_header_id" != "$conflict_body_id" ] ||
             ! grep --fixed-strings --quiet '"code":"conflict"' conflict.json; then
             cat conflict.headers conflict.json server.log
+            exit 1
+          fi
+
+          deleted_status="$(
+            curl --silent --show-error \
+              --request DELETE \
+              --dump-header deleted.headers \
+              --output deleted.body \
+              --write-out '%{http_code}' \
+              "http://127.0.0.1:8080/v1/teams/$created_id"
+          )"
+
+          if [ "$deleted_status" != 204 ] ||
+            ! grep --ignore-case --quiet '^x-request-id: [^[:space:]]' deleted.headers ||
+            [ -s deleted.body ]; then
+            cat created.headers created.json deleted.headers deleted.body server.log
+            exit 1
+          fi
+
+
+          missing_status="$(
+            curl --silent --show-error \
+              --dump-header missing.headers \
+              --output missing.json \
+              --write-out '%{http_code}' \
+              "http://127.0.0.1:8080/v1/teams/$created_id"
+          )"
+
+          missing_header_id="$(
+            grep --ignore-case '^x-request-id:' missing.headers |
+              head -n 1 |
+              awk '{print $2}' |
+              tr -d '\r'
+          )"
+          missing_body_id="$(
+            sed -n 's/.*"request_id":"\([^"]*\)".*/\1/p' missing.json
+          )"
+
+          if [ "$missing_status" != 404 ] ||
+            [ -z "$missing_header_id" ] ||
+            [ "$missing_header_id" != "$missing_body_id" ] ||
+            ! grep --fixed-strings --quiet '"code":"not_found"' missing.json; then
+            cat created.headers created.json missing.headers missing.json server.log
             exit 1
           fi

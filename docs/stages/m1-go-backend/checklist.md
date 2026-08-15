@@ -38,7 +38,7 @@
 
 - [x] 使用 chi/v5 组织已实现路由，handler 保持标准 `net/http` 签名。
 - [x] chi 与 sqlc 类型都没有进入 catalog domain 或公共 API 契约。
-- [x] 已实现的 `/v1` Team 路由具备严格 JSON、1 MiB 上限、请求 ID 和统一错误。
+- [x] 完整 Team HTTP CRUD 路由具备严格 JSON、1 MiB 上限、请求 ID 和统一错误；PATCH 拒绝未知字段、多个 JSON 值和 `null`，DELETE 成功返回空 `204`。
 - [x] Team HTTP 不透明 cursor 编解码、分页响应与稳定排序已完成；仅未提供 `limit` 时使用默认值，显式空值、零值或重复的 `limit`/`cursor` 均返回 `400 invalid_argument`。
 - [x] HTTP 日志包含同一 request ID、方法、路由/路径、状态和耗时，不泄漏敏感值。
 - [x] Team 的关键校验、业务服务、repository 与已实现 handler 有单元/集成测试覆盖。

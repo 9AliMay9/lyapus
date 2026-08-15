@@ -28,7 +28,7 @@
 - 2026-08-13，在可丢弃 PostgreSQL 16.14 开发库完成 migration dry-run、apply、status 后，实测创建两个 Team、单项读取、`limit=1` 第一页和携带 `next_cursor` 的第二页；结果按 `(created_at DESC, id DESC)` 返回，cursor 分页无重复或遗漏。随后在独立 `_test` 库完成 migration dry-run、apply、status，并以该库运行 `make verify`；`go vet`、普通测试、race、真实 PostgreSQL integration test 与漏洞扫描均成功。待 PR 的 clean-runner 验收更新后的 smoke 断言。
 - 2026-08-14，`govulncheck` 识别出 Go 1.26.5 标准库中四个代码路径可达漏洞；本机工具链与 `go.mod` 均升级到 Go 1.26.6（扫描报告给出的修复版本）后，以同一独立 `_test` PostgreSQL 16.14 数据库重跑 `make verify`，普通/竞态/真实 integration test 通过，漏洞扫描恢复为 `No vulnerabilities found.`。
 - 2026-08-14，PR #17 的 required `verify`、`smoke` 与 `atlas-community` checks 全部通过；其中 clean-runner smoke 在版本化 migration 后验证 Team 创建、单项读取、`limit=1` 列表读取及既有错误路径。
-- 2026-08-15，Team HTTP PATCH/DELETE 的普通与竞态测试通过；在可丢弃 PostgreSQL 16.14 开发库完成 migration dry-run、apply、status 后，实测 PATCH 成功、空更新 400、唯一 slug 冲突 409、DELETE 空 204 与删除后查询 404，响应与完成日志的 request ID 一致。独立 `_test` 库完成 migration dry-run、apply、status；`make verify` 通过。更新后的 CI smoke 待本施工包 PR 的 clean-runner 验收。
+- 2026-08-15，Team HTTP PATCH/DELETE 的普通与竞态测试通过；在可丢弃 PostgreSQL 16.14 开发库完成 migration dry-run、apply、status 后，实测 PATCH 成功、空更新 400、唯一 slug 冲突 409、DELETE 空 204 与删除后查询 404，响应与完成日志的 request ID 一致。独立 `_test` 库完成 migration dry-run、apply、status；`make verify` 通过。PR #18 的 required `verify`、`smoke` 与 `atlas-community` 均在 clean runner 通过，smoke 覆盖完整 Team HTTP CRUD 链路。
 
 ## 与计划的偏差
 

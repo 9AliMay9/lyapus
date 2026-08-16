@@ -85,6 +85,7 @@ docs/
 | 出现尚不能可靠收敛的重要技术选择 | `architecture/proposals/`；决定后看/写 ADR | 留下取舍理由，避免以后只记得结论。 |
 | 运行容器、迁移数据或排障 | 对应 `runbooks/` | 只执行已经验证的操作步骤。 |
 | 准备提交、推送或合并 GitHub 变更 | `runbooks/github-ssh.md` | 恢复 SSH agent，并按“分支 → PR → required checks → 合并 → 同步 main”完成受保护分支流程。 |
+| 功能性 PR、独立施工包或阶段准备收口 | `standards/collaboration.md` 的“高能力收口审阅门禁” | 先提醒并等待项目所有者确认模型/参数切换，再核对实现、施工包、原始方案、证据和文档一致性。 |
 | 做压测、故障实验或阶段收尾 | `benchmarks/`、`postmortems/`、`outcome.md` | 保存可解释的证据和实际结果。 |
 
 ## 方案解释规则

@@ -2,7 +2,7 @@
 
 ## 当前落点
 
-- 当前阶段：M0 已完成终局审计；M1 已完成数据库基础设施、Team repository 数据访问层，以及 Team 业务服务和完整 Team HTTP CRUD 纵切面。Team CRUD/稳定分页施工包已由 PR #13 以 squash commit `f4df01f` 合入 `main`；Team service、创建 API、全局 request ID 与 API smoke 已由 PR #15 以 squash commit `8e84c20` 合入 `main`，均通过 required clean-runner CI；Team HTTP read 与 cursor 分页已由 PR #17 以 squash commit `284021e` 合入 `main`。Team HTTP mutate 的 PR #18 required clean-runner checks 已通过，待合入 `main`。
+- 当前阶段：M0 已完成终局审计；M1 已完成数据库基础设施、Team repository 数据访问层，以及 Team 业务服务和完整 Team HTTP CRUD 纵切面。Team CRUD/稳定分页施工包已由 PR #13 以 squash commit `f4df01f` 合入 `main`；Team service、创建 API、全局 request ID 与 API smoke 已由 PR #15 以 squash commit `8e84c20` 合入 `main`；Team HTTP read 与 cursor 分页已由 PR #17 以 squash commit `284021e` 合入 `main`；Team HTTP mutate 已由 PR #18 以 squash commit `de7e2d3` 合入 `main`。上述功能性 PR 均通过 required clean-runner CI。
 - M0 结论：真实实现完整满足仓库内施工包，并基本符合原始 v3.1 工程基线预期，可以进入 M1。
 - M1 状态：施工包、Atlas 决策、schema、两份 versioned migration、sqlc 基线与 CI 门禁已完成；`LYAPUS_DATABASE_URL`、`pgxpool` 启动 Ping/关闭路径及数据库感知 `/readyz` 已完成并作真实运行验证。Team repository 的 Create/Get/List/Update/Delete、`(created_at, id)` 稳定游标分页、sqlc adapter 与本地及 clean-runner 真实 PostgreSQL integration test 已完成。Team service 已集中实现输入校验与分页默认值；chi 的完整 Team HTTP CRUD 已接入真实 repository。HTTP 层以 raw URL-safe base64 表示不透明 `(created_at, id)` cursor，保持严格 JSON、统一 catalog 错误与全局 request ID。Team HTTP mutate 已在本地真实 PostgreSQL、`make verify` 与 PR #18 clean-runner 验证：PATCH 严格区分字段未提供、空字符串与 `null`，DELETE 成功返回空 `204`，smoke 覆盖完整 Team CRUD 链路。Service、Environment、Compose 与查询计划实验仍待完成。
 - M1 最小范围：Team、Service、Environment CRUD，PostgreSQL migration/约束/事务/并发正确性，单元与真实数据库测试，Compose 空环境复现，以及一份查询计划优化记录。
@@ -29,14 +29,13 @@
 
 ## 下一次从这里开始
 
-1. 合入 PR #18 后实施 Service repository、业务服务与 HTTP 创建/读取路径。
+1. 对照 M1 施工包细化 Service 纵切面；在扩展新请求体前先明确并测试 catalog API 的请求 `Content-Type` 契约，同时补齐 Team PATCH/DELETE 非法 ID 的路由级回归测试，再实施 Service repository、业务服务与 HTTP 创建/读取路径。
 2. 按同一分层完成 Service/Environment，并在 Service 阶段集中处理“Service + 初始 Environment”的事务与并发。
 
 不要在应用启动路径自动执行 migration；不要让 Atlas Cloud/Pro、鉴权、RBAC、k6、OpenTelemetry 或其他后续增强进入 M1 v0.1 的阻塞路径。
 
 ## 协作审阅约定
 
-- 日常的学习、施工、测试解释和文档维护默认使用 Terra + medium。
-- 阶段开始时，先用 Sol 完成原始方案边界、施工包和验收标准的概览审阅；施工包经项目所有者确认后，切回 Terra + medium 执行。
-- 阶段验收前，再用 Sol 独立核对实现、测试证据、文档事实、风险和原始方案的一致性。安全、数据迁移/删除、公共 API 或数据模型等高影响判断也可临时使用 Sol。
-- 此约定是当前协作偏好，不是项目运行时依赖、架构决策或对外承诺；模型可用性变化时以实际界面为准。
+- 日常学习、施工和测试解释使用适合连续协作的模型配置；阶段设计、高影响判断和收口一致性审阅使用当时可用的高能力配置。
+- 功能性 PR、独立施工包或阶段达到收口点时，协作助手先提醒并等待项目所有者明确确认模型/参数已经调整，再开始核对实现、施工包、原始方案、证据和文档一致性。
+- 完整触发条件、审阅范围和例外以 `../standards/collaboration.md` 的“高能力收口审阅门禁”为准；该约定是协作流程，不是项目运行时依赖或对外承诺。

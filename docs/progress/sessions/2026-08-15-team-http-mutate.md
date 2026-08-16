@@ -17,5 +17,5 @@
 ## 边界与后续
 
 - 本施工包不改动 Team schema、migration、sqlc 查询、repository 或 service 的既有 Update/Delete 语义，只补齐 HTTP transport 与验证链路。
-- PR #18 的 required `verify`、`smoke` 与 `atlas-community` 均已在 clean runner 通过；smoke 已确认创建、读取、列表、更新、唯一冲突、删除与删除后 404 的单条 Team HTTP CRUD 链路。
+- PR #18 的 required `verify`、`smoke` 与 `atlas-community` 均已在 clean runner 通过；smoke 已确认创建、读取、列表、更新、唯一冲突、删除与删除后 404 的单条 Team HTTP CRUD 链路。施工包最终以 squash commit `de7e2d3` 合入 `main`。
 - Team 已形成完整的 HTTP CRUD 模板；下一步按同一分层实现 Service，并在其创建路径集中处理“Service + 初始 Environment”的事务原子性与并发唯一冲突。

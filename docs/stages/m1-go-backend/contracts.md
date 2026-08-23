@@ -111,6 +111,7 @@ Catalog 资源错误响应固定为：
 | 400 | `invalid_argument` | JSON、路径、游标或业务参数不合法。 |
 | 404 | `not_found` | 目标资源或必需的父资源不存在。 |
 | 409 | `conflict` | 唯一性冲突或资源仍被子资源引用。 |
+| 415 | `unsupported_media_type` | 带请求体的 catalog 写操作未使用 `application/json`。 |
 | 500 | `internal` | 未分类内部错误；响应不泄漏 SQL、连接串或内部路径。 |
 | 503 | `not_ready` | `/readyz` 的数据库检查失败。 |
 

@@ -1,6 +1,6 @@
 # M1 实际实施结果
 
-状态：M1 尚未完成；数据库基础设施、Team repository、Team 业务服务与完整 Team HTTP CRUD 纵切面已完成，以下只记录已发生的事实。
+状态：M1 尚未完成；数据库基础设施、完整 Team HTTP CRUD，以及经 clean runner 验证的 Service Create/Get/List、初始 Environment 事务创建和并发正确性已完成，以下只记录已发生的事实。
 
 ## 实际完成
 
@@ -13,6 +13,9 @@
 - `catalog.TeamService` 集中校验 Team ID、slug、name、更新输入与分页输入；它只依赖 domain repository 接口，不暴露 HTTP、pgx 或 sqlc 类型。
 - `POST /v1/teams`、`GET /v1/teams/{team_id}` 与 `GET /v1/teams` 已通过 chi 接到真实 Team service/repository；请求体使用 1 MiB 上限、拒绝未知字段和多个 JSON 值，并将 catalog 的参数、not-found、冲突与未知错误映射为稳定 JSON 错误信封。集合读取将 URL-safe base64 cursor 解码为 domain `(created_at, id)`，并将下一页 cursor 编码为不透明 token。仅未提供 `limit` 时使用默认值；显式空值、零值或重复的 `limit`/`cursor` 都映射为 `400 invalid_argument`。
 - request-ID 已提升至 `internal/platform/requestid`，包围整个服务 mux；健康检查与 `/v1` 都生成新的 ID，并在响应头、catalog 错误体和完成日志中复用。完成日志同时记录 method、path、status 和 duration。
+- Service 的 Create/Get/List 查询由项目手写并经 sqlc 生成 pgx 调用；PostgreSQL adapter 支持全局及 `team_id` 过滤的 `(created_at DESC, id DESC)` 游标分页。列表多取一行计算下一页，Service 单项查询再按 `(created_at, id)` 正序读取其 Environment。
+- `catalog.ServiceService` 集中校验 Team/Service ID、slug、name、description、初始 Environment 与分页输入。Service 创建始终开启显式 pgx 事务，并通过 `Queries.WithTx` 在同一事务写入 Service 与全部初始 Environment；任一步失败回滚，全部成功才提交。
+- `POST /v1/services`、`GET /v1/services/{service_id}` 与 `GET /v1/services` 已通过 chi 接到真实 Service service/repository。集合读取支持可选 `team_id`、严格 `limit`/`cursor` 参数；Service 单项响应展开 Environment，集合响应不展开。带请求体的 catalog 写请求必须使用 `application/json`，否则返回 `415 unsupported_media_type`。
 
 ## 验证
 
@@ -29,16 +32,21 @@
 - 2026-08-14，`govulncheck` 识别出 Go 1.26.5 标准库中四个代码路径可达漏洞；本机工具链与 `go.mod` 均升级到 Go 1.26.6（扫描报告给出的修复版本）后，以同一独立 `_test` PostgreSQL 16.14 数据库重跑 `make verify`，普通/竞态/真实 integration test 通过，漏洞扫描恢复为 `No vulnerabilities found.`。
 - 2026-08-14，PR #17 的 required `verify`、`smoke` 与 `atlas-community` checks 全部通过；其中 clean-runner smoke 在版本化 migration 后验证 Team 创建、单项读取、`limit=1` 列表读取及既有错误路径。
 - 2026-08-15，Team HTTP PATCH/DELETE 的普通与竞态测试通过；在可丢弃 PostgreSQL 16.14 开发库完成 migration dry-run、apply、status 后，实测 PATCH 成功、空更新 400、唯一 slug 冲突 409、DELETE 空 204 与删除后查询 404，响应与完成日志的 request ID 一致。独立 `_test` 库完成 migration dry-run、apply、status；`make verify` 通过。PR #18 的 required `verify`、`smoke` 与 `atlas-community` 均在 clean runner 通过，smoke 覆盖完整 Team HTTP CRUD 链路。
+- 2026-08-22，Service domain/service、SQL/sqlc、PostgreSQL adapter 与 HTTP transport 的普通测试及 `go test -race ./...` 通过。真实 PostgreSQL integration test 覆盖 Service + 初始 Environment 原子创建与回读、缺失 Team、重复初始 Environment 回滚、全局/Team 过滤游标分页，以及两个独立 repository 并发创建同一 `(team_id, slug)` 时恰好一个成功、一个冲突。
+- 2026-08-22，在可丢弃 PostgreSQL 16.14 开发库完成 migration dry-run、apply、status 后，实测创建父 Team 201、创建带两个初始 Environment 的 Service 201、单项读取 200、创建不带 Environment 的第二个 Service 201，以及 `team_id=1&limit=1` 两页列表；结果按 `(created_at DESC, id DESC)` 无重复或遗漏，单项展开 Environment 而列表不展开。响应与完成日志 request ID 一致，API 经 `Ctrl-C` 优雅停止，容器随后停止并自动删除。
+- 2026-08-22，在独立 `_test` PostgreSQL 16.14 数据库完成 migration dry-run、apply、status 后运行 `make verify`；`go vet`、生成新鲜度、普通测试、race、真实 integration test 与漏洞扫描全部通过，结果为 `No vulnerabilities found.`。验证后一次性容器已停止并自动删除。
+- 2026-08-23，PR #20 的 required `verify`、`smoke` 与 `atlas-community` checks 全部通过。clean-runner smoke 使用独立的 `service-smoke` 父 Team 创建带初始 Environment 的 Service，并验证 Service 单项读取、带 `team_id` 和 `limit=1` 的列表读取及列表不展开 Environment；既有 `ci-smoke` Team 保持 PATCH、冲突、DELETE 204 和删除后 404 链路。
 
 ## 与计划的偏差
 
 - 尚未引入 Compose；本次使用一次性容器仅作为运行证据，不能替代最终 Compose 空环境验收。
 - `/readyz` 暂时返回最小探针体 `{"status":"not_ready"}`；它已有全局 request-ID，但尚未改成 catalog 的错误信封，仍应保持健康探针的最小契约。
-- Team repository、业务校验和完整 Team HTTP CRUD 已完成；Service/Environment HTTP 资源契约仍未实现。
+- Service 当前只实现 Create/Get/List；PATCH/Delete 与 Environment 独立 CRUD 尚未实现，因此不能将 Service 或三类资源写成完整 CRUD。
+- 初版 Service smoke 把 Service 创建到既有 `ci-smoke` Team 下，令后续 Team DELETE 正确返回 409 而非旧断言的 204。该失败暴露的是测试数据归属冲突，不是应用缺陷；修复后将 Service 链路改用独立父 Team，并在同一 PR 的 clean runner 通过。
 
 ## 证据
 
-- Git commit / release：数据库基础设施已由 `df0154d`（PR #10）合入；Team Create/Get repository 已由 `57f19d4`（PR #11）合入；Team CRUD/稳定分页已由 `f4df01f`（PR #13）合入；Team service/创建 API 已由 `8e84c20`（PR #15）合入；Team HTTP read 已由 `284021e`（PR #17）合入；Team HTTP mutate 已由 `de7e2d3`（PR #18）合入；M1 release 待完成。
+- Git commit / release：数据库基础设施已由 `df0154d`（PR #10）合入；Team Create/Get repository 已由 `57f19d4`（PR #11）合入；Team CRUD/稳定分页已由 `f4df01f`（PR #13）合入；Team service/创建 API 已由 `8e84c20`（PR #15）合入；Team HTTP read 已由 `284021e`（PR #17）合入；Team HTTP mutate 已由 `de7e2d3`（PR #18）合入；Service Create/Get/List 已由 PR #20 验证、尚待合并；M1 release 待完成。
 - Migration ADR 与 runbook：ADR-0004 与 migration runbook 已完成。
 - 查询计划 benchmark：待完成。
 - 会话与学习记录：数据库基础设施会话已记录；M1 总结待完成。

@@ -76,9 +76,9 @@
 1. **迁移工具小实验（已完成）**：P-0001 已在空 PostgreSQL 16.14 上完成 diff、人工审阅、apply、status、重复执行和完整性校验，并由 ADR-0004 接受 Atlas Community。
 2. **数据库基础设施（已完成）**：扩展配置，建立 `pgxpool`，启动时显式连接检查，关闭时释放连接；把 `/readyz` 接到有超时的数据库 ping。
 3. **schema 与 migrations（基线已完成）**：期望 schema、两份 versioned migration、空库与前滚路径已建立；具体约束成功/失败行为仍须由真实 PostgreSQL 集成测试验证。
-4. **queries 与 repository（Team 已完成）**：Team Create/Get/List/Update/Delete、错误分类、基于 `(created_at, id)` 的稳定游标分页和真实数据库集成测试已完成；Service 和 Environment 仍按同一路径实施。
-5. **业务服务（Team 已完成）**：Team 的输入校验、分页默认值与 repository 调用边界已集中在 `catalog.TeamService`；后续集中处理 Service 归属规则、“Service + 初始 Environments”事务和并发唯一性测试。
-6. **HTTP transport（进行中）**：chi、全局 request ID、JSON/错误工具、完成日志与完整 Team HTTP CRUD 已接真实 repository；Team list 使用不透明 cursor，PATCH 严格区分缺省字段和 `null`。继续实现 Service/Environment 及其归属过滤。
+4. **queries 与 repository（Team 完成，Service 读/创建完成）**：Team Create/Get/List/Update/Delete 已完成；Service Create/Get/List、`team_id` 过滤、稳定游标分页、初始 Environment 事务创建、错误分类及真实数据库集成/并发测试已完成。继续实现 Service Update/Delete 与 Environment 独立 CRUD。
+5. **业务服务（Team 完成，Service 读/创建完成）**：Team 的完整业务边界与 Service 的 Create/Get/List 校验、归属过滤和分页默认值已集中在 catalog service；Service 创建输入包含可选初始 Environment，并保持 repository 事务边界。继续实现 Service mutation 与 Environment 业务规则。
+6. **HTTP transport（进行中）**：chi、全局 request ID、严格 JSON/媒体类型、错误工具、完成日志与完整 Team HTTP CRUD 已接真实 repository；Service POST、单项 GET、列表 GET、`team_id` 过滤和不透明 cursor 已装配，单项响应展开 Environment 而集合不展开。继续实现 Service PATCH/DELETE 与 Environment CRUD，并在每个纵切面补 clean-runner smoke。
 7. **交付路径**：建立 Dockerfile、Compose、migration runbook，确保空卷可以按顺序完成 migration、启动和 API 演示。
 8. **查询计划实验**：构造明确数据规模，对 Service 按 Team 的游标列表查询保存索引前后证据。
 9. **收口**：更新根 README、架构图、知识笔记、`outcome.md` 和当前进度；在 clean runner 与空 Compose project 上完成最终验收。
@@ -159,7 +159,7 @@ docker compose up --build
 - M1 v0.1 Git commit 与 release：待完成。
 - 迁移工具 ADR：ADR-0004 已 accepted。
 - 数据库 migration runbook：核心 diff/apply/status 路径已在本机与 required CI 实测。
-- PostgreSQL 集成测试：Team Create/Get/List/Update/Delete、唯一冲突、外键引用删除冲突、not-found 映射和游标分页已在本地与 PR #13 clean-runner 验证；其余约束、事务与并发场景待实现。
+- PostgreSQL 集成测试：Team Create/Get/List/Update/Delete、唯一冲突、外键引用删除冲突、not-found 映射和游标分页已在本地与 PR #13 clean-runner 验证；Service Create/Get/List、初始 Environment 事务回滚、父资源缺失、唯一冲突、`team_id` 过滤、游标分页和并发重复创建已在本地真实 PostgreSQL 验证。PR #20 的 clean-runner `verify` 与扩展 smoke 已验证该 Service HTTP 纵切面。
 - Compose 空环境记录：待验证。
 - 查询计划对比：待实验。
 - M1 学习总结和会话记录：待完成。

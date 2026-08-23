@@ -49,7 +49,9 @@ func run(logger *slog.Logger) error {
 
 	teamRepository := catalogpostgres.NewTeamRepository(pool)
 	teamService := catalog.NewTeamService(teamRepository)
-	catalogHandler := cataloghttp.NewHandler(teamService)
+	serviceRepository := catalogpostgres.NewServiceRepository(pool)
+	serviceService := catalog.NewServiceService(serviceRepository)
+	catalogHandler := cataloghttp.NewHandler(teamService, serviceService)
 
 	server := transporthttp.NewServer(cfg, logger, pool, catalogHandler)
 

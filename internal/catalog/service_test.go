@@ -338,3 +338,386 @@ func (r *recordingTeamRepository) DeleteTeam(_ context.Context, id int64) error 
 func (r *recordingTeamRepository) callCount() int {
 	return r.calls
 }
+
+func TestServiceServiceCreateServiceNormalizesAndDelegates(t *testing.T) {
+	description := "Service catalog API"
+	repository := &recordingServiceRepository{
+		detail: ServiceDetail{
+			Service: Service{
+				ID:     9,
+				TeamID: 7,
+				Slug:   "catalog-api",
+				Name:   "Catalog API",
+			},
+		},
+	}
+	service := NewServiceService(repository)
+
+	got, err := service.CreateService(context.Background(), CreateServiceInput{
+		TeamID:      7,
+		Slug:        "catalog-api",
+		Name:        "\tCatalog API\t",
+		Description: &description,
+		Environments: []CreateEnvironmentInput{
+			{
+				Slug: "development",
+				Name: "\tDevelopment\t",
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("CreateService() error = %v", err)
+	}
+
+	if got.Service.ID != repository.detail.Service.ID {
+		t.Fatalf(
+			"CreateService() service ID = %d, want %d",
+			got.Service.ID,
+			repository.detail.Service.ID,
+		)
+	}
+	if repository.createInput == nil {
+		t.Fatal("CreateService() did not call repository")
+	}
+
+	input := *repository.createInput
+	if input.TeamID != 7 {
+		t.Fatalf("CreateService() repository TeamID = %d, want 7", input.TeamID)
+	}
+	if input.Slug != "catalog-api" {
+		t.Fatalf(
+			"CreateService() repository Slug = %q, want %q",
+			input.Slug,
+			"catalog-api",
+		)
+	}
+	if input.Name != "Catalog API" {
+		t.Fatalf(
+			"CreateService() repository Name = %q, want %q",
+			input.Name,
+			"Catalog API",
+		)
+	}
+	if input.Description == nil {
+		t.Fatal("CreateService() repository Description = nil, want value")
+	}
+	if *input.Description != description {
+		t.Fatalf(
+			"CreateService() repository Description = %q, want %q",
+			*input.Description,
+			description,
+		)
+	}
+	if len(input.Environments) != 1 {
+		t.Fatalf(
+			"CreateService() repository environments length = %d, want 1",
+			len(input.Environments),
+		)
+	}
+	if input.Environments[0].Slug != "development" {
+		t.Fatalf(
+			"CreateService() environment Slug = %q, want %q",
+			input.Environments[0].Slug,
+			"development",
+		)
+	}
+	if input.Environments[0].Name != "Development" {
+		t.Fatalf(
+			"CreateService() environment Name = %q, want %q",
+			input.Environments[0].Name,
+			"Development",
+		)
+	}
+}
+
+func TestServiceServiceGetServiceByIDDelegates(t *testing.T) {
+	repository := &recordingServiceRepository{
+		detail: ServiceDetail{
+			Service: Service{
+				ID: 9,
+			},
+		},
+	}
+	service := NewServiceService(repository)
+
+	got, err := service.GetServiceByID(context.Background(), 9)
+	if err != nil {
+		t.Fatalf("GetServiceByID() error = %v", err)
+	}
+
+	if got.Service.ID != 9 {
+		t.Fatalf("GetServiceByID() service ID = %d, want 9", got.Service.ID)
+	}
+	if repository.getID != 9 {
+		t.Fatalf("GetServiceByID() repository ID = %d, want 9", repository.getID)
+	}
+}
+
+func TestServiceServiceListServicesDefaultsAndNormalizesInput(t *testing.T) {
+	t.Run("without team filter", func(t *testing.T) {
+		repository := &recordingServiceRepository{}
+		service := NewServiceService(repository)
+
+		_, err := service.ListServices(
+			context.Background(),
+			ListServicesInput{},
+		)
+		if err != nil {
+			t.Fatalf("ListServices() error = %v", err)
+		}
+		if repository.listInput == nil {
+			t.Fatal("ListServices() did not call repository")
+		}
+		if repository.listInput.TeamID != nil {
+			t.Fatalf(
+				"ListServices() repository TeamID = %d, want nil",
+				*repository.listInput.TeamID,
+			)
+		}
+		if repository.listInput.Limit != defaultServiceListLimit {
+			t.Fatalf(
+				"ListServices() repository Limit = %d, want %d",
+				repository.listInput.Limit,
+				defaultServiceListLimit,
+			)
+		}
+	})
+
+	t.Run("with team filter and cursor", func(t *testing.T) {
+		teamID := int64(7)
+		cursor := ServiceCursor{
+			CreatedAt: time.Date(
+				2026,
+				time.August,
+				16,
+				12,
+				0,
+				0,
+				0,
+				time.FixedZone("CST", 8*60*60),
+			),
+			ID: 9,
+		}
+
+		repository := &recordingServiceRepository{}
+		service := NewServiceService(repository)
+
+		_, err := service.ListServices(context.Background(), ListServicesInput{
+			TeamID: &teamID,
+			After:  &cursor,
+		})
+		if err != nil {
+			t.Fatalf("ListServices() error = %v", err)
+		}
+		if repository.listInput == nil {
+			t.Fatal("ListServices() did not call repository")
+		}
+		if repository.listInput.TeamID == nil {
+			t.Fatal("ListServices() repository TeamID = nil, want value")
+		}
+		if *repository.listInput.TeamID != teamID {
+			t.Fatalf(
+				"ListServices() repository TeamID = %d, want %d",
+				*repository.listInput.TeamID,
+				teamID,
+			)
+		}
+		if repository.listInput.TeamID == &teamID {
+			t.Fatal("ListServices() repository TeamID aliases caller input")
+		}
+		if repository.listInput.After == nil {
+			t.Fatal("ListServices() repository cursor = nil, want value")
+		}
+		if repository.listInput.After == &cursor {
+			t.Fatal("ListServices() repository cursor aliases caller input")
+		}
+		if repository.listInput.After.ID != cursor.ID {
+			t.Fatalf(
+				"ListServices() repository cursor ID = %d, want %d",
+				repository.listInput.After.ID,
+				cursor.ID,
+			)
+		}
+		if repository.listInput.After.CreatedAt.Location() != time.UTC {
+			t.Fatalf(
+				"ListServices() repository cursor location = %s, want UTC",
+				repository.listInput.After.CreatedAt.Location(),
+			)
+		}
+		if !repository.listInput.After.CreatedAt.Equal(cursor.CreatedAt) {
+			t.Fatalf(
+				"ListServices() repository cursor time = %s, want %s",
+				repository.listInput.After.CreatedAt,
+				cursor.CreatedAt,
+			)
+		}
+	})
+}
+
+func TestServiceServiceRejectsInvalidInputBeforeRepository(t *testing.T) {
+	tests := []struct {
+		name string
+		call func(*ServiceService) error
+	}{
+		{
+			name: "zero create team ID",
+			call: func(service *ServiceService) error {
+				_, err := service.CreateService(
+					context.Background(),
+					CreateServiceInput{
+						TeamID: 0,
+						Slug:   "catalog-api",
+						Name:   "Catalog API",
+					},
+				)
+				return err
+			},
+		},
+		{
+			name: "invalid service slug",
+			call: func(service *ServiceService) error {
+				_, err := service.CreateService(
+					context.Background(),
+					CreateServiceInput{
+						TeamID: 7,
+						Slug:   "Catalog API",
+						Name:   "Catalog API",
+					},
+				)
+				return err
+			},
+		},
+		{
+			name: "description too long",
+			call: func(service *ServiceService) error {
+				description := strings.Repeat("界", 501)
+
+				_, err := service.CreateService(
+					context.Background(),
+					CreateServiceInput{
+						TeamID:      7,
+						Slug:        "catalog-api",
+						Name:        "Catalog API",
+						Description: &description,
+					},
+				)
+				return err
+			},
+		},
+		{
+			name: "invalid initial environment",
+			call: func(service *ServiceService) error {
+				_, err := service.CreateService(
+					context.Background(),
+					CreateServiceInput{
+						TeamID: 7,
+						Slug:   "catalog-api",
+						Name:   "Catalog API",
+						Environments: []CreateEnvironmentInput{
+							{
+								Slug: "Development",
+								Name: "Development",
+							},
+						},
+					},
+				)
+				return err
+			},
+		},
+		{
+			name: "zero service ID",
+			call: func(service *ServiceService) error {
+				_, err := service.GetServiceByID(context.Background(), 0)
+				return err
+			},
+		},
+		{
+			name: "zero team filter",
+			call: func(service *ServiceService) error {
+				teamID := int64(0)
+
+				_, err := service.ListServices(
+					context.Background(),
+					ListServicesInput{
+						TeamID: &teamID,
+					},
+				)
+				return err
+			},
+		},
+		{
+			name: "too large list limit",
+			call: func(service *ServiceService) error {
+				_, err := service.ListServices(
+					context.Background(),
+					ListServicesInput{
+						Limit: maxServiceListLimit + 1,
+					},
+				)
+				return err
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repository := &recordingServiceRepository{}
+			service := NewServiceService(repository)
+
+			err := tt.call(service)
+
+			if !errors.Is(err, ErrInvalidArgument) {
+				t.Fatalf("error = %v, want ErrInvalidArgument", err)
+			}
+			if repository.callCount() != 0 {
+				t.Fatalf(
+					"repository call count = %d, want 0",
+					repository.callCount(),
+				)
+			}
+		})
+	}
+}
+
+type recordingServiceRepository struct {
+	createInput *CreateServiceInput
+	getID       int64
+	listInput   *ListServicesInput
+	detail      ServiceDetail
+	page        ServicePage
+	err         error
+	calls       int
+}
+
+var _ ServiceRepository = (*recordingServiceRepository)(nil)
+
+func (r *recordingServiceRepository) CreateService(
+	_ context.Context,
+	input CreateServiceInput,
+) (ServiceDetail, error) {
+	r.calls++
+	r.createInput = &input
+	return r.detail, r.err
+}
+
+func (r *recordingServiceRepository) GetServiceByID(
+	_ context.Context,
+	id int64,
+) (ServiceDetail, error) {
+	r.calls++
+	r.getID = id
+	return r.detail, r.err
+}
+
+func (r *recordingServiceRepository) ListServices(
+	_ context.Context,
+	input ListServicesInput,
+) (ServicePage, error) {
+	r.calls++
+	r.listInput = &input
+	return r.page, r.err
+}
+
+func (r *recordingServiceRepository) callCount() int {
+	return r.calls
+}

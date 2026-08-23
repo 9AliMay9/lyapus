@@ -316,11 +316,38 @@ jobs:
             exit 1
           fi
 
+          service_parent_status="$(
+            curl --silent --show-error \
+              --request POST \
+              --header 'Content-Type: application/json' \
+              --data '{"slug":"service-smoke","name":"Service Smoke"}' \
+              --dump-header service-parent.headers \
+              --output service-parent.json \
+              --write-out '%{http_code}' \
+              http://127.0.0.1:8080/v1/teams
+          )"
+
+          if [ "$service_parent_status" != 201 ] ||
+            ! grep --ignore-case --quiet '^x-request-id: [^[:space:]]' service-parent.headers ||
+            ! grep --fixed-strings --quiet '"slug":"service-smoke"' service-parent.json; then
+            cat service-parent.headers service-parent.json server.log
+            exit 1
+          fi
+
+          service_team_id="$(
+            sed -n 's/.*"id":\([0-9][0-9]*\).*/\1/p' service-parent.json
+          )"
+
+          if [ -z "$service_team_id" ]; then
+            cat service-parent.headers service-parent.json server.log
+            exit 1
+          fi
+
           service_created_status="$(
             curl --silent --show-error \
               --request POST \
               --header 'Content-Type: application/json' \
-              --data '{"team_id":'"$created_id"',"slug":"catalog","name":"Service Catalog","description":"CI smoke service","environments":[{"slug":"production","name":"Production"}]}' \
+              --data '{"team_id":'"$service_team_id"',"slug":"catalog","name":"Service Catalog","description":"CI smoke service","environments":[{"slug":"production","name":"Production"}]}' \
               --dump-header service-created.headers \
               --output service-created.json \
               --write-out '%{http_code}' \
@@ -329,7 +356,7 @@ jobs:
 
           if [ "$service_created_status" != 201 ] ||
             ! grep --ignore-case --quiet '^x-request-id: [^[:space:]]' service-created.headers ||
-            ! grep --fixed-strings --quiet '"team_id":'"$created_id" service-created.json ||
+            ! grep --fixed-strings --quiet '"team_id":'"$service_team_id" service-created.json ||
             ! grep --fixed-strings --quiet '"slug":"catalog"' service-created.json ||
             ! grep --fixed-strings --quiet '"environments":[{"id":' service-created.json ||
             ! grep --fixed-strings --quiet '"slug":"production"' service-created.json; then
@@ -357,7 +384,7 @@ jobs:
           if [ "$service_get_status" != 200 ] ||
             ! grep --ignore-case --quiet '^x-request-id: [^[:space:]]' service-get.headers ||
             ! grep --fixed-strings --quiet '"id":'"$service_created_id" service-get.json ||
-            ! grep --fixed-strings --quiet '"team_id":'"$created_id" service-get.json ||
+            ! grep --fixed-strings --quiet '"team_id":'"$service_team_id" service-get.json ||
             ! grep --fixed-strings --quiet '"slug":"catalog"' service-get.json ||
             ! grep --fixed-strings --quiet '"environments":[{"id":' service-get.json ||
             ! grep --fixed-strings --quiet '"slug":"production"' service-get.json; then
@@ -370,13 +397,13 @@ jobs:
               --dump-header service-list.headers \
               --output service-list.json \
               --write-out '%{http_code}' \
-              "http://127.0.0.1:8080/v1/services?team_id=$created_id&limit=1"
+              "http://127.0.0.1:8080/v1/services?team_id=$service_team_id&limit=1"
           )"
 
           if [ "$service_list_status" != 200 ] ||
             ! grep --ignore-case --quiet '^x-request-id: [^[:space:]]' service-list.headers ||
             ! grep --fixed-strings --quiet '"items":[{"id":'"$service_created_id" service-list.json ||
-            ! grep --fixed-strings --quiet '"team_id":'"$created_id" service-list.json ||
+            ! grep --fixed-strings --quiet '"team_id":'"$service_team_id" service-list.json ||
             ! grep --fixed-strings --quiet '"slug":"catalog"' service-list.json ||
             ! grep --fixed-strings --quiet '"next_cursor":""' service-list.json ||
             grep --fixed-strings --quiet '"environments"' service-list.json; then

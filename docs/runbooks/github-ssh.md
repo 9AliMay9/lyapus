@@ -82,6 +82,23 @@ gh run view <run-id> --log-failed
 
 `gh pr create` 只创建 PR，不替代变更范围审阅；`gh pr checks --required --watch` 只显示门禁检查；`gh run view --log-failed` 只在失败时读取日志。需要撤销 CLI API 授权时，先运行 `gh auth logout`，再在 GitHub 账号的 Applications 页面撤销 GitHub CLI 访问。
 
+### Required check 失败时读取现场证据
+
+当 `gh pr checks --required --watch` 显示失败时，项目所有者先亲自读取失败 job 的日志；这是 CI/CD、可观测性和可靠性工作中的正常诊断步骤，不应因为协作助手可以分析日志而跳过。
+
+1. 从 checks 输出或 Actions 页面 URL 取得 run ID。
+2. 运行：
+
+   ```bash
+   gh run view <run-id> --log-failed
+   ```
+
+3. 先定位第一个失败的 step，保留失败断言、相关响应/服务日志、退出码和紧邻上下文；不要复制无关的整份成功日志。
+4. 检查输出中是否意外出现连接串、token、私有地址或其他敏感值；若有，先脱敏，再将最小必要片段交给协作助手分析。
+5. 修复必须提交到同一 PR 分支并重新 `git push`；随后再次运行 `gh pr checks --required --watch`，不重开 PR，也不绕过门禁。
+
+协作助手默认根据项目所有者提供的失败证据给出定位和修复建议；只有项目所有者明确要求代查时，才由协作助手访问 GitHub Actions 日志。
+
 ## 使用 GitHub CLI 合并与收尾
 
 确认 Files changed 范围正确且 required checks 均成功后，使用以下命令完成 squash merge 与短生命周期分支清理：

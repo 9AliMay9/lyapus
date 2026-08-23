@@ -8,8 +8,10 @@ import (
 )
 
 const (
-	defaultTeamListLimit int32 = 20
-	maxTeamListLimit     int32 = 100
+	defaultTeamListLimit    int32 = 20
+	maxTeamListLimit        int32 = 100
+	defaultServiceListLimit int32 = 20
+	maxServiceListLimit     int32 = 100
 )
 
 var teamSlugPattern = regexp.MustCompile(`^[a-z][a-z0-9-]{0,62}$`)
@@ -71,6 +73,51 @@ func (s *TeamService) DeleteTeam(ctx context.Context, id int64) error {
 	return s.repository.DeleteTeam(ctx, id)
 }
 
+type ServiceService struct {
+	repository ServiceRepository
+}
+
+func NewServiceService(repository ServiceRepository) *ServiceService {
+	return &ServiceService{
+		repository: repository,
+	}
+}
+
+func (s *ServiceService) CreateService(
+	ctx context.Context,
+	input CreateServiceInput,
+) (ServiceDetail, error) {
+	normalized, err := normalizeCreateServiceInput(input)
+	if err != nil {
+		return ServiceDetail{}, err
+	}
+
+	return s.repository.CreateService(ctx, normalized)
+}
+
+func (s *ServiceService) GetServiceByID(
+	ctx context.Context,
+	id int64,
+) (ServiceDetail, error) {
+	if err := validateServiceID(id); err != nil {
+		return ServiceDetail{}, err
+	}
+
+	return s.repository.GetServiceByID(ctx, id)
+}
+
+func (s *ServiceService) ListServices(
+	ctx context.Context,
+	input ListServicesInput,
+) (ServicePage, error) {
+	normalized, err := normalizeListServicesInput(input)
+	if err != nil {
+		return ServicePage{}, err
+	}
+
+	return s.repository.ListServices(ctx, normalized)
+}
+
 func normalizeCreateTeamInput(input CreateTeamInput) (CreateTeamInput, error) {
 	slug, err := normalizeTeamSlug(input.Slug)
 	if err != nil {
@@ -83,6 +130,65 @@ func normalizeCreateTeamInput(input CreateTeamInput) (CreateTeamInput, error) {
 	}
 
 	return CreateTeamInput{
+		Slug: slug,
+		Name: name,
+	}, nil
+}
+
+func normalizeCreateServiceInput(
+	input CreateServiceInput,
+) (CreateServiceInput, error) {
+	if err := validateTeamID(input.TeamID); err != nil {
+		return CreateServiceInput{}, err
+	}
+
+	slug, err := normalizeServiceSlug(input.Slug)
+	if err != nil {
+		return CreateServiceInput{}, err
+	}
+
+	name, err := normalizeServiceName(input.Name)
+	if err != nil {
+		return CreateServiceInput{}, err
+	}
+
+	description, err := normalizeServiceDescription(input.Description)
+	if err != nil {
+		return CreateServiceInput{}, err
+	}
+
+	environments := make([]CreateEnvironmentInput, len(input.Environments))
+	for i, environment := range input.Environments {
+		normalizedEnvironment, err := normalizeCreateEnvironmentInput(environment)
+		if err != nil {
+			return CreateServiceInput{}, err
+		}
+		environments[i] = normalizedEnvironment
+	}
+
+	return CreateServiceInput{
+		TeamID:       input.TeamID,
+		Slug:         slug,
+		Name:         name,
+		Description:  description,
+		Environments: environments,
+	}, nil
+}
+
+func normalizeCreateEnvironmentInput(
+	input CreateEnvironmentInput,
+) (CreateEnvironmentInput, error) {
+	slug, err := normalizeServiceSlug(input.Slug)
+	if err != nil {
+		return CreateEnvironmentInput{}, err
+	}
+
+	name, err := normalizeServiceName(input.Name)
+	if err != nil {
+		return CreateEnvironmentInput{}, err
+	}
+
+	return CreateEnvironmentInput{
 		Slug: slug,
 		Name: name,
 	}, nil
@@ -139,9 +245,53 @@ func normalizeListTeamsInput(input ListTeamsInput) (ListTeamsInput, error) {
 	return input, nil
 }
 
+func normalizeListServicesInput(
+	input ListServicesInput,
+) (ListServicesInput, error) {
+	if input.TeamID != nil {
+		if err := validateTeamID(*input.TeamID); err != nil {
+			return ListServicesInput{}, err
+		}
+
+		teamID := *input.TeamID
+		input.TeamID = &teamID
+	}
+
+	switch {
+	case input.Limit == 0:
+		input.Limit = defaultServiceListLimit
+	case input.Limit < 0 || input.Limit > maxServiceListLimit:
+		return ListServicesInput{}, invalidTeamArgument("limit must be between 1 and 100")
+	}
+
+	if input.After == nil {
+		return input, nil
+	}
+	if input.After.ID < 1 {
+		return ListServicesInput{}, invalidTeamArgument("cursor ID must be positive")
+	}
+	if input.After.CreatedAt.IsZero() {
+		return ListServicesInput{}, invalidTeamArgument("cursor created_at must be set")
+	}
+
+	after := *input.After
+	after.CreatedAt = after.CreatedAt.UTC()
+	input.After = &after
+
+	return input, nil
+}
+
 func validateTeamID(id int64) error {
 	if id < 1 {
 		return invalidTeamArgument("team ID must be positive")
+	}
+
+	return nil
+}
+
+func validateServiceID(id int64) error {
+	if id < 1 {
+		return invalidTeamArgument("service ID must be positive")
 	}
 
 	return nil
@@ -155,6 +305,10 @@ func normalizeTeamSlug(slug string) (string, error) {
 	return slug, nil
 }
 
+func normalizeServiceSlug(slug string) (string, error) {
+	return normalizeTeamSlug(slug)
+}
+
 func normalizeTeamName(name string) (string, error) {
 	normalized := strings.TrimSpace(name)
 	if normalized == "" || utf8.RuneCountInString(normalized) > 100 {
@@ -162,6 +316,26 @@ func normalizeTeamName(name string) (string, error) {
 	}
 
 	return normalized, nil
+}
+
+func normalizeServiceName(name string) (string, error) {
+	return normalizeTeamName(name)
+}
+
+func normalizeServiceDescription(
+	description *string,
+) (*string, error) {
+	if description == nil {
+		return nil, nil
+	}
+	if utf8.RuneCountInString(*description) > 500 {
+		return nil, invalidTeamArgument(
+			"description must contain at most 500 characters",
+		)
+	}
+
+	normalized := *description
+	return &normalized, nil
 }
 
 func invalidTeamArgument(message string) error {

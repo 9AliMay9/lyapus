@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -209,6 +210,467 @@ func TestTeamRepositoryIntegrationUpdateAndDelete(t *testing.T) {
 	}
 }
 
+func TestServiceRepositoryIntegrationCreateGetAndTransaction(t *testing.T) {
+	serviceRepository, teamRepository, pool, ctx := setupServiceRepositoryIntegration(t)
+
+	team := createIntegrationTeam(
+		t,
+		ctx,
+		teamRepository,
+		"platform",
+		"Platform",
+	)
+
+	description := "Service catalog API"
+	created, err := serviceRepository.CreateService(
+		ctx,
+		catalog.CreateServiceInput{
+			TeamID:      team.ID,
+			Slug:        "catalog-api",
+			Name:        "Catalog API",
+			Description: &description,
+			Environments: []catalog.CreateEnvironmentInput{
+				{
+					Slug: "staging",
+					Name: "Staging",
+				},
+				{
+					Slug: "production",
+					Name: "Production",
+				},
+			},
+		},
+	)
+	if err != nil {
+		t.Fatalf("CreateService() error = %v", err)
+	}
+
+	if created.Service.ID <= 0 {
+		t.Fatalf("CreateService() ID = %d, want a positive ID", created.Service.ID)
+	}
+	if created.Service.TeamID != team.ID {
+		t.Fatalf(
+			"CreateService() TeamID = %d, want %d",
+			created.Service.TeamID,
+			team.ID,
+		)
+	}
+	if created.Service.Description == nil || *created.Service.Description != description {
+		t.Fatalf(
+			"CreateService() Description = %#v, want %q",
+			created.Service.Description,
+			description,
+		)
+	}
+	if created.Service.CreatedAt.IsZero() || created.Service.UpdatedAt.IsZero() {
+		t.Fatalf("CreateService() timestamps = %#v, want non-zero values", created.Service)
+	}
+	if created.Service.UpdatedAt.Before(created.Service.CreatedAt) {
+		t.Fatalf(
+			"CreateService() UpdatedAt = %s, before CreatedAt = %s",
+			created.Service.UpdatedAt,
+			created.Service.CreatedAt,
+		)
+	}
+	if len(created.Environments) != 2 {
+		t.Fatalf(
+			"CreateService() environment count = %d, want 2",
+			len(created.Environments),
+		)
+	}
+	for _, environment := range created.Environments {
+		if environment.ID <= 0 {
+			t.Fatalf("CreateService() environment ID = %d, want positive", environment.ID)
+		}
+		if environment.ServiceID != created.Service.ID {
+			t.Fatalf(
+				"CreateService() environment ServiceID = %d, want %d",
+				environment.ServiceID,
+				created.Service.ID,
+			)
+		}
+	}
+
+	got, err := serviceRepository.GetServiceByID(ctx, created.Service.ID)
+	if err != nil {
+		t.Fatalf("GetServiceByID() error = %v", err)
+	}
+	if got.Service.ID != created.Service.ID {
+		t.Fatalf(
+			"GetServiceByID() Service ID = %d, want %d",
+			got.Service.ID,
+			created.Service.ID,
+		)
+	}
+	if got.Service.Description == nil || *got.Service.Description != description {
+		t.Fatalf(
+			"GetServiceByID() Description = %#v, want %q",
+			got.Service.Description,
+			description,
+		)
+	}
+	if len(got.Environments) != 2 {
+		t.Fatalf(
+			"GetServiceByID() environment count = %d, want 2",
+			len(got.Environments),
+		)
+	}
+	if got.Environments[0].Slug != "staging" || got.Environments[1].Slug != "production" {
+		t.Fatalf(
+			"GetServiceByID() environment order = %#v, want staging then production",
+			got.Environments,
+		)
+	}
+
+	_, err = serviceRepository.CreateService(
+		ctx,
+		catalog.CreateServiceInput{
+			TeamID: 999,
+			Slug:   "missing-parent",
+			Name:   "Missing Parent",
+		},
+	)
+	if !errors.Is(err, catalog.ErrNotFound) {
+		t.Fatalf(
+			"CreateService() missing parent error = %v, want ErrNotFound",
+			err,
+		)
+	}
+
+	_, err = serviceRepository.CreateService(
+		ctx,
+		catalog.CreateServiceInput{
+			TeamID: team.ID,
+			Slug:   "must-roll-back",
+			Name:   "Must Roll Back",
+			Environments: []catalog.CreateEnvironmentInput{
+				{
+					Slug: "staging",
+					Name: "Staging",
+				},
+				{
+					Slug: "staging",
+					Name: "Another Staging",
+				},
+			},
+		},
+	)
+	if !errors.Is(err, catalog.ErrConflict) {
+		t.Fatalf(
+			"CreateService() duplicate initial environment error = %v, want ErrConflict",
+			err,
+		)
+	}
+
+	var count int
+	if err := pool.QueryRow(
+		ctx,
+		"SELECT count(*) FROM services WHERE team_id = $1 AND slug = $2",
+		team.ID,
+		"must-roll-back",
+	).Scan(&count); err != nil {
+		t.Fatalf("count rolled back services: %v", err)
+	}
+	if count != 0 {
+		t.Fatalf("rolled back service count = %d, want 0", count)
+	}
+
+	_, err = serviceRepository.GetServiceByID(ctx, 999)
+	if !errors.Is(err, catalog.ErrNotFound) {
+		t.Fatalf("GetServiceByID() missing error = %v, want ErrNotFound", err)
+	}
+}
+
+func TestServiceRepositoryIntegrationListPaginationAndTeamFilter(t *testing.T) {
+	serviceRepository, teamRepository, _, ctx := setupServiceRepositoryIntegration(t)
+
+	platform := createIntegrationTeam(t, ctx, teamRepository, "platform", "Platform")
+	observability := createIntegrationTeam(
+		t,
+		ctx,
+		teamRepository,
+		"observability",
+		"Observability",
+	)
+
+	created := []catalog.Service{
+		createIntegrationService(
+			t,
+			ctx,
+			serviceRepository,
+			platform.ID,
+			"catalog-api",
+			"Catalog API",
+		),
+		createIntegrationService(
+			t,
+			ctx,
+			serviceRepository,
+			platform.ID,
+			"deployment-api",
+			"Deployment API",
+		),
+		createIntegrationService(
+			t,
+			ctx,
+			serviceRepository,
+			platform.ID,
+			"incident-api",
+			"Incident API",
+		),
+		createIntegrationService(
+			t,
+			ctx,
+			serviceRepository,
+			observability.ID,
+			"metrics-api",
+			"Metrics API",
+		),
+	}
+
+	first, err := serviceRepository.ListServices(
+		ctx,
+		catalog.ListServicesInput{Limit: 2},
+	)
+	if err != nil {
+		t.Fatalf("ListServices() global first page error = %v", err)
+	}
+	if len(first.Services) != 2 {
+		t.Fatalf(
+			"ListServices() global first page length = %d, want 2",
+			len(first.Services),
+		)
+	}
+	if first.Next == nil {
+		t.Fatal("ListServices() global first page Next = nil, want cursor")
+	}
+	assertServicesInDescendingCursorOrder(t, first.Services)
+
+	second, err := serviceRepository.ListServices(
+		ctx,
+		catalog.ListServicesInput{
+			Limit: 2,
+			After: first.Next,
+		},
+	)
+	if err != nil {
+		t.Fatalf("ListServices() global second page error = %v", err)
+	}
+	if len(second.Services) != 2 {
+		t.Fatalf(
+			"ListServices() global second page length = %d, want 2",
+			len(second.Services),
+		)
+	}
+	if second.Next != nil {
+		t.Fatalf(
+			"ListServices() global second page Next = %#v, want nil",
+			second.Next,
+		)
+	}
+	all := append(
+		append([]catalog.Service{}, first.Services...),
+		second.Services...,
+	)
+	if len(all) != len(created) {
+		t.Fatalf(
+			"ListServices() global total length = %d, want %d",
+			len(all),
+			len(created),
+		)
+	}
+
+	wantIDs := map[int64]struct{}{}
+	for _, service := range created {
+		wantIDs[service.ID] = struct{}{}
+	}
+	for _, service := range all {
+		if _, ok := wantIDs[service.ID]; !ok {
+			t.Fatalf(
+				"ListServices() global returned unexpected service ID %d",
+				service.ID,
+			)
+		}
+		delete(wantIDs, service.ID)
+	}
+	if len(wantIDs) != 0 {
+		t.Fatalf("ListServices() global missed service IDs %#v", wantIDs)
+	}
+
+	teamID := platform.ID
+	filteredFirst, err := serviceRepository.ListServices(
+		ctx,
+		catalog.ListServicesInput{
+			TeamID: &teamID,
+			Limit:  2,
+		},
+	)
+	if err != nil {
+		t.Fatalf("ListServices() filtered first page error = %v", err)
+	}
+	if len(filteredFirst.Services) != 2 {
+		t.Fatalf(
+			"ListServices() filtered first page length = %d, want 2",
+			len(filteredFirst.Services),
+		)
+	}
+	if filteredFirst.Next == nil {
+		t.Fatal("ListServices() filtered first page Next = nil, want cursor")
+	}
+	assertServicesInDescendingCursorOrder(t, filteredFirst.Services)
+
+	filteredSecond, err := serviceRepository.ListServices(
+		ctx,
+		catalog.ListServicesInput{
+			TeamID: &teamID,
+			Limit:  2,
+			After:  filteredFirst.Next,
+		},
+	)
+	if err != nil {
+		t.Fatalf("ListServices() filtered second page error = %v", err)
+	}
+	if len(filteredSecond.Services) != 1 {
+		t.Fatalf(
+			"ListServices() filtered second page length = %d, want 1",
+			len(filteredSecond.Services),
+		)
+	}
+	if filteredSecond.Next != nil {
+		t.Fatalf(
+			"ListServices() filtered second page Next = %#v, want nil",
+			filteredSecond.Next,
+		)
+	}
+
+	filtered := append(
+		append([]catalog.Service{}, filteredFirst.Services...),
+		filteredSecond.Services...,
+	)
+
+	wantPlatformIDs := map[int64]struct{}{
+		created[0].ID: {},
+		created[1].ID: {},
+		created[2].ID: {},
+	}
+
+	for _, service := range filtered {
+		if service.TeamID != platform.ID {
+			t.Fatalf(
+				"ListServices() filtered TeamID = %d, want %d",
+				service.TeamID,
+				platform.ID,
+			)
+		}
+		if _, ok := wantPlatformIDs[service.ID]; !ok {
+			t.Fatalf(
+				"ListServices() filtered returned unexpected service ID %d",
+				service.ID,
+			)
+		}
+		delete(wantPlatformIDs, service.ID)
+	}
+	if len(wantPlatformIDs) != 0 {
+		t.Fatalf(
+			"ListServices() filtered missed service IDs %#v",
+			wantPlatformIDs,
+		)
+	}
+}
+
+func TestServiceRepositoryIntegrationConcurrentDuplicateCreate(t *testing.T) {
+	_, teamRepository, pool, ctx := setupServiceRepositoryIntegration(t)
+
+	team := createIntegrationTeam(t, ctx, teamRepository, "platform", "Platform")
+
+	type result struct {
+		service catalog.Service
+		err     error
+	}
+
+	repositories := []*ServiceRepository{
+		NewServiceRepository(pool),
+		NewServiceRepository(pool),
+	}
+
+	start := make(chan struct{})
+	results := make(chan result, len(repositories))
+
+	var group sync.WaitGroup
+	for _, repository := range repositories {
+		group.Add(1)
+
+		go func(repository *ServiceRepository) {
+			defer group.Done()
+
+			<-start
+
+			detail, err := repository.CreateService(
+				ctx,
+				catalog.CreateServiceInput{
+					TeamID: team.ID,
+					Slug:   "catalog-api",
+					Name:   "Catalog API",
+				},
+			)
+			results <- result{
+				service: detail.Service,
+				err:     err,
+			}
+		}(repository)
+	}
+
+	close(start)
+	group.Wait()
+	close(results)
+
+	successes := 0
+	conflicts := 0
+
+	for result := range results {
+		switch {
+		case result.err == nil:
+			successes++
+
+			if result.service.ID <= 0 {
+				t.Errorf(
+					"concurrent CreateService() ID = %d, want positive",
+					result.service.ID,
+				)
+			}
+
+		case errors.Is(result.err, catalog.ErrConflict):
+			conflicts++
+
+		default:
+			t.Errorf(
+				"concurrent CreateService() error = %v, want ErrConflict",
+				result.err,
+			)
+		}
+	}
+
+	if successes != 1 {
+		t.Fatalf("concurrent CreateService() successes = %d, want 1", successes)
+	}
+	if conflicts != 1 {
+		t.Fatalf("concurrent CreateService() conflicts = %d, want 1", conflicts)
+	}
+
+	var count int
+	if err := pool.QueryRow(
+		ctx,
+		"SELECT count(*) FROM services WHERE team_id = $1 AND slug = $2",
+		team.ID,
+		"catalog-api",
+	).Scan(&count); err != nil {
+		t.Fatalf("count concurrently created services: %v", err)
+	}
+	if count != 1 {
+		t.Fatalf("concurrently created service count = %d, want 1", count)
+	}
+}
+
 func setupTeamRepositoryIntegration(t *testing.T) (*TeamRepository, *pgxpool.Pool, context.Context) {
 	t.Helper()
 
@@ -219,6 +681,20 @@ func setupTeamRepositoryIntegration(t *testing.T) (*TeamRepository, *pgxpool.Poo
 	resetCatalogTables(t, ctx, pool)
 
 	return NewTeamRepository(pool), pool, ctx
+}
+
+func setupServiceRepositoryIntegration(
+	t *testing.T,
+) (*ServiceRepository, *TeamRepository, *pgxpool.Pool, context.Context) {
+	t.Helper()
+
+	pool := openIntegrationPool(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	t.Cleanup(cancel)
+
+	resetCatalogTables(t, ctx, pool)
+
+	return NewServiceRepository(pool), NewTeamRepository(pool), pool, ctx
 }
 
 func createIntegrationTeam(
@@ -241,6 +717,31 @@ func createIntegrationTeam(
 	return team
 }
 
+func createIntegrationService(
+	t *testing.T,
+	ctx context.Context,
+	repository *ServiceRepository,
+	teamID int64,
+	slug string,
+	name string,
+) catalog.Service {
+	t.Helper()
+
+	detail, err := repository.CreateService(
+		ctx,
+		catalog.CreateServiceInput{
+			TeamID: teamID,
+			Slug:   slug,
+			Name:   name,
+		},
+	)
+	if err != nil {
+		t.Fatalf("CreateService(%q) error = %v", slug, err)
+	}
+
+	return detail.Service
+}
+
 func assertTeamsInDescendingCursorOrder(t *testing.T, teams []catalog.Team) {
 	t.Helper()
 
@@ -258,6 +759,33 @@ func assertTeamsInDescendingCursorOrder(t *testing.T, teams []catalog.Team) {
 		if current.CreatedAt.Equal(next.CreatedAt) && current.ID <= next.ID {
 			t.Fatalf(
 				"Teams with equal created_at are not ordered by id DESC: %d before %d",
+				current.ID,
+				next.ID,
+			)
+		}
+	}
+}
+
+func assertServicesInDescendingCursorOrder(
+	t *testing.T,
+	services []catalog.Service,
+) {
+	t.Helper()
+
+	for index := 0; index+1 < len(services); index++ {
+		current := services[index]
+		next := services[index+1]
+
+		if current.CreatedAt.Before(next.CreatedAt) {
+			t.Fatalf(
+				"Services are not ordered by created_at DESC: %s before %s",
+				current.CreatedAt,
+				next.CreatedAt,
+			)
+		}
+		if current.CreatedAt.Equal(next.CreatedAt) && current.ID <= next.ID {
+			t.Fatalf(
+				"Services with equal created_at are not ordered by id DESC: %d before %d",
 				current.ID,
 				next.ID,
 			)

@@ -25,7 +25,8 @@ type teamService interface {
 }
 
 type Handler struct {
-	teams teamService
+	teams    teamService
+	services serviceService
 }
 
 type createTeamRequest struct {
@@ -56,9 +57,13 @@ type teamPageResponse struct {
 	NextCursor string         `json:"next_cursor"`
 }
 
-func NewHandler(teams teamService) stdhttp.Handler {
+func NewHandler(
+	teams teamService,
+	services serviceService,
+) stdhttp.Handler {
 	handler := Handler{
-		teams: teams,
+		teams:    teams,
+		services: services,
 	}
 
 	router := chi.NewRouter()
@@ -83,24 +88,48 @@ func NewHandler(teams teamService) stdhttp.Handler {
 	})
 
 	router.Post("/v1/teams", handler.createTeam)
+	router.Post("/v1/services", handler.createService)
 	router.Get("/v1/teams", handler.listTeams)
+	router.Get("/v1/services", handler.listServices)
 	router.Get("/v1/teams/{team_id}", handler.getTeam)
+	router.Get("/v1/services/{service_id}", handler.getService)
 	router.Patch("/v1/teams/{team_id}", handler.updateTeam)
 	router.Delete("/v1/teams/{team_id}", handler.deleteTeam)
 
 	return router
 }
 
+func writeRequestBodyError(
+	w stdhttp.ResponseWriter,
+	r *stdhttp.Request,
+	err error,
+) {
+	requestID := requestid.FromContext(r.Context())
+
+	if errors.Is(err, errUnsupportedMediaType) {
+		writeError(
+			w,
+			stdhttp.StatusUnsupportedMediaType,
+			"unsupported_media_type",
+			"content type must be application/json",
+			requestID,
+		)
+		return
+	}
+
+	writeError(
+		w,
+		stdhttp.StatusBadRequest,
+		"invalid_argument",
+		"invalid request body",
+		requestID,
+	)
+}
+
 func (h Handler) createTeam(w stdhttp.ResponseWriter, r *stdhttp.Request) {
 	var request createTeamRequest
 	if err := decodeJSONBody(w, r, &request); err != nil {
-		writeError(
-			w,
-			stdhttp.StatusBadRequest,
-			"invalid_argument",
-			"invalid request body",
-			requestid.FromContext(r.Context()),
-		)
+		writeRequestBodyError(w, r, err)
 		return
 	}
 
@@ -114,6 +143,29 @@ func (h Handler) createTeam(w stdhttp.ResponseWriter, r *stdhttp.Request) {
 	}
 
 	writeJSON(w, stdhttp.StatusCreated, teamResponseFromCatalog(team))
+}
+
+func (h Handler) createService(w stdhttp.ResponseWriter, r *stdhttp.Request) {
+	var request createServiceRequest
+	if err := decodeJSONBody(w, r, &request); err != nil {
+		writeRequestBodyError(w, r, err)
+		return
+	}
+
+	detail, err := h.services.CreateService(
+		r.Context(),
+		createServiceInputFromRequest(request),
+	)
+	if err != nil {
+		writeCatalogError(w, err, requestid.FromContext(r.Context()))
+		return
+	}
+
+	writeJSON(
+		w,
+		stdhttp.StatusCreated,
+		serviceDetailResponseFromCatalog(detail),
+	)
 }
 
 func (h Handler) getTeam(w stdhttp.ResponseWriter, r *stdhttp.Request) {
@@ -132,6 +184,22 @@ func (h Handler) getTeam(w stdhttp.ResponseWriter, r *stdhttp.Request) {
 	writeJSON(w, stdhttp.StatusOK, teamResponseFromCatalog(team))
 }
 
+func (h Handler) getService(w stdhttp.ResponseWriter, r *stdhttp.Request) {
+	id, err := parsePositiveServiceID(chi.URLParam(r, "service_id"))
+	if err != nil {
+		writeCatalogError(w, err, requestid.FromContext(r.Context()))
+		return
+	}
+
+	detail, err := h.services.GetServiceByID(r.Context(), id)
+	if err != nil {
+		writeCatalogError(w, err, requestid.FromContext(r.Context()))
+		return
+	}
+
+	writeJSON(w, stdhttp.StatusOK, serviceDetailResponseFromCatalog(detail))
+}
+
 func (h Handler) updateTeam(w stdhttp.ResponseWriter, r *stdhttp.Request) {
 	id, err := parsePositiveTeamID(chi.URLParam(r, "team_id"))
 	if err != nil {
@@ -141,13 +209,7 @@ func (h Handler) updateTeam(w stdhttp.ResponseWriter, r *stdhttp.Request) {
 
 	var request updateTeamRequest
 	if err := decodeJSONBody(w, r, &request); err != nil {
-		writeError(
-			w,
-			stdhttp.StatusBadRequest,
-			"invalid_argument",
-			"invalid request body",
-			requestid.FromContext(r.Context()),
-		)
+		writeRequestBodyError(w, r, err)
 		return
 	}
 
@@ -207,6 +269,34 @@ func (h Handler) listTeams(w stdhttp.ResponseWriter, r *stdhttp.Request) {
 	writeJSON(w, stdhttp.StatusOK, response)
 }
 
+func (h Handler) listServices(w stdhttp.ResponseWriter, r *stdhttp.Request) {
+	input, err := parseListServicesInput(r)
+	if err != nil {
+		writeCatalogError(w, err, requestid.FromContext(r.Context()))
+		return
+	}
+
+	page, err := h.services.ListServices(r.Context(), input)
+	if err != nil {
+		writeCatalogError(w, err, requestid.FromContext(r.Context()))
+		return
+	}
+
+	response, err := servicePageResponseFromCatalog(page)
+	if err != nil {
+		writeError(
+			w,
+			stdhttp.StatusInternalServerError,
+			"internal",
+			"internal server error",
+			requestid.FromContext(r.Context()),
+		)
+		return
+	}
+
+	writeJSON(w, stdhttp.StatusOK, response)
+}
+
 func parseListTeamsInput(r *stdhttp.Request) (catalog.ListTeamsInput, error) {
 	input := catalog.ListTeamsInput{}
 	query := r.URL.Query()
@@ -242,6 +332,62 @@ func parseListTeamsInput(r *stdhttp.Request) (catalog.ListTeamsInput, error) {
 		after, err := decodeTeamCursor(cursor)
 		if err != nil {
 			return catalog.ListTeamsInput{}, err
+		}
+		input.After = &after
+	}
+
+	return input, nil
+}
+
+func parseListServicesInput(
+	r *stdhttp.Request,
+) (catalog.ListServicesInput, error) {
+	input := catalog.ListServicesInput{}
+	query := r.URL.Query()
+
+	teamID, hasTeamID, err := singleQueryValue(query, "team_id")
+	if err != nil {
+		return catalog.ListServicesInput{}, err
+	}
+	if hasTeamID {
+		parsed, err := parsePositiveTeamID(teamID)
+		if err != nil {
+			return catalog.ListServicesInput{}, err
+		}
+		input.TeamID = &parsed
+	}
+
+	limit, hasLimit, err := singleQueryValue(query, "limit")
+	if err != nil {
+		return catalog.ListServicesInput{}, err
+	}
+	if hasLimit {
+		parsed, err := strconv.ParseInt(limit, 10, 64)
+		if err != nil {
+			message := "limit must be an integer"
+			if errors.Is(err, strconv.ErrRange) {
+				message = "limit must be between 1 and 100"
+			}
+			return catalog.ListServicesInput{}, &catalog.InvalidArgumentError{
+				Message: message,
+			}
+		}
+		if parsed < 1 || parsed > 100 {
+			return catalog.ListServicesInput{}, &catalog.InvalidArgumentError{
+				Message: "limit must be between 1 and 100",
+			}
+		}
+		input.Limit = int32(parsed)
+	}
+
+	cursor, hasCursor, err := singleQueryValue(query, "cursor")
+	if err != nil {
+		return catalog.ListServicesInput{}, err
+	}
+	if hasCursor {
+		after, err := decodeServiceCursor(cursor)
+		if err != nil {
+			return catalog.ListServicesInput{}, err
 		}
 		input.After = &after
 	}
@@ -285,11 +431,50 @@ func teamPageResponseFromCatalog(page catalog.TeamPage) (teamPageResponse, error
 	return response, nil
 }
 
+func servicePageResponseFromCatalog(
+	page catalog.ServicePage,
+) (servicePageResponse, error) {
+	items := make([]serviceResponse, len(page.Services))
+	for i, service := range page.Services {
+		items[i] = serviceResponseFromCatalog(service)
+	}
+
+	response := servicePageResponse{
+		Items: items,
+	}
+
+	if page.Next == nil {
+		return response, nil
+	}
+
+	cursor, err := encodeServiceCursor(*page.Next)
+	if err != nil {
+		return servicePageResponse{}, fmt.Errorf(
+			"encode next service cursor: %w",
+			err,
+		)
+	}
+
+	response.NextCursor = cursor
+	return response, nil
+}
+
 func parsePositiveTeamID(value string) (int64, error) {
 	id, err := strconv.ParseInt(value, 10, 64)
 	if err != nil || id < 1 {
 		return 0, &catalog.InvalidArgumentError{
 			Message: "team ID must be a positive integer",
+		}
+	}
+
+	return id, nil
+}
+
+func parsePositiveServiceID(value string) (int64, error) {
+	id, err := strconv.ParseInt(value, 10, 64)
+	if err != nil || id < 1 {
+		return 0, &catalog.InvalidArgumentError{
+			Message: "service ID must be a positive integer",
 		}
 	}
 

@@ -14,3 +14,9 @@ type TeamRepository interface {
 	UpdateTeam(ctx context.Context, id int64, input UpdateTeamInput) (Team, error)
 	DeleteTeam(ctx context.Context, id int64) error
 }
+
+type ServiceRepository interface {
+	CreateService(ctx context.Context, input CreateServiceInput) (ServiceDetail, error)
+	GetServiceByID(ctx context.Context, id int64) (ServiceDetail, error)
+	ListServices(ctx context.Context, input ListServicesInput) (ServicePage, error)
+}

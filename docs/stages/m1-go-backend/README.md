@@ -1,6 +1,6 @@
 # M1：常规 Go 后端
 
-状态：Atlas migration、schema/sqlc 基线、数据库基础设施、Team repository CRUD（含稳定游标分页）、Team 业务服务和完整 Team HTTP CRUD 已完成；Service/Environment、Compose 与查询计划实验待完成，M1 v0.1 尚未完成。
+状态：Atlas migration、schema/sqlc 基线、数据库基础设施和完整 Team HTTP CRUD 已完成；Service Create/Get/List、`team_id` 过滤、初始 Environment 事务创建与并发冲突测试已完成本地验证，clean-runner 验收待补。Service PATCH/DELETE、独立 Environment CRUD、Compose 与查询计划实验仍待完成，M1 v0.1 尚未完成。
 
 施工前依次阅读：
 
@@ -9,4 +9,4 @@
 3. `checklist.md`：当前唯一的阶段完成清单。
 4. `../../architecture/decisions/ADR-0004-atlas-community-migrations.md` 与 `../../runbooks/database-migrations.md`：已接受的 migration 决策和经过验证的操作路径。
 
-`outcome.md` 只记录实际结果；未完成的 Service/Environment、Compose 和查询计划实验不得写成完成事实。
+`outcome.md` 只记录实际结果；未完成的 Service mutation、独立 Environment CRUD、Compose 和查询计划实验不得写成完成事实。

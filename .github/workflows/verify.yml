@@ -316,6 +316,74 @@ jobs:
             exit 1
           fi
 
+          service_created_status="$(
+            curl --silent --show-error \
+              --request POST \
+              --header 'Content-Type: application/json' \
+              --data '{"team_id":'"$created_id"',"slug":"catalog","name":"Service Catalog","description":"CI smoke service","environments":[{"slug":"production","name":"Production"}]}' \
+              --dump-header service-created.headers \
+              --output service-created.json \
+              --write-out '%{http_code}' \
+              http://127.0.0.1:8080/v1/services
+          )"
+
+          if [ "$service_created_status" != 201 ] ||
+            ! grep --ignore-case --quiet '^x-request-id: [^[:space:]]' service-created.headers ||
+            ! grep --fixed-strings --quiet '"team_id":'"$created_id" service-created.json ||
+            ! grep --fixed-strings --quiet '"slug":"catalog"' service-created.json ||
+            ! grep --fixed-strings --quiet '"environments":[{"id":' service-created.json ||
+            ! grep --fixed-strings --quiet '"slug":"production"' service-created.json; then
+            cat service-created.headers service-created.json server.log
+            exit 1
+          fi
+
+          service_created_id="$(
+            sed -n 's/.*"id":\([0-9][0-9]*\),"team_id":.*/\1/p' service-created.json
+          )"
+
+          if [ -z "$service_created_id" ]; then
+            cat service-created.headers service-created.json server.log
+            exit 1
+          fi
+
+          service_get_status="$(
+            curl --silent --show-error \
+              --dump-header service-get.headers \
+              --output service-get.json \
+              --write-out '%{http_code}' \
+              "http://127.0.0.1:8080/v1/services/$service_created_id"
+          )"
+
+          if [ "$service_get_status" != 200 ] ||
+            ! grep --ignore-case --quiet '^x-request-id: [^[:space:]]' service-get.headers ||
+            ! grep --fixed-strings --quiet '"id":'"$service_created_id" service-get.json ||
+            ! grep --fixed-strings --quiet '"team_id":'"$created_id" service-get.json ||
+            ! grep --fixed-strings --quiet '"slug":"catalog"' service-get.json ||
+            ! grep --fixed-strings --quiet '"environments":[{"id":' service-get.json ||
+            ! grep --fixed-strings --quiet '"slug":"production"' service-get.json; then
+            cat service-created.headers service-created.json service-get.headers service-get.json server.log
+            exit 1
+          fi
+
+          service_list_status="$(
+            curl --silent --show-error \
+              --dump-header service-list.headers \
+              --output service-list.json \
+              --write-out '%{http_code}' \
+              "http://127.0.0.1:8080/v1/services?team_id=$created_id&limit=1"
+          )"
+
+          if [ "$service_list_status" != 200 ] ||
+            ! grep --ignore-case --quiet '^x-request-id: [^[:space:]]' service-list.headers ||
+            ! grep --fixed-strings --quiet '"items":[{"id":'"$service_created_id" service-list.json ||
+            ! grep --fixed-strings --quiet '"team_id":'"$created_id" service-list.json ||
+            ! grep --fixed-strings --quiet '"slug":"catalog"' service-list.json ||
+            ! grep --fixed-strings --quiet '"next_cursor":""' service-list.json ||
+            grep --fixed-strings --quiet '"environments"' service-list.json; then
+            cat service-created.headers service-created.json service-list.headers service-list.json server.log
+            exit 1
+          fi
+
           updated_status="$(
             curl --silent --show-error \
               --request PATCH \

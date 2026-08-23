@@ -2,9 +2,9 @@
 
 ## 当前落点
 
-- 当前阶段：M0 已完成终局审计；M1 已完成数据库基础设施、Team repository 数据访问层，以及 Team 业务服务和完整 Team HTTP CRUD 纵切面。Team CRUD/稳定分页施工包已由 PR #13 以 squash commit `f4df01f` 合入 `main`；Team service、创建 API、全局 request ID 与 API smoke 已由 PR #15 以 squash commit `8e84c20` 合入 `main`；Team HTTP read 与 cursor 分页已由 PR #17 以 squash commit `284021e` 合入 `main`；Team HTTP mutate 已由 PR #18 以 squash commit `de7e2d3` 合入 `main`。上述功能性 PR 均通过 required clean-runner CI。
+- 当前阶段：M0 已完成终局审计；M1 已完成数据库基础设施和完整 Team HTTP CRUD 纵切面。Team CRUD/稳定分页施工包已由 PR #13 以 squash commit `f4df01f` 合入 `main`；Team service、创建 API、全局 request ID 与 API smoke 已由 PR #15 以 squash commit `8e84c20` 合入 `main`；Team HTTP read 与 cursor 分页已由 PR #17 以 squash commit `284021e` 合入 `main`；Team HTTP mutate 已由 PR #18 以 squash commit `de7e2d3` 合入 `main`。上述功能性 PR 均通过 required clean-runner CI。当前 `feat/service-catalog` 分支已完成 Service Create/Get/List、`team_id` 过滤、初始 Environment 事务创建及并发冲突的实现和本地验证，尚未提交 PR 或取得 clean-runner 证据。
 - M0 结论：真实实现完整满足仓库内施工包，并基本符合原始 v3.1 工程基线预期，可以进入 M1。
-- M1 状态：施工包、Atlas 决策、schema、两份 versioned migration、sqlc 基线与 CI 门禁已完成；`LYAPUS_DATABASE_URL`、`pgxpool` 启动 Ping/关闭路径及数据库感知 `/readyz` 已完成并作真实运行验证。Team repository 的 Create/Get/List/Update/Delete、`(created_at, id)` 稳定游标分页、sqlc adapter 与本地及 clean-runner 真实 PostgreSQL integration test 已完成。Team service 已集中实现输入校验与分页默认值；chi 的完整 Team HTTP CRUD 已接入真实 repository。HTTP 层以 raw URL-safe base64 表示不透明 `(created_at, id)` cursor，保持严格 JSON、统一 catalog 错误与全局 request ID。Team HTTP mutate 已在本地真实 PostgreSQL、`make verify` 与 PR #18 clean-runner 验证：PATCH 严格区分字段未提供、空字符串与 `null`，DELETE 成功返回空 `204`，smoke 覆盖完整 Team CRUD 链路。Service、Environment、Compose 与查询计划实验仍待完成。
+- M1 状态：施工包、Atlas 决策、schema、两份 versioned migration、sqlc 基线与 CI 门禁已完成；`LYAPUS_DATABASE_URL`、`pgxpool` 启动 Ping/关闭路径及数据库感知 `/readyz` 已完成并作真实运行验证。Team 已具备完整 repository/service/HTTP CRUD 和 clean-runner 证据。当前 Service 已实现 Create/Get/List、全局及 `team_id` 过滤的 `(created_at, id)` 稳定游标分页；创建 Service 与可选初始 Environment 使用显式 pgx 事务，缺失 Team、同 Team slug 冲突和初始 Environment 冲突映射为稳定错误，并以两个独立 repository 并发创建验证恰好一个成功、一个冲突。HTTP 层已提供 Service POST、单项 GET 和列表 GET；单项展开 Environment，集合不展开。严格 JSON、415 媒体类型、统一错误、全局 request ID 与不透明 cursor 保持既有边界。Service PATCH/DELETE、独立 Environment CRUD、Compose 与查询计划实验仍待完成。
 - M1 最小范围：Team、Service、Environment CRUD，PostgreSQL migration/约束/事务/并发正确性，单元与真实数据库测试，Compose 空环境复现，以及一份查询计划优化记录。
 - M1 默认实现：Go 1.26.6、PostgreSQL 16.14、`pgx/v5` + `pgxpool`、chi/v5、sqlc 1.31.1、手写 SQL + repository adapter、identity bigint 和不透明游标。chi 保持标准 HTTP handler；sqlc 生成类型不越过 PostgreSQL adapter。选择理由与适用边界见施工包。
 - Migration 已由 ADR-0004 最终确定：P-0001 完成固定 Atlas Community v1.2.0 的两次 migration（空库 apply、已有库前滚、重复 apply、status 与完整性篡改拦截）、同一 `db/schema.sql` 的 sqlc 1.31.1 解析/生成、本机可复现 Community 构建，以及 PR #8 中 required `atlas-community` CI 实跑。未来触发退出条件时才以新 ADR 记录并回退 `golang-migrate`。
@@ -29,8 +29,9 @@
 
 ## 下一次从这里开始
 
-1. 对照 M1 施工包细化 Service 纵切面；在扩展新请求体前先明确并测试 catalog API 的请求 `Content-Type` 契约，同时补齐 Team PATCH/DELETE 非法 ID 的路由级回归测试，再实施 Service repository、业务服务与 HTTP 创建/读取路径。
-2. 按同一分层完成 Service/Environment，并在 Service 阶段集中处理“Service + 初始 Environment”的事务与并发。
+1. 将 clean-runner smoke 扩展为一条 Service 真实 HTTP 纵切面：先创建父 Team，再创建带初始 Environment 的 Service，验证单项读取与带 `team_id`、`limit=1` 的列表读取；失败时输出响应与 server log。保持 Team smoke 不回退。
+2. 重跑本地必要检查，提交 `feat/service-catalog`，等待 required `verify`、`smoke` 与 `atlas-community` 全绿；之后执行高能力收口复核并合并。
+3. 下一个功能施工包实现 Service PATCH/Delete；随后按同一分层实现 Environment 独立 CRUD 与 `service_id` 过滤。
 
 不要在应用启动路径自动执行 migration；不要让 Atlas Cloud/Pro、鉴权、RBAC、k6、OpenTelemetry 或其他后续增强进入 M1 v0.1 的阻塞路径。
 

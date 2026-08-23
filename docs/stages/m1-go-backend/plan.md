@@ -159,7 +159,7 @@ docker compose up --build
 - M1 v0.1 Git commit 与 release：待完成。
 - 迁移工具 ADR：ADR-0004 已 accepted。
 - 数据库 migration runbook：核心 diff/apply/status 路径已在本机与 required CI 实测。
-- PostgreSQL 集成测试：Team Create/Get/List/Update/Delete、唯一冲突、外键引用删除冲突、not-found 映射和游标分页已在本地与 PR #13 clean-runner 验证；Service Create/Get/List、初始 Environment 事务回滚、父资源缺失、唯一冲突、`team_id` 过滤、游标分页和并发重复创建已在本地真实 PostgreSQL 验证，待当前 PR clean-runner 验收。
+- PostgreSQL 集成测试：Team Create/Get/List/Update/Delete、唯一冲突、外键引用删除冲突、not-found 映射和游标分页已在本地与 PR #13 clean-runner 验证；Service Create/Get/List、初始 Environment 事务回滚、父资源缺失、唯一冲突、`team_id` 过滤、游标分页和并发重复创建已在本地真实 PostgreSQL 验证。PR #20 的 clean-runner `verify` 与扩展 smoke 已验证该 Service HTTP 纵切面。
 - Compose 空环境记录：待验证。
 - 查询计划对比：待实验。
 - M1 学习总结和会话记录：待完成。

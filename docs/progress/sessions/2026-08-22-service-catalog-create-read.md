@@ -16,6 +16,7 @@
 - 真实 PostgreSQL integration test 覆盖创建/回读、初始 Environment、事务回滚、父 Team 缺失、唯一冲突、全局及 Team 过滤分页，以及并发重复创建时恰好一个成功、一个冲突。
 - 可丢弃开发库完成 Atlas dry-run、apply、status；真实 HTTP 实测 Team 创建、Service 创建、Service 单项读取和两页列表，响应形状、Environment 展开边界、排序、cursor 与 request ID 符合契约。API 经 `Ctrl-C` 优雅关闭，容器已停止并自动删除。
 - 独立 `_test` 库完成 Atlas dry-run、apply、status；`make verify` 的 vet、生成检查、普通测试、race、真实 integration test 与漏洞扫描全部通过，结果为 `No vulnerabilities found.`。测试容器已停止并自动删除。
+- PR #20 的 required `verify`、`smoke` 与 `atlas-community` 均在 clean runner 通过。初版 smoke 将 Service 归属到既有 Team，导致其后 Team DELETE 正确返回 409；修复为单独创建 `service-smoke` 父 Team 后，Service 创建、单项读取、按 Team 的 `limit=1` 列表与既有完整 Team CRUD 链路同时通过。
 
 ## 与施工包和原始方案的对齐
 
@@ -25,5 +26,4 @@
 
 ## 合并前剩余
 
-- 扩展 GitHub Actions smoke：创建父 Team，创建带初始 Environment 的 Service，再验证 Service 单项读取及带 `team_id`、`limit=1` 的列表读取；保留既有 Team CRUD smoke。
-- 提交并创建 PR，等待 required `verify`、`smoke` 与 `atlas-community` 在 clean runner 全部通过，再执行合并前收口复核。
+- Service 施工包的 clean-runner 验收已完成；待把本次 CI 证据文档提交到 PR #20，并等待该最新 HEAD 的 required checks 后合并。

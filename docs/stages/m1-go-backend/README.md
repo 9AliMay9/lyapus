@@ -1,6 +1,6 @@
 # M1：常规 Go 后端
 
-状态：Atlas migration、schema/sqlc 基线、数据库基础设施和完整 Team HTTP CRUD 已完成；Service Create/Get/List、`team_id` 过滤、初始 Environment 事务创建与并发冲突测试已完成本地验证，clean-runner 验收待补。Service PATCH/DELETE、独立 Environment CRUD、Compose 与查询计划实验仍待完成，M1 v0.1 尚未完成。
+状态：Atlas migration、schema/sqlc 基线、数据库基础设施和完整 Team HTTP CRUD 已完成；Service Create/Get/List、`team_id` 过滤、初始 Environment 事务创建与并发冲突测试已完成，并由 PR #20 clean runner 验证。Service PATCH/DELETE、独立 Environment CRUD、Compose 与查询计划实验仍待完成，M1 v0.1 尚未完成。
 
 施工前依次阅读：
 

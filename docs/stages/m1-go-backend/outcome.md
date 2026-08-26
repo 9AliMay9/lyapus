@@ -43,12 +43,12 @@
 
 - 尚未引入 Compose；本次使用一次性容器仅作为运行证据，不能替代最终 Compose 空环境验收。
 - `/readyz` 暂时返回最小探针体 `{"status":"not_ready"}`；它已有全局 request-ID，但尚未改成 catalog 的错误信封，仍应保持健康探针的最小契约。
-- Service PATCH/Delete 已完成本地与 clean-runner 验证，最终文档门禁与 merge 尚未发生；Environment 独立 CRUD 尚未实现，因此仍不能将三类资源写成完整 CRUD。
+- Service PATCH/Delete 已完成本地与 clean-runner 验证并由 PR #21 合入；Environment 独立 CRUD 尚未实现，因此仍不能将三类资源写成完整 CRUD。
 - 初版 Service smoke 把 Service 创建到既有 `ci-smoke` Team 下，令后续 Team DELETE 正确返回 409 而非旧断言的 204。该失败暴露的是测试数据归属冲突，不是应用缺陷；修复后将 Service 链路改用独立父 Team，并在同一 PR 的 clean runner 通过。
 
 ## 证据
 
-- Git commit / release：数据库基础设施已由 `df0154d`（PR #10）合入；Team Create/Get repository 已由 `57f19d4`（PR #11）合入；Team CRUD/稳定分页已由 `f4df01f`（PR #13）合入；Team service/创建 API 已由 `8e84c20`（PR #15）合入；Team HTTP read 已由 `284021e`（PR #17）合入；Team HTTP mutate 已由 `de7e2d3`（PR #18）合入；Service Create/Get/List 已由 `43c627d`（PR #20）合入；Service mutation 已由 PR #21 clean runner 验证、尚待合并；M1 release 待完成。
+- Git commit / release：数据库基础设施已由 `df0154d`（PR #10）合入；Team Create/Get repository 已由 `57f19d4`（PR #11）合入；Team CRUD/稳定分页已由 `f4df01f`（PR #13）合入；Team service/创建 API 已由 `8e84c20`（PR #15）合入；Team HTTP read 已由 `284021e`（PR #17）合入；Team HTTP mutate 已由 `de7e2d3`（PR #18）合入；Service Create/Get/List 已由 `43c627d`（PR #20）合入；Service mutation 已由 `41f2651`（PR #21）合入；M1 release 待完成。
 - Migration ADR 与 runbook：ADR-0004 与 migration runbook 已完成。
 - 查询计划 benchmark：待完成。
 - 会话与学习记录：数据库基础设施会话已记录；M1 总结待完成。

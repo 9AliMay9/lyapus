@@ -29,7 +29,7 @@
 - [x] Team、Service、Environment 表、关系和声明式约束与 `contracts.md` 一致。
 - [x] Team repository CRUD、稳定游标分页与 PostgreSQL integration test 完成。
 - [x] Service Create/Get/List 与 `team_id` 过滤完成。
-- [x] Service PATCH/Delete 完成本地实现与验证，形成完整 CRUD。
+- [x] Service PATCH/Delete 已由 PR #21 合入，形成完整 CRUD。
 - [ ] Environment CRUD 与 `service_id` 过滤完成。
 - [x] Service + 初始 Environment 在一个事务内原子创建。
 - [ ] 父资源不存在、唯一冲突和仍被引用的删除均映射为稳定业务错误。

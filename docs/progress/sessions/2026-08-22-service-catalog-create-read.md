@@ -24,6 +24,6 @@
 - Service、Environment 归属模型、Service CRUD 方向、事务、并发正确性、PostgreSQL、分页过滤和测试都来自 M1 原始范围。本施工包先完成 Service Create/Get/List 和“Service + 初始 Environment”，属于既定施工顺序的一个纵切面，不删除后续 mutation 或 Environment 范围。
 - M1 仍未完成：Service PATCH/Delete、Environment 独立 CRUD、Compose 空环境、查询计划实验、README 五分钟演示与最终 release 均无完整证据。
 
-## 合并前剩余
+## 合并结果
 
-- Service 施工包的 clean-runner 验收已完成；待把本次 CI 证据文档提交到 PR #20，并等待该最新 HEAD 的 required checks 后合并。
+- PR #20 的最终 required checks 通过后已 squash merge；Service Create/Get/List 以 commit `43c627d` 合入 `main`。

@@ -411,6 +411,149 @@ jobs:
             exit 1
           fi
 
+          service_updated_status="$(
+            curl --silent --show-error \
+              --request PATCH \
+              --header 'Content-Type: application/json' \
+              --data '{"name":"Service Catalog Updated"}' \
+              --dump-header service-updated.headers \
+              --output service-updated.json \
+              --write-out '%{http_code}' \
+              "http://127.0.0.1:8080/v1/services/$service_created_id"
+          )"
+
+          if [ "$service_updated_status" != 200 ] ||
+            ! grep --ignore-case --quiet '^x-request-id: [^[:space:]]' service-updated.headers ||
+            ! grep --fixed-strings --quiet '"id":'"$service_created_id" service-updated.json ||
+            ! grep --fixed-strings --quiet '"team_id":'"$service_team_id" service-updated.json ||
+            ! grep --fixed-strings --quiet '"slug":"catalog"' service-updated.json ||
+            ! grep --fixed-strings --quiet '"name":"Service Catalog Updated"' service-updated.json ||
+            ! grep --fixed-strings --quiet '"description":"CI smoke service"' service-updated.json ||
+            grep --fixed-strings --quiet '"environments"' service-updated.json; then
+            cat service-updated.headers service-updated.json server.log
+            exit 1
+          fi
+
+          service_cleared_status="$(
+            curl --silent --show-error \
+              --request PATCH \
+              --header 'Content-Type: application/json' \
+              --data '{"description":null}' \
+              --dump-header service-cleared.headers \
+              --output service-cleared.json \
+              --write-out '%{http_code}' \
+              "http://127.0.0.1:8080/v1/services/$service_created_id"
+          )"
+
+          if [ "$service_cleared_status" != 200 ] ||
+            ! grep --ignore-case --quiet '^x-request-id: [^[:space:]]' service-cleared.headers ||
+            ! grep --fixed-strings --quiet '"id":'"$service_created_id" service-cleared.json ||
+            ! grep --fixed-strings --quiet '"name":"Service Catalog Updated"' service-cleared.json ||
+            ! grep --fixed-strings --quiet '"description":null' service-cleared.json ||
+            grep --fixed-strings --quiet '"environments"' service-cleared.json; then
+            cat service-cleared.headers service-cleared.json server.log
+            exit 1
+          fi
+
+          service_delete_conflict_status="$(
+            curl --silent --show-error \
+              --request DELETE \
+              --dump-header service-delete-conflict.headers \
+              --output service-delete-conflict.json \
+              --write-out '%{http_code}' \
+              "http://127.0.0.1:8080/v1/services/$service_created_id"
+          )"
+
+          service_delete_conflict_header_id="$(
+            grep --ignore-case '^x-request-id:' service-delete-conflict.headers |
+              head -n 1 |
+              awk '{print $2}' |
+              tr -d '\r'
+          )"
+
+          service_delete_conflict_body_id="$(
+            sed -n 's/.*"request_id":"\([^"]*\)".*/\1/p' service-delete-conflict.json
+          )"
+
+          if [ "$service_delete_conflict_status" != 409 ] ||
+            [ -z "$service_delete_conflict_header_id" ] ||
+            [ "$service_delete_conflict_header_id" != "$service_delete_conflict_body_id" ] ||
+            ! grep --fixed-strings --quiet '"code":"conflict"' service-delete-conflict.json; then
+            cat service-delete-conflict.headers service-delete-conflict.json server.log
+            exit 1
+          fi
+
+          service_deletable_status="$(
+            curl --silent --show-error \
+              --request POST \
+              --header 'Content-Type: application/json' \
+              --data '{"team_id":'"$service_team_id"',"slug":"deletable","name":"Deletable Service"}' \
+              --dump-header service-deletable.headers \
+              --output service-deletable.json \
+              --write-out '%{http_code}' \
+              http://127.0.0.1:8080/v1/services
+          )"
+
+          if [ "$service_deletable_status" != 201 ] ||
+            ! grep --ignore-case --quiet '^x-request-id: [^[:space:]]' service-deletable.headers ||
+            ! grep --fixed-strings --quiet '"team_id":'"$service_team_id" service-deletable.json ||
+            ! grep --fixed-strings --quiet '"slug":"deletable"' service-deletable.json ||
+            ! grep --fixed-strings --quiet '"environments":[]' service-deletable.json; then
+            cat service-deletable.headers service-deletable.json server.log
+            exit 1
+          fi
+
+          service_deletable_id="$(
+            sed -n 's/.*"id":\([0-9][0-9]*\),"team_id":.*/\1/p' service-deletable.json
+          )"
+
+          if [ -z "$service_deletable_id" ]; then
+            cat service-deletable.headers service-deletable.json server.log
+            exit 1
+          fi
+
+          service_deleted_status="$(
+            curl --silent --show-error \
+              --request DELETE \
+              --dump-header service-deleted.headers \
+              --output service-deleted.body \
+              --write-out '%{http_code}' \
+              "http://127.0.0.1:8080/v1/services/$service_deletable_id"
+          )"
+
+          if [ "$service_deleted_status" != 204 ] ||
+            ! grep --ignore-case --quiet '^x-request-id: [^[:space:]]' service-deleted.headers ||
+            [ -s service-deleted.body ]; then
+            cat service-deleted.headers service-deleted.body server.log
+            exit 1
+          fi
+
+          service_missing_status="$(
+            curl --silent --show-error \
+              --dump-header service-missing.headers \
+              --output service-missing.json \
+              --write-out '%{http_code}' \
+              "http://127.0.0.1:8080/v1/services/$service_deletable_id"
+          )"
+
+          service_missing_header_id="$(
+            grep --ignore-case '^x-request-id:' service-missing.headers |
+              head -n 1 |
+              awk '{print $2}' |
+              tr -d '\r'
+          )"
+          service_missing_body_id="$(
+            sed -n 's/.*"request_id":"\([^"]*\)".*/\1/p' service-missing.json
+          )"
+
+          if [ "$service_missing_status" != 404 ] ||
+            [ -z "$service_missing_header_id" ] ||
+            [ "$service_missing_header_id" != "$service_missing_body_id" ] ||
+            ! grep --fixed-strings --quiet '"code":"not_found"' service-missing.json; then
+            cat service-missing.headers service-missing.json server.log
+            exit 1
+          fi
+
           updated_status="$(
             curl --silent --show-error \
               --request PATCH \

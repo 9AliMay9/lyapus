@@ -22,6 +22,14 @@ type serviceService interface {
 		context.Context,
 		catalog.ListServicesInput,
 	) (catalog.ServicePage, error)
+
+	UpdateService(
+		context.Context,
+		int64,
+		catalog.UpdateServiceInput,
+	) (catalog.Service, error)
+
+	DeleteService(context.Context, int64) error
 }
 
 type createServiceRequest struct {
@@ -30,6 +38,12 @@ type createServiceRequest struct {
 	Name         string                     `json:"name"`
 	Description  *string                    `json:"description"`
 	Environments []createEnvironmentRequest `json:"environments"`
+}
+
+type updateServiceRequest struct {
+	Slug        patchString         `json:"slug"`
+	Name        patchString         `json:"name"`
+	Description patchNullableString `json:"description"`
 }
 
 type createEnvironmentRequest struct {
@@ -93,6 +107,27 @@ func createServiceInputFromRequest(
 		Description:  request.Description,
 		Environments: environments,
 	}
+}
+
+func updateServiceInputFromRequest(
+	request updateServiceRequest,
+) catalog.UpdateServiceInput {
+	input := catalog.UpdateServiceInput{}
+
+	if request.Slug.set {
+		slug := request.Slug.value
+		input.Slug = &slug
+	}
+	if request.Name.set {
+		name := request.Name.value
+		input.Name = &name
+	}
+	if request.Description.set {
+		input.Description = request.Description.value
+		input.DescriptionProvided = true
+	}
+
+	return input
 }
 
 func serviceResponseFromCatalog(service catalog.Service) serviceResponse {

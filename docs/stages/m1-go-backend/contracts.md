@@ -132,7 +132,7 @@ PostgreSQL 可识别的 unique violation、foreign key violation 等通过 SQLST
 - `POST /v1/services` 可携带 `environments` 数组；Service 和初始 Environment 必须在一个数据库事务中全部成功或全部失败。
 - `PATCH` 只允许可变字段，至少提供一个字段；显式空字符串仍要经过校验。
 - `team_id` 与 `service_id` 是不可变归属。M1 不支持跨 Team 或跨 Service 搬迁资源。
-- Service 单项响应包含其 Environment 列表；Service 集合响应不展开 Environment，避免列表放大。
+- Service 创建响应与单项 `GET` 响应包含其 Environment 列表；Service 集合响应不展开 Environment，避免列表放大。Service `PATCH` 成功返回更新后的核心 Service 字段，不额外查询或展开 Environment。
 
 ## 分页与排序
 

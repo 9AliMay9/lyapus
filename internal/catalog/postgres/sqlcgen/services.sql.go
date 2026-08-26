@@ -70,6 +70,19 @@ func (q *Queries) CreateService(ctx context.Context, arg CreateServiceParams) (S
 	return i, err
 }
 
+const deleteService = `-- name: DeleteService :one
+DELETE FROM services
+WHERE id = $1
+RETURNING id
+`
+
+func (q *Queries) DeleteService(ctx context.Context, id int64) (int64, error) {
+	row := q.db.QueryRow(ctx, deleteService, id)
+	var id_2 int64
+	err := row.Scan(&id_2)
+	return id_2, err
+}
+
 const getServiceByID = `-- name: GetServiceByID :one
 SELECT id, team_id, slug, name, description, created_at, updated_at
 FROM services
@@ -294,4 +307,47 @@ func (q *Queries) ListServicesFirstPageByTeamID(ctx context.Context, arg ListSer
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateService = `-- name: UpdateService :one
+UPDATE services
+SET slug = COALESCE($1::text, slug),
+    name = COALESCE($2::text, name),
+    description = CASE
+      WHEN $3::boolean
+        THEN $4::text
+      ELSE description
+    END,
+    updated_at = now()
+WHERE id = $5
+RETURNING id, team_id, slug, name, description, created_at, updated_at
+`
+
+type UpdateServiceParams struct {
+	Slug                pgtype.Text
+	Name                pgtype.Text
+	DescriptionProvided bool
+	Description         pgtype.Text
+	ID                  int64
+}
+
+func (q *Queries) UpdateService(ctx context.Context, arg UpdateServiceParams) (Service, error) {
+	row := q.db.QueryRow(ctx, updateService,
+		arg.Slug,
+		arg.Name,
+		arg.DescriptionProvided,
+		arg.Description,
+		arg.ID,
+	)
+	var i Service
+	err := row.Scan(
+		&i.ID,
+		&i.TeamID,
+		&i.Slug,
+		&i.Name,
+		&i.Description,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }

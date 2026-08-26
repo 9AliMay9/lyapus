@@ -118,6 +118,31 @@ func (s *ServiceService) ListServices(
 	return s.repository.ListServices(ctx, normalized)
 }
 
+func (s *ServiceService) UpdateService(
+	ctx context.Context,
+	id int64,
+	input UpdateServiceInput,
+) (Service, error) {
+	if err := validateServiceID(id); err != nil {
+		return Service{}, err
+	}
+
+	normalized, err := normalizeUpdateServiceInput(input)
+	if err != nil {
+		return Service{}, err
+	}
+
+	return s.repository.UpdateService(ctx, id, normalized)
+}
+
+func (s *ServiceService) DeleteService(ctx context.Context, id int64) error {
+	if err := validateServiceID(id); err != nil {
+		return err
+	}
+
+	return s.repository.DeleteService(ctx, id)
+}
+
 func normalizeCreateTeamInput(input CreateTeamInput) (CreateTeamInput, error) {
 	slug, err := normalizeTeamSlug(input.Slug)
 	if err != nil {
@@ -173,6 +198,45 @@ func normalizeCreateServiceInput(
 		Description:  description,
 		Environments: environments,
 	}, nil
+}
+
+func normalizeUpdateServiceInput(
+	input UpdateServiceInput,
+) (UpdateServiceInput, error) {
+	if input.Slug == nil && input.Name == nil && !input.DescriptionProvided {
+		return UpdateServiceInput{}, invalidTeamArgument(
+			"at least one field must be provided",
+		)
+	}
+
+	var normalized UpdateServiceInput
+
+	if input.Slug != nil {
+		slug, err := normalizeServiceSlug(*input.Slug)
+		if err != nil {
+			return UpdateServiceInput{}, err
+		}
+		normalized.Slug = &slug
+	}
+
+	if input.Name != nil {
+		name, err := normalizeServiceName(*input.Name)
+		if err != nil {
+			return UpdateServiceInput{}, err
+		}
+		normalized.Name = &name
+	}
+
+	if input.DescriptionProvided {
+		description, err := normalizeServiceDescription(input.Description)
+		if err != nil {
+			return UpdateServiceInput{}, err
+		}
+		normalized.Description = description
+		normalized.DescriptionProvided = true
+	}
+
+	return normalized, nil
 }
 
 func normalizeCreateEnvironmentInput(

@@ -55,6 +55,81 @@ func TestCreateServiceInputFromRequest(t *testing.T) {
 	}
 }
 
+func TestUpdateServiceRequestToCatalogInput(t *testing.T) {
+	t.Run("provided fields", func(t *testing.T) {
+		var request updateServiceRequest
+		if err := json.Unmarshal(
+			[]byte(
+				`{"slug":"catalog-api","name":"Catalog API", "description":"Updated description"}`,
+			),
+			&request,
+		); err != nil {
+			t.Fatalf("unmarshal update service request: %v", err)
+		}
+
+		got := updateServiceInputFromRequest(request)
+
+		if got.Slug == nil || *got.Slug != "catalog-api" {
+			t.Fatalf("Slug = %#v, want catalog-api", got.Slug)
+		}
+		if got.Name == nil || *got.Name != "Catalog API" {
+			t.Fatalf("Name = %#v, want Catalog API", got.Name)
+		}
+		if !got.DescriptionProvided {
+			t.Fatal("DescriptionProvided = false, want true")
+		}
+		if got.Description == nil || *got.Description != "Updated description" {
+			t.Fatalf("Description = %#v, want Updated description", got.Description)
+		}
+	})
+
+	t.Run("explicit null description", func(t *testing.T) {
+		var request updateServiceRequest
+		if err := json.Unmarshal([]byte(`{"description":null}`), &request); err != nil {
+			t.Fatalf("unmarshal update service request: %v", err)
+		}
+
+		got := updateServiceInputFromRequest(request)
+
+		if got.Slug != nil {
+			t.Fatalf("Slug = %#v, want nil", got.Slug)
+		}
+		if got.Name != nil {
+			t.Fatalf("Name = %#v, want nil", got.Name)
+		}
+		if !got.DescriptionProvided {
+			t.Fatal("DescriptionProvided = false, want true")
+		}
+		if got.Description != nil {
+			t.Fatalf("Description = %#v, want nil", got.Description)
+		}
+	})
+
+	t.Run("omitted fields", func(t *testing.T) {
+		var request updateServiceRequest
+		if err := json.Unmarshal([]byte(`{}`), &request); err != nil {
+			t.Fatalf("unmarshal update service request: %v", err)
+		}
+
+		got := updateServiceInputFromRequest(request)
+
+		if got.Slug != nil || got.Name != nil || got.Description != nil {
+			t.Fatalf("input = %#v, want no values", got)
+		}
+		if got.DescriptionProvided {
+			t.Fatal("DescriptionProvided = true, want false")
+		}
+	})
+
+	t.Run("rejects non-string description", func(t *testing.T) {
+		var request updateServiceRequest
+		err := json.Unmarshal([]byte(`{"description":1}`), &request)
+		if err == nil {
+			t.Fatal("unmarshal update service request error = nil, want error")
+		}
+	})
+}
+
 func TestServiceResponsesFromCatalog(t *testing.T) {
 	createdAt := time.Date(
 		2026,

@@ -48,7 +48,7 @@
 - [x] PR #15 合并前本地 `make verify`（含生成检查、普通/竞态/真实 PostgreSQL integration test 与漏洞扫描）通过。
 - [x] PR #15 的 required `verify`、`smoke` 与 `atlas-community` checks 覆盖数据库依赖和 Team 创建 API 最小路径；PR #17 的同三项 checks 验证 Team 单项读取与 `limit=1` 列表读取；PR #18 的同三项 checks 验证完整 Team HTTP CRUD 链路。
 - [x] Service Create/Get/List 施工包的 required `verify`、`smoke` 与 `atlas-community` checks 已在 PR #20 clean runner 通过。
-- [ ] Service PATCH/Delete 施工包的 required `verify`、`smoke` 与 `atlas-community` checks 通过。
+- [x] Service PATCH/Delete 施工包的 required `verify`、`smoke` 与 `atlas-community` checks 已在 PR #21 clean runner 通过。
 
 ## 可复现交付与证据
 

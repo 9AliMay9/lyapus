@@ -358,6 +358,34 @@ func (r *ServiceRepository) ListServices(
 	return servicePageFromRows(rows, input.Limit)
 }
 
+func (r *ServiceRepository) UpdateService(
+	ctx context.Context,
+	id int64,
+	input catalog.UpdateServiceInput,
+) (catalog.Service, error) {
+	row, err := r.queries.UpdateService(ctx, sqlcgen.UpdateServiceParams{
+		Slug:                textFromStringPointer(input.Slug),
+		Name:                textFromStringPointer(input.Name),
+		DescriptionProvided: input.DescriptionProvided,
+		Description:         textFromStringPointer(input.Description),
+		ID:                  id,
+	})
+	if err != nil {
+		return catalog.Service{}, classifyServiceError("update service", err)
+	}
+
+	return serviceFromRow(row)
+}
+
+func (r *ServiceRepository) DeleteService(ctx context.Context, id int64) error {
+	_, err := r.queries.DeleteService(ctx, id)
+	if err != nil {
+		return classifyServiceError("delete service", err)
+	}
+
+	return nil
+}
+
 func serviceListLimitWithExtra(limit int32) (int32, error) {
 	if limit < 1 || limit == maxInt32 {
 		return 0, catalog.ErrInvalidArgument

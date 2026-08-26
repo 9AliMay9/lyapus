@@ -430,6 +430,106 @@ func TestServiceServiceCreateServiceNormalizesAndDelegates(t *testing.T) {
 	}
 }
 
+func TestNormalizeUpdateServiceInput(t *testing.T) {
+	t.Run("normalizes provided fields", func(t *testing.T) {
+		slug := "catalog-api"
+		name := "\tCatalog API\t"
+		description := "Updated service description"
+
+		got, err := normalizeUpdateServiceInput(UpdateServiceInput{
+			Slug:                &slug,
+			Name:                &name,
+			Description:         &description,
+			DescriptionProvided: true,
+		})
+		if err != nil {
+			t.Fatalf("normalizeUpdateServiceInput() error = %v", err)
+		}
+
+		if got.Slug == nil {
+			t.Fatal("normalized slug = nil, want value")
+		}
+		if *got.Slug != "catalog-api" {
+			t.Fatalf("normalized slug = %q, want %q", *got.Slug, "catalog-api")
+		}
+		if got.Slug == &slug {
+			t.Fatal("normalized slug aliases input")
+		}
+
+		if got.Name == nil {
+			t.Fatal("normalized name = nil, want value")
+		}
+		if *got.Name != "Catalog API" {
+			t.Fatalf("normalized name = %q, want %q", *got.Name, "Catalog API")
+		}
+		if got.Name == &name {
+			t.Fatal("normalized name aliases input")
+		}
+
+		if !got.DescriptionProvided {
+			t.Fatal("normalized description provided = false, want value")
+		}
+		if got.Description == nil {
+			t.Fatal("normalized description = nil, want value")
+		}
+		if *got.Description != "Updated service description" {
+			t.Fatalf(
+				"normalized description = %q, want %q",
+				*got.Description,
+				"Updated service description",
+			)
+		}
+		if got.Description == &description {
+			t.Fatal("normalized description aliased input")
+		}
+	})
+
+	t.Run("preserves explicit null description", func(t *testing.T) {
+		got, err := normalizeUpdateServiceInput(UpdateServiceInput{
+			DescriptionProvided: true,
+		})
+		if err != nil {
+			t.Fatalf("normalizeUpdateServiceInput() error = %v", err)
+		}
+		if !got.DescriptionProvided {
+			t.Fatal("normalized description provided = false, want true")
+		}
+		if got.Description != nil {
+			t.Fatalf("normalized description = %q, want nil", *got.Description)
+		}
+	})
+
+	description := strings.Repeat("a", 501)
+	tests := []struct {
+		name  string
+		input UpdateServiceInput
+	}{
+		{
+			name:  "no fields",
+			input: UpdateServiceInput{},
+		},
+		{
+			name: "description too long",
+			input: UpdateServiceInput{
+				Description:         &description,
+				DescriptionProvided: true,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := normalizeUpdateServiceInput(tt.input)
+			if !errors.Is(err, ErrInvalidArgument) {
+				t.Fatalf(
+					"normalizeUpdateServiceInput() error = %v, want ErrInvalidArgument",
+					err,
+				)
+			}
+		})
+	}
+}
+
 func TestServiceServiceGetServiceByIDDelegates(t *testing.T) {
 	repository := &recordingServiceRepository{
 		detail: ServiceDetail{
@@ -554,6 +654,79 @@ func TestServiceServiceListServicesDefaultsAndNormalizesInput(t *testing.T) {
 	})
 }
 
+func TestServiceServiceUpdateServiceNormalizesAndDelegates(t *testing.T) {
+	repository := &recordingServiceRepository{
+		service: Service{
+			ID:   9,
+			Slug: "catalog-api",
+			Name: "Catalog API",
+		},
+	}
+	service := NewServiceService(repository)
+
+	name := "\tCatalog API v2\t"
+	description := "Updated description"
+	got, err := service.UpdateService(context.Background(), 9, UpdateServiceInput{
+		Name:                &name,
+		Description:         &description,
+		DescriptionProvided: true,
+	})
+	if err != nil {
+		t.Fatalf("UpdateService() error = %v", err)
+	}
+
+	if got != repository.service {
+		t.Fatalf("UpdateService() = %#v, want %#v", got, repository.service)
+	}
+	if repository.updateID != 9 {
+		t.Fatalf("UpdateService() repository ID = %d, want 9", repository.updateID)
+	}
+	if repository.updateInput == nil {
+		t.Fatal("UpdateService() did not call repository")
+	}
+	if repository.updateInput.Slug != nil {
+		t.Fatalf(
+			"UpdateService() repository slug = %q, want nil",
+			*repository.updateInput.Slug,
+		)
+	}
+	if repository.updateInput.Name == nil {
+		t.Fatal("UpdateService() repository name = nil, want value")
+	}
+	if *repository.updateInput.Name != "Catalog API v2" {
+		t.Fatalf(
+			"UpdateService() repository name = %q, want %q",
+			*repository.updateInput.Name,
+			"Catalog API v2",
+		)
+	}
+	if !repository.updateInput.DescriptionProvided {
+		t.Fatal("UpdateService() repository description provided = false, want true")
+	}
+	if repository.updateInput.Description == nil {
+		t.Fatal("UpdateService() repository description = nil, want value")
+	}
+	if *repository.updateInput.Description != "Updated description" {
+		t.Fatalf(
+			"UpdateService() repository description = %q, want %q",
+			*repository.updateInput.Description,
+			"Updated description",
+		)
+	}
+}
+
+func TestServiceServiceDeleteServiceDelegates(t *testing.T) {
+	repository := &recordingServiceRepository{}
+	service := NewServiceService(repository)
+
+	if err := service.DeleteService(context.Background(), 9); err != nil {
+		t.Fatalf("DeleteService() error = %v", err)
+	}
+	if repository.deleteID != 9 {
+		t.Fatalf("DeleteService() repository ID = %d, want 9", repository.deleteID)
+	}
+}
+
 func TestServiceServiceRejectsInvalidInputBeforeRepository(t *testing.T) {
 	tests := []struct {
 		name string
@@ -632,6 +805,38 @@ func TestServiceServiceRejectsInvalidInputBeforeRepository(t *testing.T) {
 			},
 		},
 		{
+			name: "zero update service ID",
+			call: func(service *ServiceService) error {
+				name := "Catalog API"
+
+				_, err := service.UpdateService(
+					context.Background(),
+					0,
+					UpdateServiceInput{
+						Name: &name,
+					},
+				)
+				return err
+			},
+		},
+		{
+			name: "empty update",
+			call: func(service *ServiceService) error {
+				_, err := service.UpdateService(
+					context.Background(),
+					1,
+					UpdateServiceInput{},
+				)
+				return err
+			},
+		},
+		{
+			name: "zero delete service ID",
+			call: func(service *ServiceService) error {
+				return service.DeleteService(context.Background(), 0)
+			},
+		},
+		{
 			name: "zero team filter",
 			call: func(service *ServiceService) error {
 				teamID := int64(0)
@@ -683,7 +888,11 @@ type recordingServiceRepository struct {
 	createInput *CreateServiceInput
 	getID       int64
 	listInput   *ListServicesInput
+	updateID    int64
+	updateInput *UpdateServiceInput
+	deleteID    int64
 	detail      ServiceDetail
+	service     Service
 	page        ServicePage
 	err         error
 	calls       int
@@ -716,6 +925,26 @@ func (r *recordingServiceRepository) ListServices(
 	r.calls++
 	r.listInput = &input
 	return r.page, r.err
+}
+
+func (r *recordingServiceRepository) UpdateService(
+	_ context.Context,
+	id int64,
+	input UpdateServiceInput,
+) (Service, error) {
+	r.calls++
+	r.updateID = id
+	r.updateInput = &input
+	return r.service, r.err
+}
+
+func (r *recordingServiceRepository) DeleteService(
+	_ context.Context,
+	id int64,
+) error {
+	r.calls++
+	r.deleteID = id
+	return r.err
 }
 
 func (r *recordingServiceRepository) callCount() int {

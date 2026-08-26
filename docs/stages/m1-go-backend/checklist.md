@@ -29,7 +29,7 @@
 - [x] Team、Service、Environment 表、关系和声明式约束与 `contracts.md` 一致。
 - [x] Team repository CRUD、稳定游标分页与 PostgreSQL integration test 完成。
 - [x] Service Create/Get/List 与 `team_id` 过滤完成。
-- [ ] Service PATCH/Delete 完成，形成完整 CRUD。
+- [x] Service PATCH/Delete 完成本地实现与验证，形成完整 CRUD。
 - [ ] Environment CRUD 与 `service_id` 过滤完成。
 - [x] Service + 初始 Environment 在一个事务内原子创建。
 - [ ] 父资源不存在、唯一冲突和仍被引用的删除均映射为稳定业务错误。
@@ -43,11 +43,12 @@
 - [x] Team HTTP 不透明 cursor 编解码、分页响应与稳定排序已完成；仅未提供 `limit` 时使用默认值，显式空值、零值或重复的 `limit`/`cursor` 均返回 `400 invalid_argument`。
 - [x] HTTP 日志包含同一 request ID、方法、路由/路径、状态和耗时，不泄漏敏感值。
 - [x] Team 的关键校验、业务服务、repository 与已实现 handler 有单元/集成测试覆盖。
-- [x] Service Create/Get/List 的校验、repository、事务、并发与 HTTP handler 有单元/真实 PostgreSQL integration test 覆盖。
+- [x] Service CRUD 的校验、repository、事务、并发与 HTTP handler 有单元/真实 PostgreSQL integration test 覆盖。
 - [x] PostgreSQL integration tests 使用独立 `_test` 数据库且不会静默跳过。
 - [x] PR #15 合并前本地 `make verify`（含生成检查、普通/竞态/真实 PostgreSQL integration test 与漏洞扫描）通过。
 - [x] PR #15 的 required `verify`、`smoke` 与 `atlas-community` checks 覆盖数据库依赖和 Team 创建 API 最小路径；PR #17 的同三项 checks 验证 Team 单项读取与 `limit=1` 列表读取；PR #18 的同三项 checks 验证完整 Team HTTP CRUD 链路。
 - [x] Service Create/Get/List 施工包的 required `verify`、`smoke` 与 `atlas-community` checks 已在 PR #20 clean runner 通过。
+- [x] Service PATCH/Delete 施工包的 required `verify`、`smoke` 与 `atlas-community` checks 已在 PR #21 clean runner 通过。
 
 ## 可复现交付与证据
 

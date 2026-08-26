@@ -82,3 +82,10 @@ type CreateServiceInput struct {
 	Description  *string
 	Environments []CreateEnvironmentInput
 }
+
+type UpdateServiceInput struct {
+	Slug                *string
+	Name                *string
+	Description         *string
+	DescriptionProvided bool
+}

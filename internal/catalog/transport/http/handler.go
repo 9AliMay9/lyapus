@@ -44,6 +44,11 @@ type patchString struct {
 	set   bool
 }
 
+type patchNullableString struct {
+	value *string
+	set   bool
+}
+
 type teamResponse struct {
 	ID        int64     `json:"id"`
 	Slug      string    `json:"slug"`
@@ -94,7 +99,9 @@ func NewHandler(
 	router.Get("/v1/teams/{team_id}", handler.getTeam)
 	router.Get("/v1/services/{service_id}", handler.getService)
 	router.Patch("/v1/teams/{team_id}", handler.updateTeam)
+	router.Patch("/v1/services/{service_id}", handler.updateService)
 	router.Delete("/v1/teams/{team_id}", handler.deleteTeam)
+	router.Delete("/v1/services/{service_id}", handler.deleteService)
 
 	return router
 }
@@ -234,6 +241,47 @@ func (h Handler) deleteTeam(w stdhttp.ResponseWriter, r *stdhttp.Request) {
 	}
 
 	if err := h.teams.DeleteTeam(r.Context(), id); err != nil {
+		writeCatalogError(w, err, requestid.FromContext(r.Context()))
+		return
+	}
+
+	w.WriteHeader(stdhttp.StatusNoContent)
+}
+
+func (h Handler) updateService(w stdhttp.ResponseWriter, r *stdhttp.Request) {
+	id, err := parsePositiveServiceID(chi.URLParam(r, "service_id"))
+	if err != nil {
+		writeCatalogError(w, err, requestid.FromContext(r.Context()))
+		return
+	}
+
+	var request updateServiceRequest
+	if err := decodeJSONBody(w, r, &request); err != nil {
+		writeRequestBodyError(w, r, err)
+		return
+	}
+
+	service, err := h.services.UpdateService(
+		r.Context(),
+		id,
+		updateServiceInputFromRequest(request),
+	)
+	if err != nil {
+		writeCatalogError(w, err, requestid.FromContext(r.Context()))
+		return
+	}
+
+	writeJSON(w, stdhttp.StatusOK, serviceResponseFromCatalog(service))
+}
+
+func (h Handler) deleteService(w stdhttp.ResponseWriter, r *stdhttp.Request) {
+	id, err := parsePositiveServiceID(chi.URLParam(r, "service_id"))
+	if err != nil {
+		writeCatalogError(w, err, requestid.FromContext(r.Context()))
+		return
+	}
+
+	if err := h.services.DeleteService(r.Context(), id); err != nil {
 		writeCatalogError(w, err, requestid.FromContext(r.Context()))
 		return
 	}
@@ -499,6 +547,23 @@ func (value *patchString) UnmarshalJSON(data []byte) error {
 	}
 
 	return json.Unmarshal(data, &value.value)
+}
+
+func (value *patchNullableString) UnmarshalJSON(data []byte) error {
+	value.set = true
+
+	if bytes.Equal(bytes.TrimSpace(data), []byte("null")) {
+		value.value = nil
+		return nil
+	}
+
+	var stringValue string
+	if err := json.Unmarshal(data, &stringValue); err != nil {
+		return err
+	}
+
+	value.value = &stringValue
+	return nil
 }
 
 func updateTeamInputFromRequest(request updateTeamRequest) catalog.UpdateTeamInput {

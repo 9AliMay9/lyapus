@@ -1748,6 +1748,422 @@ func TestHandlerListServicesRejectsInvalidQuery(t *testing.T) {
 	}
 }
 
+func TestHandlerUpdateService(t *testing.T) {
+	createdAt := time.Date(2026, time.August, 24, 12, 0, 0, 0, time.UTC)
+	updatedAt := createdAt.Add(time.Minute)
+	description := "Updated service description"
+
+	service := &recordingServiceService{
+		service: catalog.Service{
+			ID:          42,
+			TeamID:      7,
+			Slug:        "catalog-api",
+			Name:        "Catalog API",
+			Description: &description,
+			CreatedAt:   createdAt,
+			UpdatedAt:   updatedAt,
+		},
+	}
+	handler := newTestHandlerWithServices(&recordingTeamService{}, service)
+
+	request := newJSONRequest(
+		stdhttp.MethodPatch,
+		"/v1/services/42",
+		`{"slug":"catalog-api","name":"Catalog API","description":"Updated service description"}`,
+	)
+	recorder := httptest.NewRecorder()
+
+	handler.ServeHTTP(recorder, request)
+
+	response := recorder.Result()
+	defer response.Body.Close()
+
+	if response.StatusCode != stdhttp.StatusOK {
+		t.Fatalf("status = %d, want %d", response.StatusCode, stdhttp.StatusOK)
+	}
+	if service.updateID == nil {
+		t.Fatal("UpdateService() was not called")
+	}
+	if *service.updateID != 42 {
+		t.Fatalf("UpdateService() ID = %d, want 42", *service.updateID)
+	}
+	if service.updateInput == nil {
+		t.Fatal("UpdateService() input = nil")
+	}
+	if service.updateInput.Slug == nil || *service.updateInput.Slug != "catalog-api" {
+		t.Fatalf("UpdateService() Slug = %#v, want catalog-api", service.updateInput.Slug)
+	}
+	if service.updateInput.Name == nil || *service.updateInput.Name != "Catalog API" {
+		t.Fatalf("UpdateService() Name = %#v, want Catalog API", service.updateInput.Name)
+	}
+	if !service.updateInput.DescriptionProvided {
+		t.Fatal("UpdateService() DescriptionProvided = false, want true")
+	}
+	if service.updateInput.Description == nil ||
+		*service.updateInput.Description != "Updated service description" {
+		t.Fatalf(
+			"UpdateService() Description = %#v, want Updated service description",
+			service.updateInput.Description,
+		)
+	}
+
+	var got serviceResponse
+	if err := json.NewDecoder(response.Body).Decode(&got); err != nil {
+		t.Fatalf("decode response body: %v", err)
+	}
+	if got.ID != 42 || got.TeamID != 7 {
+		t.Fatalf("response IDs = (%d, %d), want (42, 7)", got.ID, got.TeamID)
+	}
+	if got.Slug != "catalog-api" || got.Name != "Catalog API" {
+		t.Fatalf("response = %#v, want catalog-api / Catalog API", got)
+	}
+	if got.Description == nil || *got.Description != description {
+		t.Fatalf("response Description = %#v, want %q", got.Description, description)
+	}
+	if !got.UpdatedAt.Equal(updatedAt) {
+		t.Fatalf("response updated_at = %s, want %s", got.UpdatedAt, updatedAt)
+	}
+}
+
+func TestHandlerUpdateServicePassesExplicitNullDescription(t *testing.T) {
+	service := &recordingServiceService{}
+	handler := newTestHandlerWithServices(&recordingTeamService{}, service)
+
+	request := newJSONRequest(
+		stdhttp.MethodPatch,
+		"/v1/services/42",
+		`{"description":null}`,
+	)
+	recorder := httptest.NewRecorder()
+
+	handler.ServeHTTP(recorder, request)
+
+	if recorder.Code != stdhttp.StatusOK {
+		t.Fatalf("status = %d, want %d", recorder.Code, stdhttp.StatusOK)
+	}
+	if service.updateInput == nil {
+		t.Fatal("UpdateService was not called")
+	}
+	if service.updateInput.Slug != nil || service.updateInput.Name != nil {
+		t.Fatalf("UpdateService() input %#v, want description only", *service.updateInput)
+	}
+	if !service.updateInput.DescriptionProvided {
+		t.Fatal("UpdateService() DescriptionProvided = false, want true")
+	}
+	if service.updateInput.Description != nil {
+		t.Fatalf("UpdateService() Description = %#v, want nil", service.updateInput.Description)
+	}
+}
+
+func TestHandlerDeleteService(t *testing.T) {
+	service := &recordingServiceService{}
+	handler := newTestHandlerWithServices(&recordingTeamService{}, service)
+
+	request := httptest.NewRequest(
+		stdhttp.MethodDelete,
+		"/v1/services/42",
+		nil,
+	)
+	recorder := httptest.NewRecorder()
+
+	handler.ServeHTTP(recorder, request)
+
+	if recorder.Code != stdhttp.StatusNoContent {
+		t.Fatalf("status = %d, want %d", recorder.Code, stdhttp.StatusNoContent)
+	}
+	if recorder.Body.Len() != 0 {
+		t.Fatalf("response body = %q, want empty", recorder.Body.String())
+	}
+	if service.deleteID == nil {
+		t.Fatal("DeleteService() was not called")
+	}
+	if *service.deleteID != 42 {
+		t.Fatalf("DeleteService() ID = %d, want 42", *service.deleteID)
+	}
+}
+
+func TestHandlerUpdateServiceRejectsInvalidRequestBody(t *testing.T) {
+	tests := []struct {
+		name string
+		body string
+	}{
+		{
+			name: "null slug",
+			body: `{"slug":null}`,
+		},
+		{
+			name: "wrong description type",
+			body: `{"description":42}`,
+		},
+		{
+			name: "unknown field",
+			body: `{"environment":"production"}`,
+		},
+		{
+			name: "multiple JSON values",
+			body: `{"name":"Catalog API"} {"slug":"catalog-api"}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			service := &recordingServiceService{}
+			handler := newTestHandlerWithServices(&recordingTeamService{}, service)
+
+			request := newJSONRequest(
+				stdhttp.MethodPatch,
+				"/v1/services/42",
+				tt.body,
+			)
+			recorder := httptest.NewRecorder()
+
+			handler.ServeHTTP(recorder, request)
+
+			if service.updateInput != nil {
+				t.Fatalf(
+					"UpdateService() input = %#v, want no call",
+					*service.updateInput,
+				)
+			}
+			assertErrorResponse(
+				t,
+				recorder,
+				stdhttp.StatusBadRequest,
+				"invalid_argument",
+				"invalid request body",
+			)
+		})
+	}
+}
+
+func TestHandlerUpdateServiceRejectsUnsupportedMediaType(t *testing.T) {
+	tests := []struct {
+		name        string
+		contentType string
+	}{
+		{
+			name: "missing",
+		},
+		{
+			name:        "plain text",
+			contentType: "text/plain",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			service := &recordingServiceService{}
+			handler := newTestHandlerWithServices(&recordingTeamService{}, service)
+
+			request := httptest.NewRequest(
+				stdhttp.MethodPatch,
+				"/v1/services/42",
+				strings.NewReader(`{"name":"Catalog API"}`),
+			)
+			if tt.contentType != "" {
+				request.Header.Set("Content-Type", tt.contentType)
+			}
+			recorder := httptest.NewRecorder()
+
+			handler.ServeHTTP(recorder, request)
+
+			if service.updateInput != nil {
+				t.Fatalf(
+					"UpdateService() input = %#v, want no call",
+					*service.updateInput,
+				)
+			}
+			assertErrorResponse(
+				t,
+				recorder,
+				stdhttp.StatusUnsupportedMediaType,
+				"unsupported_media_type",
+				"content type must be application/json",
+			)
+		})
+	}
+}
+
+func TestHandlerUpdateServiceMapsCatalogErrors(t *testing.T) {
+	tests := []struct {
+		name        string
+		body        string
+		err         error
+		wantStatus  int
+		wantCode    string
+		wantMessage string
+	}{
+		{
+			name:        "empty update",
+			body:        `{}`,
+			err:         &catalog.InvalidArgumentError{Message: "at least one field must be provided"},
+			wantStatus:  stdhttp.StatusBadRequest,
+			wantCode:    "invalid_argument",
+			wantMessage: "at least one field must be provided",
+		},
+		{
+			name:        "not found",
+			body:        `{"name":"Catalog API"}`,
+			err:         catalog.ErrNotFound,
+			wantStatus:  stdhttp.StatusNotFound,
+			wantCode:    "not_found",
+			wantMessage: "resource not found",
+		},
+		{
+			name:        "conflict",
+			body:        `{"slug":"catalog-api"}`,
+			err:         catalog.ErrConflict,
+			wantStatus:  stdhttp.StatusConflict,
+			wantCode:    "conflict",
+			wantMessage: "resource conflict",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			service := &recordingServiceService{
+				err: tt.err,
+			}
+			handler := newTestHandlerWithServices(&recordingTeamService{}, service)
+
+			request := newJSONRequest(
+				stdhttp.MethodPatch,
+				"/v1/services/42",
+				tt.body,
+			)
+			recorder := httptest.NewRecorder()
+
+			handler.ServeHTTP(recorder, request)
+
+			if service.updateID == nil {
+				t.Fatal("UpdateService() was not called")
+			}
+			if *service.updateID != 42 {
+				t.Fatalf("UpdateService() ID = %d, want 42", *service.updateID)
+			}
+			assertErrorResponse(
+				t,
+				recorder,
+				tt.wantStatus,
+				tt.wantCode,
+				tt.wantMessage,
+			)
+		})
+	}
+}
+
+func TestHandlerDeleteServiceMapsCatalogErrors(t *testing.T) {
+	tests := []struct {
+		name        string
+		err         error
+		wantStatus  int
+		wantCode    string
+		wantMessage string
+	}{
+		{
+			name:        "not found",
+			err:         catalog.ErrNotFound,
+			wantStatus:  stdhttp.StatusNotFound,
+			wantCode:    "not_found",
+			wantMessage: "resource not found",
+		},
+		{
+			name:        "conflict",
+			err:         catalog.ErrConflict,
+			wantStatus:  stdhttp.StatusConflict,
+			wantCode:    "conflict",
+			wantMessage: "resource conflict",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			service := &recordingServiceService{
+				err: tt.err,
+			}
+			handler := newTestHandlerWithServices(&recordingTeamService{}, service)
+
+			request := httptest.NewRequest(
+				stdhttp.MethodDelete,
+				"/v1/services/42",
+				nil,
+			)
+			recorder := httptest.NewRecorder()
+
+			handler.ServeHTTP(recorder, request)
+
+			if service.deleteID == nil {
+				t.Fatal("DeleteService() was not called")
+			}
+			if *service.deleteID != 42 {
+				t.Fatalf("DeleteService() ID = %d, want 42", *service.deleteID)
+			}
+			assertErrorResponse(
+				t,
+				recorder,
+				tt.wantStatus,
+				tt.wantCode,
+				tt.wantMessage,
+			)
+		})
+	}
+}
+
+func TestHandlerServiceMutationsRejectInvalidID(t *testing.T) {
+	tests := []struct {
+		name   string
+		method string
+	}{
+		{
+			name:   "patch",
+			method: stdhttp.MethodPatch,
+		},
+		{
+			name:   "delete",
+			method: stdhttp.MethodDelete,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			service := &recordingServiceService{}
+			handler := newTestHandlerWithServices(&recordingTeamService{}, service)
+
+			var request *stdhttp.Request
+			if tt.method == stdhttp.MethodPatch {
+				request = newJSONRequest(
+					tt.method,
+					"/v1/services/0",
+					`{"name":"Catalog API"}`,
+				)
+			} else {
+				request = httptest.NewRequest(
+					tt.method,
+					"/v1/services/0",
+					nil,
+				)
+			}
+			recorder := httptest.NewRecorder()
+
+			handler.ServeHTTP(recorder, request)
+
+			if service.updateID != nil {
+				t.Fatalf("UpdateService() ID = %d, want no call", *service.updateID)
+			}
+			if service.deleteID != nil {
+				t.Fatalf("DeleteService() ID = %d, want no call", *service.deleteID)
+			}
+			assertErrorResponse(
+				t,
+				recorder,
+				stdhttp.StatusBadRequest,
+				"invalid_argument",
+				"service ID must be a positive integer",
+			)
+		})
+	}
+}
+
 func newJSONRequest(
 	method string,
 	target string,
@@ -1869,7 +2285,11 @@ type recordingServiceService struct {
 	createInput *catalog.CreateServiceInput
 	getID       *int64
 	listInput   *catalog.ListServicesInput
+	updateID    *int64
+	updateInput *catalog.UpdateServiceInput
+	deleteID    *int64
 	detail      catalog.ServiceDetail
+	service     catalog.Service
 	page        catalog.ServicePage
 	err         error
 }
@@ -1896,4 +2316,22 @@ func (s *recordingServiceService) ListServices(
 ) (catalog.ServicePage, error) {
 	s.listInput = &input
 	return s.page, s.err
+}
+
+func (s *recordingServiceService) UpdateService(
+	_ context.Context,
+	id int64,
+	input catalog.UpdateServiceInput,
+) (catalog.Service, error) {
+	s.updateID = &id
+	s.updateInput = &input
+	return s.service, s.err
+}
+
+func (s *recordingServiceService) DeleteService(
+	_ context.Context,
+	id int64,
+) error {
+	s.deleteID = &id
+	return s.err
 }

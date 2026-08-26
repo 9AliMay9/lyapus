@@ -50,3 +50,21 @@ WHERE team_id = $1
   )
 ORDER BY created_at DESC, id DESC
 LIMIT $4;
+
+-- name: UpdateService :one
+UPDATE services
+SET slug = COALESCE(sqlc.narg('slug')::text, slug),
+    name = COALESCE(sqlc.narg('name')::text, name),
+    description = CASE
+      WHEN sqlc.arg('description_provided')::boolean
+        THEN sqlc.narg('description')::text
+      ELSE description
+    END,
+    updated_at = now()
+WHERE id = sqlc.arg('id')
+RETURNING id, team_id, slug, name, description, created_at, updated_at;
+
+-- name: DeleteService :one
+DELETE FROM services
+WHERE id = $1
+RETURNING id;

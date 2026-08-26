@@ -381,6 +381,170 @@ func TestServiceRepositoryIntegrationCreateGetAndTransaction(t *testing.T) {
 	}
 }
 
+func TestServiceRepositoryIntegrationUpdateAndDelete(t *testing.T) {
+	serviceRepository, teamRepository, pool, ctx := setupServiceRepositoryIntegration(t)
+
+	team := createIntegrationTeam(t, ctx, teamRepository, "platform", "Platform")
+
+	description := "Original description"
+	createdDetail, err := serviceRepository.CreateService(
+		ctx,
+		catalog.CreateServiceInput{
+			TeamID:      team.ID,
+			Slug:        "catalog-api",
+			Name:        "Catalog API",
+			Description: &description,
+		},
+	)
+	if err != nil {
+		t.Fatalf("CreateService() error = %v", err)
+	}
+	created := createdDetail.Service
+
+	updatedName := "Catalog API v2"
+	updated, err := serviceRepository.UpdateService(
+		ctx,
+		created.ID,
+		catalog.UpdateServiceInput{
+			Name: &updatedName,
+		},
+	)
+	if err != nil {
+		t.Fatalf("UpdateService() name error = %v", err)
+	}
+	if updated.ID != created.ID {
+		t.Fatalf("UpdateService() ID = %d, want %d", updated.ID, created.ID)
+	}
+	if updated.TeamID != created.TeamID {
+		t.Fatalf("UpdateService() TeamID = %d, want %d", updated.TeamID, created.TeamID)
+	}
+	if updated.Slug != created.Slug {
+		t.Fatalf("UpdateService() Slug = %q, want %q", updated.Slug, created.Slug)
+	}
+	if updated.Name != updatedName {
+		t.Fatalf("UpdateService() Name = %q, want %q", updated.Name, updatedName)
+	}
+	if updated.Description == nil || *updated.Description != description {
+		t.Fatalf(
+			"UpdateService() Description = %#v, want %q",
+			updated.Description,
+			description,
+		)
+	}
+	if updated.CreatedAt != created.CreatedAt {
+		t.Fatalf(
+			"UpdateService() CreatedAt = %s, want %s",
+			updated.CreatedAt,
+			created.CreatedAt,
+		)
+	}
+	if updated.UpdatedAt.Before(created.UpdatedAt) {
+		t.Fatalf(
+			"UpdateService() UpdatedAt = %s, before previous value %s",
+			updated.UpdatedAt,
+			created.UpdatedAt,
+		)
+	}
+
+	cleared, err := serviceRepository.UpdateService(
+		ctx,
+		created.ID,
+		catalog.UpdateServiceInput{
+			DescriptionProvided: true,
+		},
+	)
+	if err != nil {
+		t.Fatalf("UpdateService() clear description error = %v", err)
+	}
+	if cleared.Description != nil {
+		t.Fatalf("UpdateService() cleared Description = %#v, want nil", cleared.Description)
+	}
+	if cleared.Name != updatedName {
+		t.Fatalf("UpdateService() cleared Name = %q, want %q", cleared.Name, updatedName)
+	}
+
+	got, err := serviceRepository.GetServiceByID(ctx, created.ID)
+	if err != nil {
+		t.Fatalf("GetServiceByID() after update error = %v", err)
+	}
+	if got.Service != cleared {
+		t.Fatalf(
+			"GetServiceByID() after update = %#v, want %#v",
+			got.Service,
+			cleared,
+		)
+	}
+
+	other := createIntegrationService(
+		t,
+		ctx,
+		serviceRepository,
+		team.ID,
+		"other-api",
+		"Other API",
+	)
+	duplicateSlug := cleared.Slug
+	_, err = serviceRepository.UpdateService(
+		ctx,
+		other.ID,
+		catalog.UpdateServiceInput{
+			Slug: &duplicateSlug,
+		},
+	)
+	if !errors.Is(err, catalog.ErrConflict) {
+		t.Fatalf("UpdateService() duplicate slug error = %v, want ErrConflict", err)
+	}
+
+	missingName := "Missing"
+	_, err = serviceRepository.UpdateService(
+		ctx,
+		999,
+		catalog.UpdateServiceInput{
+			Name: &missingName,
+		},
+	)
+	if !errors.Is(err, catalog.ErrNotFound) {
+		t.Fatalf("UpdateService() missing error = %#v, want ErrNotFound", err)
+	}
+
+	if _, err := pool.Exec(
+		ctx,
+		"INSERT INTO environments (service_id, slug, name) VALUES ($1, $2, $3)",
+		created.ID,
+		"production",
+		"Production",
+	); err != nil {
+		t.Fatalf("seed environment for foreign key test: %v", err)
+	}
+
+	err = serviceRepository.DeleteService(ctx, created.ID)
+	if !errors.Is(err, catalog.ErrConflict) {
+		t.Fatalf("DeleteService() referenced error = %v, want ErrConflict", err)
+	}
+
+	deletable := createIntegrationService(
+		t,
+		ctx,
+		serviceRepository,
+		team.ID,
+		"deletable-api",
+		"Deletable API",
+	)
+	if err := serviceRepository.DeleteService(ctx, deletable.ID); err != nil {
+		t.Fatalf("DeleteService() error = %v", err)
+	}
+
+	_, err = serviceRepository.GetServiceByID(ctx, deletable.ID)
+	if !errors.Is(err, catalog.ErrNotFound) {
+		t.Fatalf("GetServiceByID() after delete error = %v, want ErrNotFound", err)
+	}
+
+	err = serviceRepository.DeleteService(ctx, deletable.ID)
+	if !errors.Is(err, catalog.ErrNotFound) {
+		t.Fatalf("DeleteService() missing error = %v, want ErrNotFound", err)
+	}
+}
+
 func TestServiceRepositoryIntegrationListPaginationAndTeamFilter(t *testing.T) {
 	serviceRepository, teamRepository, _, ctx := setupServiceRepositoryIntegration(t)
 

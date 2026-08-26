@@ -19,4 +19,6 @@ type ServiceRepository interface {
 	CreateService(ctx context.Context, input CreateServiceInput) (ServiceDetail, error)
 	GetServiceByID(ctx context.Context, id int64) (ServiceDetail, error)
 	ListServices(ctx context.Context, input ListServicesInput) (ServicePage, error)
+	UpdateService(ctx context.Context, id int64, input UpdateServiceInput) (Service, error)
+	DeleteService(ctx context.Context, id int64) error
 }

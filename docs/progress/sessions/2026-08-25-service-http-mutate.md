@@ -21,8 +21,8 @@
 - 实现保持既有模块化单体边界：domain/service 位于 `internal/catalog`，SQL/sqlc 与 pgx 错误分类留在 PostgreSQL adapter，HTTP 三态解码和 wire response 留在 catalog transport；没有跨层类型泄漏或新目录偏差。
 - 本纵切面符合 M1 施工包以及 v3.1 对 Service Catalog CRUD、参数校验、统一错误、数据库约束和真实测试的要求，没有扩大到 RBAC、乐观锁或 Environment 独立 CRUD。
 - Service 创建与单项 GET 使用 detail representation 并展开 Environment；PATCH 使用核心 Service representation，避免一次无必要的补查。该边界已明确写入阶段契约。
-- 本地实现和验证已完成；PR #21 的 required `verify`、`smoke` 与 `atlas-community` 已在 clean runner 通过。最终文档 commit 的门禁与 merge 尚未发生，不能提前写成已合并。
+- 本地实现和验证已完成；PR #21 的 required `verify`、`smoke` 与 `atlas-community` 已在最终文档 commit 上通过，随后以 squash commit `41f2651` 合入 `main`。
 
-## 下一步
+## 合并结果
 
-- 提交本次 CI 证据文档并等待最新 required checks 全绿，再 squash merge。
+- Service HTTP mutation 施工包已完成收口；下一功能入口是 Environment 独立 CRUD 与 `service_id` 过滤。

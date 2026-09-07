@@ -78,10 +78,11 @@
 3. **schema 与 migrations（基线已完成）**：期望 schema、两份 versioned migration、空库与前滚路径已建立；具体约束成功/失败行为仍须由真实 PostgreSQL 集成测试验证。
 4. **queries 与 repository（三类资源完成）**：Team、Service 与 Environment Create/Get/List/Update/Delete 已完成；Service 与 Environment 分别支持归属过滤和稳定游标分页。Service 创建保留初始 Environment 事务边界、错误分类及真实数据库集成/并发测试；Environment adapter 已完成本地真实数据库验证。
 5. **业务服务（三类资源完成）**：Team、Service 与 Environment 的业务边界已集中在 catalog service；Service 创建输入包含可选初始 Environment 并保持 repository 事务边界，mutation 保持归属不可变并支持 description 显式清空。Environment 校验、更新字段与列表输入沿用同级稳定契约。
-6. **HTTP transport（PR #23 已验证，等待合并）**：chi、全局 request ID、严格 JSON/媒体类型、错误工具、完成日志与三类资源 HTTP CRUD 已接真实 repository；Service 创建与单项 GET 展开 Environment，集合与 PATCH 不展开。Environment CRUD、`service_id` 过滤与 cursor 分页已完成本地 HTTP 及 required clean-runner smoke 验证。
-7. **交付路径**：建立 Dockerfile、Compose、migration runbook，确保空卷可以按顺序完成 migration、启动和 API 演示。
-8. **查询计划实验**：构造明确数据规模，对 Service 按 Team 的游标列表查询保存索引前后证据。
-9. **收口**：更新根 README、架构图、知识笔记、`outcome.md` 和当前进度；在 clean runner 与空 Compose project 上完成最终验收。
+6. **HTTP transport（三类资源完成）**：chi、全局 request ID、严格 JSON/媒体类型、错误工具、完成日志与三类资源 HTTP CRUD 已接真实 repository；Service 创建与单项 GET 展开 Environment，集合与 PATCH 不展开。Environment CRUD、`service_id` 过滤与 cursor 分页已由 PR #23 通过 required clean-runner smoke，并以 squash commit `4b311b9` 合入 `main`。
+7. **约束实证**：使用绕过 Go 校验的真实 SQL integration tests，补齐外键、唯一以及格式、长度、时间 `CHECK` 的成功/失败矩阵；不因测试缺口修改已经与契约一致的 schema。
+8. **交付路径**：建立 Dockerfile、Compose、migration runbook，确保空 project/空卷可以按顺序完成 migration、启动和 API 演示；同步补齐根 README 的数据模型、API 示例和五分钟路径。
+9. **查询计划实验**：构造明确数据规模，对 Service 按 Team 的游标列表查询保存索引前后证据。
+10. **收口**：更新根 README、架构图、知识笔记、`outcome.md` 和当前进度；在 clean runner 与空 Compose project 上完成最终验收。
 
 ## 代码施工清单
 
@@ -159,7 +160,7 @@ docker compose up --build
 - M1 v0.1 Git commit 与 release：待完成。
 - 迁移工具 ADR：ADR-0004 已 accepted。
 - 数据库 migration runbook：核心 diff/apply/status 路径已在本机与 required CI 实测。
-- PostgreSQL 集成测试：Team Create/Get/List/Update/Delete、唯一冲突、外键引用删除冲突、not-found 映射和游标分页已在本地与 PR #13 clean-runner 验证；Service Create/Get/List、初始 Environment 事务回滚、父资源缺失、唯一冲突、`team_id` 过滤、游标分页和并发重复创建已由本地与 PR #20 clean runner 验证。Service Update/Delete 的字段保留、显式清空、冲突与删除语义已在本地真实 PostgreSQL 验证；PR #21 clean-runner smoke 已验证其 HTTP 纵切面。Environment Create/Get/List/Update/Delete、父资源缺失、同 Service slug 冲突、`service_id` 过滤和游标分页已在本地真实 PostgreSQL、race 及 PR #23 clean runner 下验证。
+- PostgreSQL 集成测试：Team Create/Get/List/Update/Delete、唯一冲突、外键引用删除冲突、not-found 映射和游标分页已在本地与 PR #13 clean-runner 验证；Service Create/Get/List、初始 Environment 事务回滚、父资源缺失、唯一冲突、`team_id` 过滤、游标分页和并发重复创建已由本地与 PR #20 clean runner 验证。Service Update/Delete 的字段保留、显式清空、冲突与删除语义已在本地真实 PostgreSQL 验证；PR #21 clean-runner smoke 已验证其 HTTP 纵切面。Environment Create/Get/List/Update/Delete、父资源缺失、同 Service slug 冲突、`service_id` 过滤和游标分页已在本地真实 PostgreSQL、race 及 PR #23 clean runner 下验证。尚缺绕过 Go 校验的完整数据库 `CHECK` 约束行为矩阵。
 - Compose 空环境记录：待验证。
 - 查询计划对比：待实验。
 - M1 学习总结和会话记录：待完成。

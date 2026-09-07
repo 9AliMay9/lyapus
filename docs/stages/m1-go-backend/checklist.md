@@ -21,7 +21,7 @@
 - [x] `/livez` 保持进程语义；`/readyz` 真实反映数据库可用性和超时。
 - [x] 建立 `db/schema.sql`、首个 versioned migration 和完整性校验文件。
 - [x] 空库 apply、重复 apply 与 status 验证通过。
-- [ ] 在真实 PostgreSQL 上验证外键、唯一、格式与时间检查约束的成功/失败行为。
+- [ ] 使用绕过 Go 校验的真实 SQL 用例验证外键、唯一、slug/name/description 格式或长度及 `updated_at >= created_at` 约束的成功/失败行为；现有 repository integration 已覆盖外键与唯一冲突，尚未完整覆盖 `CHECK`。
 - [x] migration runbook 已按实际工具命令验证。
 
 ## 数据模型与业务
@@ -30,7 +30,7 @@
 - [x] Team repository CRUD、稳定游标分页与 PostgreSQL integration test 完成。
 - [x] Service Create/Get/List 与 `team_id` 过滤完成。
 - [x] Service PATCH/Delete 已由 PR #21 合入，形成完整 CRUD。
-- [x] Environment CRUD 与 `service_id` 过滤已在 PR #23 完成本地及 required clean-runner 验证，等待合并。
+- [x] Environment CRUD 与 `service_id` 过滤已由 PR #23 通过本地及 required clean-runner 验证，并以 squash commit `4b311b9` 合入 `main`。
 - [x] Service + 初始 Environment 在一个事务内原子创建。
 - [x] 父资源不存在、唯一冲突和仍被引用的删除均映射为稳定业务错误。
 - [x] 并发创建相同 `(team_id, service.slug)` 恰好一个成功、一个冲突。

@@ -25,7 +25,7 @@ internal/catalog domain ←── PostgreSQL repository adapter ←── sqlcge
 - HTTP server 为每个请求生成 request ID，并输出含 request ID、方法、路径、状态、耗时的 JSON 完成日志；收到 `SIGINT` 或 `SIGTERM` 后以 10 秒超时执行优雅关闭。
 - `internal/catalog` 已有 Team、Service 与 Environment domain model，三类资源均具备 repository/service/HTTP CRUD。Service 与 Environment 列表使用基于 `(created_at, id)` 的稳定游标分页，并分别支持 `team_id` 与 `service_id` 等值过滤。创建 Service 与可选初始 Environment 使用一个显式 pgx 事务；Service 创建与单项 GET 响应展开 Environment，集合与 PATCH 响应不展开。Service PATCH 区分 description 未提供、字符串和显式 `null`，DELETE 在仍有 Environment 时返回冲突。chi、HTTP DTO 与 sqlc 类型均未进入 domain。
 
-Environment 独立 CRUD 已在功能分支完成本地验证，但尚未取得 required clean-runner 证据。当前仍未实现 Compose、Kafka、OpenTelemetry、Kubernetes、前端或 AI 组件；这些内容不能画入已实现数据流。Service mutation 已由 PR #21 通过 required clean runner 后合入 `main`。
+Environment 独立 CRUD 已由 PR #23 通过 required clean runner，并以 squash commit `4b311b9` 合入 `main`。当前仍未实现 Compose、Kafka、OpenTelemetry、Kubernetes、前端或 AI 组件；这些内容不能画入已实现数据流。数据库 schema 已声明格式、长度和时间 `CHECK` 约束，但尚缺绕过 Go 校验的完整真实 PostgreSQL 行为矩阵，因此不能把这部分测试证据写成已完成。
 
 ## 与原始目录示意的映射
 

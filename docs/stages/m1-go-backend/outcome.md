@@ -1,6 +1,6 @@
 # M1 实际实施结果
 
-状态：M1 尚未完成；数据库基础设施、完整 Team HTTP CRUD、经 clean runner 验证的 Service HTTP CRUD、初始 Environment 事务创建和并发正确性已完成；Environment 独立 CRUD 与 `service_id` 过滤已在 PR #23 完成本地及 required clean-runner 验证，等待合并。以下只记录已发生的事实。
+状态：M1 尚未完成；数据库基础设施、Team、Service、Environment 三类资源的完整 HTTP CRUD、初始 Environment 事务创建和并发正确性均已完成；Environment 纵切面已由 PR #23 以 squash commit `4b311b9` 合入 `main`。以下只记录已发生的事实。
 
 ## 实际完成
 
@@ -48,12 +48,12 @@
 
 - 尚未引入 Compose；本次使用一次性容器仅作为运行证据，不能替代最终 Compose 空环境验收。
 - `/readyz` 暂时返回最小探针体 `{"status":"not_ready"}`；它已有全局 request-ID，但尚未改成 catalog 的错误信封，仍应保持健康探针的最小契约。
-- 三类资源 CRUD 已在源码、本地环境和 required clean runner 验证；PR #23 尚未合并，因此不能写成已进入 `main`。
+- 三类资源 CRUD 已在源码、本地环境和 required clean runner 验证，并全部进入 `main`。schema 已声明外键、唯一以及格式、长度和时间 `CHECK`，但现有集成测试尚未用绕过 Go 校验的真实 SQL 完整证明所有 `CHECK` 成功/失败行为。
 - 初版 Service smoke 把 Service 创建到既有 `ci-smoke` Team 下，令后续 Team DELETE 正确返回 409 而非旧断言的 204。该失败暴露的是测试数据归属冲突，不是应用缺陷；修复后将 Service 链路改用独立父 Team，并在同一 PR 的 clean runner 通过。
 
 ## 证据
 
-- Git commit / release：数据库基础设施已由 `df0154d`（PR #10）合入；Team Create/Get repository 已由 `57f19d4`（PR #11）合入；Team CRUD/稳定分页已由 `f4df01f`（PR #13）合入；Team service/创建 API 已由 `8e84c20`（PR #15）合入；Team HTTP read 已由 `284021e`（PR #17）合入；Team HTTP mutate 已由 `de7e2d3`（PR #18）合入；Service Create/Get/List 已由 `43c627d`（PR #20）合入；Service mutation 已由 `41f2651`（PR #21）合入；M1 release 待完成。
+- Git commit / release：数据库基础设施已由 `df0154d`（PR #10）合入；Team Create/Get repository 已由 `57f19d4`（PR #11）合入；Team CRUD/稳定分页已由 `f4df01f`（PR #13）合入；Team service/创建 API 已由 `8e84c20`（PR #15）合入；Team HTTP read 已由 `284021e`（PR #17）合入；Team HTTP mutate 已由 `de7e2d3`（PR #18）合入；Service Create/Get/List 已由 `43c627d`（PR #20）合入；Service mutation 已由 `41f2651`（PR #21）合入；Environment catalog 已由 `4b311b9`（PR #23）合入；M1 release 待完成。
 - Migration ADR 与 runbook：ADR-0004 与 migration runbook 已完成。
 - 查询计划 benchmark：待完成。
 - 会话与学习记录：数据库基础设施及 Team、Service、Environment 纵切面会话已记录；M1 总结待完成。

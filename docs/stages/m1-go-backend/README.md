@@ -1,6 +1,6 @@
 # M1：常规 Go 后端
 
-状态：Atlas migration、schema/sqlc 基线、数据库基础设施和完整 Team HTTP CRUD 已完成；Service Create/Get/List、`team_id` 过滤、初始 Environment 事务创建与并发冲突测试已由 PR #20 合入，Service PATCH/Delete 已由 PR #21 合入。Environment 独立 CRUD 与 `service_id` 过滤已在 PR #23 完成本地及 required clean-runner 验证，等待合并；Compose 与查询计划实验仍待完成，M1 v0.1 尚未完成。
+状态：Atlas migration、schema/sqlc 基线、数据库基础设施，以及 Team、Service、Environment 三类资源的完整 HTTP CRUD 已完成；Environment 纵切面已由 PR #23 以 squash commit `4b311b9` 合入 `main`。数据库 `CHECK` 约束实证、Compose 空环境交付、查询计划实验和根 README 演示文档仍待完成，M1 v0.1 尚未完成。
 
 施工前依次阅读：
 
@@ -9,4 +9,4 @@
 3. `checklist.md`：当前唯一的阶段完成清单。
 4. `../../architecture/decisions/ADR-0004-atlas-community-migrations.md` 与 `../../runbooks/database-migrations.md`：已接受的 migration 决策和经过验证的操作路径。
 
-`outcome.md` 只记录实际结果；PR #23 的合并结果以及尚未发生的 Compose 和查询计划实验不得写成完成事实。
+`outcome.md` 只记录实际结果；尚未发生的数据库 `CHECK` 约束实证、Compose、查询计划实验和最终 M1 验收不得写成完成事实。

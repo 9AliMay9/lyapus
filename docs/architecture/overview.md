@@ -12,19 +12,20 @@ LYAPUS_DATABASE_URL ─┘                                  ├──→ JSON sl
                                                                ├──→ /livez
                                                                ├──→ /readyz ──→ bounded pool.Ping
                                                                ├──→ /v1/teams POST/GET, /v1/teams/{team_id} GET/PATCH/DELETE ──→ TeamService
-                                                               └──→ /v1/services POST/GET, /v1/services/{service_id} GET/PATCH/DELETE ──→ ServiceService
+                                                               ├──→ /v1/services POST/GET, /v1/services/{service_id} GET/PATCH/DELETE ──→ ServiceService
+                                                               └──→ /v1/environments POST/GET, /v1/environments/{environment_id} GET/PATCH/DELETE ──→ EnvironmentService
 
 internal/catalog domain ←── PostgreSQL repository adapter ←── sqlcgen
-        （Team 与 Service CRUD、稳定分页、事务创建和业务服务已实现）
+        （三类资源 CRUD、稳定分页、事务创建和业务服务已实现）
 ```
 
 - 默认监听地址是 `127.0.0.1:8080`；可用 `LYAPUS_HTTP_ADDR` 覆盖，非法地址会在启动前失败。
 - `LYAPUS_DATABASE_URL` 必填；进程启动时以五秒有界 context 创建并 Ping `pgxpool`，失败则不启动 HTTP 服务，退出时先关闭 HTTP 再释放连接池。
 - `/livez` 只表示进程存活，不访问数据库；`/readyz` 以一秒有界 context Ping PostgreSQL，成功返回 `200`，失败返回 `503`。
 - HTTP server 为每个请求生成 request ID，并输出含 request ID、方法、路径、状态、耗时的 JSON 完成日志；收到 `SIGINT` 或 `SIGTERM` 后以 10 秒超时执行优雅关闭。
-- `internal/catalog` 已有 Team、Service 与 Environment domain model。Team 与 Service 已具备完整 repository/service/HTTP CRUD；Service 列表使用基于 `(created_at, id)` 的全局及 `team_id` 过滤分页。创建 Service 与可选初始 Environment 使用一个显式 pgx 事务；创建与单项 GET 响应展开 Environment，集合与 PATCH 响应不展开。PATCH 区分 description 未提供、字符串和显式 `null`，DELETE 在仍有 Environment 时返回冲突。chi、HTTP DTO 与 sqlc 类型均未进入 domain。
+- `internal/catalog` 已有 Team、Service 与 Environment domain model，三类资源均具备 repository/service/HTTP CRUD。Service 与 Environment 列表使用基于 `(created_at, id)` 的稳定游标分页，并分别支持 `team_id` 与 `service_id` 等值过滤。创建 Service 与可选初始 Environment 使用一个显式 pgx 事务；Service 创建与单项 GET 响应展开 Environment，集合与 PATCH 响应不展开。Service PATCH 区分 description 未提供、字符串和显式 `null`，DELETE 在仍有 Environment 时返回冲突。chi、HTTP DTO 与 sqlc 类型均未进入 domain。
 
-当前仍未实现 Environment 独立 repository/service/HTTP CRUD、Compose、Kafka、OpenTelemetry、Kubernetes、前端或 AI 组件；这些内容不能画入已实现数据流。Service mutation 已由 PR #21 通过 required clean runner 后合入 `main`。
+Environment 独立 CRUD 已在功能分支完成本地验证，但尚未取得 required clean-runner 证据。当前仍未实现 Compose、Kafka、OpenTelemetry、Kubernetes、前端或 AI 组件；这些内容不能画入已实现数据流。Service mutation 已由 PR #21 通过 required clean runner 后合入 `main`。
 
 ## 与原始目录示意的映射
 

@@ -1,6 +1,6 @@
 # M1 实际实施结果
 
-状态：M1 尚未完成；数据库基础设施、完整 Team HTTP CRUD、经 clean runner 验证的 Service HTTP CRUD、初始 Environment 事务创建和并发正确性已完成，以下只记录已发生的事实。
+状态：M1 尚未完成；数据库基础设施、完整 Team HTTP CRUD、经 clean runner 验证的 Service HTTP CRUD、初始 Environment 事务创建和并发正确性已完成；Environment 独立 CRUD 与 `service_id` 过滤已在 PR #23 完成本地及 required clean-runner 验证，等待合并。以下只记录已发生的事实。
 
 ## 实际完成
 
@@ -16,6 +16,8 @@
 - Service 的 Create/Get/List 查询由项目手写并经 sqlc 生成 pgx 调用；PostgreSQL adapter 支持全局及 `team_id` 过滤的 `(created_at DESC, id DESC)` 游标分页。列表多取一行计算下一页，Service 单项查询再按 `(created_at, id)` 正序读取其 Environment。
 - `catalog.ServiceService` 集中校验 Team/Service ID、slug、name、description、初始 Environment、更新字段与分页输入。Service 创建始终开启显式 pgx 事务，并通过 `Queries.WithTx` 在同一事务写入 Service 与全部初始 Environment；任一步失败回滚，全部成功才提交。更新保持 `team_id` 不可变，并区分 description 未提供、字符串与显式清空。
 - `POST /v1/services`、`GET /v1/services/{service_id}`、`GET /v1/services`、`PATCH /v1/services/{service_id}` 与 `DELETE /v1/services/{service_id}` 已通过 chi 接到真实 Service service/repository。集合读取支持可选 `team_id`、严格 `limit`/`cursor` 参数；创建与单项 GET 展开 Environment，集合与 PATCH 不展开。带请求体的 catalog 写请求必须使用 `application/json`，否则返回 `415 unsupported_media_type`；仍被 Environment 引用的 Service 不隐式级联删除，而是返回稳定冲突。
+- Environment 查询已从 Service 查询文件拆入独立 `db/queries/environments.sql`，由 sqlc 生成 pgx 调用。独立 adapter/service/HTTP transport 支持 Create/Get/List/Update/Delete、可选 `service_id` 过滤及 `(created_at DESC, id DESC)` 不透明游标分页；缺失父 Service 映射为 not found，同一 Service 下 slug 重复映射为 conflict，归属字段不可经 PATCH 修改。
+- `POST /v1/environments`、`GET /v1/environments/{environment_id}`、`GET /v1/environments`、`PATCH /v1/environments/{environment_id}` 与 `DELETE /v1/environments/{environment_id}` 已接入真实 Environment service/repository，并复用严格 JSON、415、统一错误、request ID 与完成日志边界。
 
 ## 验证
 
@@ -38,12 +40,15 @@
 - 2026-08-23，PR #20 的 required `verify`、`smoke` 与 `atlas-community` checks 全部通过。clean-runner smoke 使用独立的 `service-smoke` 父 Team 创建带初始 Environment 的 Service，并验证 Service 单项读取、带 `team_id` 和 `limit=1` 的列表读取及列表不展开 Environment；既有 `ci-smoke` Team 保持 PATCH、冲突、DELETE 204 和删除后 404 链路。
 - 2026-08-25，Service Update/Delete 的 domain、SQL/sqlc、PostgreSQL adapter 与 HTTP transport 实现完成。普通测试、`go test -race ./...`、真实 PostgreSQL integration race 和独立 `_test` 库上的 `make verify` 通过，漏洞扫描为 `No vulnerabilities found.`。开发库实测名称 PATCH 保留未提供字段、description 显式 `null`、引用删除 409、无子资源删除 204 与删除后 GET 404；响应与完成日志 request ID 一致。API 经 `Ctrl-C` 优雅停止，开发与测试容器均已停止并自动删除。
 - 2026-08-26，PR #21 的 required `verify`、`smoke` 与 `atlas-community` checks 全部通过。clean-runner smoke 在独立 `service-smoke` Team 下验证 Service PATCH 保留 description、显式 `null` 清空、带 Environment 删除返回 409、无 Environment 删除返回空 204，以及删除后单项 GET 返回结构化 404；所有错误响应均核对 request ID 一致性。
+- 2026-09-07，Environment domain/service、独立 SQL/sqlc、PostgreSQL adapter 与 HTTP transport 完成本地实现。真实 PostgreSQL integration test 覆盖 Create/Get/Update/Delete、缺失父 Service、同 Service slug 冲突、全局及 `service_id` 过滤的两页稳定游标分页；普通、race、integration 与完整 `make verify` 均通过，漏洞扫描为 `No vulnerabilities found.`。
+- 2026-09-07，在可丢弃 PostgreSQL 16.14 开发库完成 migration dry-run、apply、status 后，实测 Team、Service 与两个 Environment 创建，Environment 单项读取、`service_id=1&limit=1` 两页列表、名称 PATCH、重复 slug 冲突、DELETE 204 与删除后 404。响应、错误信封和完成日志 request ID 符合契约；开发与测试容器均已停止并自动删除。
+- 2026-09-07，PR #23 的 required `verify`、`smoke` 与 `atlas-community` checks 全部通过。clean-runner smoke 在独立 Service 下验证 Environment 创建、单项读取、按 `service_id` 的两页 cursor 列表、PATCH 字段保留、重复 slug 409、DELETE 空 204 与删除后结构化 404；成功与错误响应均检查 request ID。
 
 ## 与计划的偏差
 
 - 尚未引入 Compose；本次使用一次性容器仅作为运行证据，不能替代最终 Compose 空环境验收。
 - `/readyz` 暂时返回最小探针体 `{"status":"not_ready"}`；它已有全局 request-ID，但尚未改成 catalog 的错误信封，仍应保持健康探针的最小契约。
-- Service PATCH/Delete 已完成本地与 clean-runner 验证并由 PR #21 合入；Environment 独立 CRUD 尚未实现，因此仍不能将三类资源写成完整 CRUD。
+- 三类资源 CRUD 已在源码、本地环境和 required clean runner 验证；PR #23 尚未合并，因此不能写成已进入 `main`。
 - 初版 Service smoke 把 Service 创建到既有 `ci-smoke` Team 下，令后续 Team DELETE 正确返回 409 而非旧断言的 204。该失败暴露的是测试数据归属冲突，不是应用缺陷；修复后将 Service 链路改用独立父 Team，并在同一 PR 的 clean runner 通过。
 
 ## 证据
@@ -51,7 +56,7 @@
 - Git commit / release：数据库基础设施已由 `df0154d`（PR #10）合入；Team Create/Get repository 已由 `57f19d4`（PR #11）合入；Team CRUD/稳定分页已由 `f4df01f`（PR #13）合入；Team service/创建 API 已由 `8e84c20`（PR #15）合入；Team HTTP read 已由 `284021e`（PR #17）合入；Team HTTP mutate 已由 `de7e2d3`（PR #18）合入；Service Create/Get/List 已由 `43c627d`（PR #20）合入；Service mutation 已由 `41f2651`（PR #21）合入；M1 release 待完成。
 - Migration ADR 与 runbook：ADR-0004 与 migration runbook 已完成。
 - 查询计划 benchmark：待完成。
-- 会话与学习记录：数据库基础设施会话已记录；M1 总结待完成。
+- 会话与学习记录：数据库基础设施及 Team、Service、Environment 纵切面会话已记录；M1 总结待完成。
 
 ## 施工包进入 M2 的条件
 

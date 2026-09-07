@@ -554,6 +554,182 @@ jobs:
             exit 1
           fi
 
+          environment_created_status="$(
+            curl --silent --show-error \
+              --request POST \
+              --header 'Content-Type: application/json' \
+              --data '{"service_id":'"$service_created_id"',"slug":"staging","name":"Staging"}' \
+              --dump-header environment-created.headers \
+              --output environment-created.json \
+              --write-out '%{http_code}' \
+              http://127.0.0.1:8080/v1/environments
+          )"
+
+          if [ "$environment_created_status" != 201 ] ||
+            ! grep --ignore-case --quiet '^x-request-id: [^[:space:]]' environment-created.headers ||
+            ! grep --fixed-strings --quiet '"service_id":'"$service_created_id" environment-created.json ||
+            ! grep --fixed-strings --quiet '"slug":"staging"' environment-created.json; then
+            cat environment-created.headers environment-created.json server.log
+            exit 1
+          fi
+
+          environment_created_id="$(
+            sed -n 's/.*"id":\([0-9][0-9]*\),"service_id":.*/\1/p' environment-created.json
+          )"
+
+          if [ -z "$environment_created_id" ]; then
+            cat environment-created.headers environment-created.json server.log
+            exit 1
+          fi
+
+          environment_get_status="$(
+            curl --silent --show-error \
+              --dump-header environment-get.headers \
+              --output environment-get.json \
+              --write-out '%{http_code}' \
+              "http://127.0.0.1:8080/v1/environments/$environment_created_id"
+          )"
+
+          if [ "$environment_get_status" != 200 ] ||
+            ! grep --ignore-case --quiet '^x-request-id: [^[:space:]]' environment-get.headers ||
+            ! grep --fixed-strings --quiet '"id":'"$environment_created_id" environment-get.json ||
+            ! grep --fixed-strings --quiet '"service_id":'"$service_created_id" environment-get.json ||
+            ! grep --fixed-strings --quiet '"slug":"staging"' environment-get.json; then
+            cat environment-get.headers environment-get.json server.log
+            exit 1
+          fi
+
+          environment_list_status="$(
+            curl --silent --show-error \
+              --dump-header environment-list.headers \
+              --output environment-list.json \
+              --write-out '%{http_code}' \
+              "http://127.0.0.1:8080/v1/environments?service_id=$service_created_id&limit=1"
+          )"
+
+          environment_next_cursor="$(
+            sed -n 's/.*"next_cursor":"\([^"]*\)".*/\1/p' environment-list.json
+          )"
+
+          if [ "$environment_list_status" != 200 ] ||
+            ! grep --ignore-case --quiet '^x-request-id: [^[:space:]]' environment-list.headers ||
+            ! grep --fixed-strings --quiet '"items":[{"id":'"$environment_created_id" environment-list.json ||
+            ! grep --fixed-strings --quiet '"service_id":'"$service_created_id" environment-list.json ||
+            ! grep --fixed-strings --quiet '"slug":"staging"' environment-list.json ||
+            [ -z "$environment_next_cursor" ]; then
+            cat environment-list.headers environment-list.json server.log
+            exit 1
+          fi
+
+          environment_second_page_status="$(
+            curl --silent --show-error \
+              --dump-header environment-second-page.headers \
+              --output environment-second-page.json \
+              --write-out '%{http_code}' \
+              "http://127.0.0.1:8080/v1/environments?service_id=$service_created_id&limit=1&cursor=$environment_next_cursor"
+          )"
+
+          if [ "$environment_second_page_status" != 200 ] ||
+            ! grep --ignore-case --quiet '^x-request-id: [^[:space:]]' environment-second-page.headers ||
+            ! grep --fixed-strings --quiet '"service_id":'"$service_created_id" environment-second-page.json ||
+            ! grep --fixed-strings --quiet '"slug":"production"' environment-second-page.json ||
+            ! grep --fixed-strings --quiet '"next_cursor":""' environment-second-page.json; then
+            cat environment-second-page.headers environment-second-page.json server.log
+            exit 1
+          fi
+
+          environment_updated_status="$(
+            curl --silent --show-error \
+              --request PATCH \
+              --header 'Content-Type: application/json' \
+              --data '{"name":"Staging Updated"}' \
+              --dump-header environment-updated.headers \
+              --output environment-updated.json \
+              --write-out '%{http_code}' \
+              "http://127.0.0.1:8080/v1/environments/$environment_created_id"
+          )"
+
+          if [ "$environment_updated_status" != 200 ] ||
+            ! grep --ignore-case --quiet '^x-request-id: [^[:space:]]' environment-updated.headers ||
+            ! grep --fixed-strings --quiet '"id":'"$environment_created_id" environment-updated.json ||
+            ! grep --fixed-strings --quiet '"service_id":'"$service_created_id" environment-updated.json ||
+            ! grep --fixed-strings --quiet '"slug":"staging"' environment-updated.json ||
+            ! grep --fixed-strings --quiet '"name":"Staging Updated"' environment-updated.json; then
+            cat environment-updated.headers environment-updated.json server.log
+            exit 1
+          fi
+
+          environment_conflict_status="$(
+            curl --silent --show-error \
+              --request PATCH \
+              --header 'Content-Type: application/json' \
+              --data '{"slug":"production"}' \
+              --dump-header environment-conflict.headers \
+              --output environment-conflict.json \
+              --write-out '%{http_code}' \
+              "http://127.0.0.1:8080/v1/environments/$environment_created_id"
+          )"
+
+          environment_conflict_header_id="$(
+            grep --ignore-case '^x-request-id:' environment-conflict.headers |
+              head -n 1 |
+              awk '{print $2}' |
+              tr -d '\r'
+          )"
+          environment_conflict_body_id="$(
+            sed -n 's/.*"request_id":"\([^"]*\)".*/\1/p' environment-conflict.json
+          )"
+
+          if [ "$environment_conflict_status" != 409 ] ||
+            [ -z "$environment_conflict_header_id" ] ||
+            [ "$environment_conflict_header_id" != "$environment_conflict_body_id" ] ||
+            ! grep --fixed-strings --quiet '"code":"conflict"' environment-conflict.json; then
+            cat environment-conflict.headers environment-conflict.json server.log
+            exit 1
+          fi
+
+          environment_deleted_status="$(
+            curl --silent --show-error \
+              --request DELETE \
+              --dump-header environment-deleted.headers \
+              --output environment-deleted.body \
+              --write-out '%{http_code}' \
+              "http://127.0.0.1:8080/v1/environments/$environment_created_id"
+          )"
+
+          if [ "$environment_deleted_status" != 204 ] ||
+            ! grep --ignore-case --quiet '^x-request-id: [^[:space:]]' environment-deleted.headers ||
+            [ -s environment-deleted.body ]; then
+            cat environment-deleted.headers environment-deleted.body server.log
+            exit 1
+          fi
+
+          environment_missing_status="$(
+            curl --silent --show-error \
+              --dump-header environment-missing.headers \
+              --output environment-missing.json \
+              --write-out '%{http_code}' \
+              "http://127.0.0.1:8080/v1/environments/$environment_created_id"
+          )"
+
+          environment_missing_header_id="$(
+            grep --ignore-case '^x-request-id:' environment-missing.headers |
+              head -n 1 |
+              awk '{print $2}' |
+              tr -d '\r'
+          )"
+          environment_missing_body_id="$(
+            sed -n 's/.*"request_id":"\([^"]*\)".*/\1/p' environment-missing.json
+          )"
+
+          if [ "$environment_missing_status" != 404 ] ||
+            [ -z "$environment_missing_header_id" ] ||
+            [ "$environment_missing_header_id" != "$environment_missing_body_id" ] ||
+            ! grep --fixed-strings --quiet '"code":"not_found"' environment-missing.json; then
+            cat environment-missing.headers environment-missing.json server.log
+            exit 1
+          fi
+
           updated_status="$(
             curl --silent --show-error \
               --request PATCH \

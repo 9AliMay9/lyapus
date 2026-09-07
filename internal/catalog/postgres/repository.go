@@ -28,9 +28,14 @@ type ServiceRepository struct {
 	queries *sqlcgen.Queries
 }
 
+type EnvironmentRepository struct {
+	queries *sqlcgen.Queries
+}
+
 var (
-	_ catalog.TeamRepository    = (*TeamRepository)(nil)
-	_ catalog.ServiceRepository = (*ServiceRepository)(nil)
+	_ catalog.TeamRepository        = (*TeamRepository)(nil)
+	_ catalog.ServiceRepository     = (*ServiceRepository)(nil)
+	_ catalog.EnvironmentRepository = (*EnvironmentRepository)(nil)
 )
 
 func NewTeamRepository(db sqlcgen.DBTX) *TeamRepository {
@@ -42,6 +47,12 @@ func NewTeamRepository(db sqlcgen.DBTX) *TeamRepository {
 func NewServiceRepository(db serviceDB) *ServiceRepository {
 	return &ServiceRepository{
 		db:      db,
+		queries: sqlcgen.New(db),
+	}
+}
+
+func NewEnvironmentRepository(db sqlcgen.DBTX) *EnvironmentRepository {
+	return &EnvironmentRepository{
 		queries: sqlcgen.New(db),
 	}
 }
@@ -479,6 +490,200 @@ func classifyServiceError(operation string, err error) error {
 
 		case "23503":
 			if postgresError.ConstraintName == "services_team_id_fkey" {
+				return catalog.ErrNotFound
+			}
+			return catalog.ErrConflict
+		}
+	}
+
+	return fmt.Errorf("%s: %w", operation, err)
+}
+
+func (r *EnvironmentRepository) CreateEnvironment(
+	ctx context.Context,
+	input catalog.CreateEnvironmentInput,
+) (catalog.Environment, error) {
+	row, err := r.queries.CreateEnvironment(
+		ctx,
+		sqlcgen.CreateEnvironmentParams{
+			ServiceID: input.ServiceID,
+			Slug:      input.Slug,
+			Name:      input.Name,
+		},
+	)
+	if err != nil {
+		return catalog.Environment{}, classifyEnvironmentError(
+			"create environment",
+			err,
+		)
+	}
+
+	return environmentFromRow(row)
+}
+
+func (r *EnvironmentRepository) GetEnvironmentByID(
+	ctx context.Context,
+	id int64,
+) (catalog.Environment, error) {
+	row, err := r.queries.GetEnvironmentByID(ctx, id)
+	if err != nil {
+		return catalog.Environment{}, classifyEnvironmentError(
+			"get environment by ID",
+			err,
+		)
+	}
+
+	return environmentFromRow(row)
+}
+
+func (r *EnvironmentRepository) ListEnvironments(
+	ctx context.Context,
+	input catalog.ListEnvironmentsInput,
+) (catalog.EnvironmentPage, error) {
+	limit, err := environmentListLimitWithExtra(input.Limit)
+	if err != nil {
+		return catalog.EnvironmentPage{}, err
+	}
+
+	var rows []sqlcgen.Environment
+
+	switch {
+	case input.ServiceID == nil && input.After == nil:
+		rows, err = r.queries.ListEnvironmentsFirstPage(ctx, limit)
+
+	case input.ServiceID != nil && input.After == nil:
+		rows, err = r.queries.ListEnvironmentsFirstPageByServiceID(
+			ctx,
+			sqlcgen.ListEnvironmentsFirstPageByServiceIDParams{
+				ServiceID: *input.ServiceID,
+				Limit:     limit,
+			},
+		)
+
+	case input.ServiceID == nil:
+		rows, err = r.queries.ListEnvironmentsAfterCursor(
+			ctx,
+			sqlcgen.ListEnvironmentsAfterCursorParams{
+				CreatedAt: pgtype.Timestamptz{
+					Time:  input.After.CreatedAt.UTC(),
+					Valid: true,
+				},
+				ID:    input.After.ID,
+				Limit: limit,
+			},
+		)
+
+	default:
+		rows, err = r.queries.ListEnvironmentsAfterCursorByServiceID(
+			ctx,
+			sqlcgen.ListEnvironmentsAfterCursorByServiceIDParams{
+				ServiceID: *input.ServiceID,
+				CreatedAt: pgtype.Timestamptz{
+					Time:  input.After.CreatedAt.UTC(),
+					Valid: true,
+				},
+				ID:    input.After.ID,
+				Limit: limit,
+			},
+		)
+	}
+	if err != nil {
+		return catalog.EnvironmentPage{}, fmt.Errorf(
+			"list environments: %w",
+			err,
+		)
+	}
+
+	return environmentPageFromRows(rows, input.Limit)
+}
+
+func (r *EnvironmentRepository) UpdateEnvironment(
+	ctx context.Context,
+	id int64,
+	input catalog.UpdateEnvironmentInput,
+) (catalog.Environment, error) {
+	row, err := r.queries.UpdateEnvironment(
+		ctx,
+		sqlcgen.UpdateEnvironmentParams{
+			Slug: textFromStringPointer(input.Slug),
+			Name: textFromStringPointer(input.Name),
+			ID:   id,
+		},
+	)
+	if err != nil {
+		return catalog.Environment{}, classifyEnvironmentError(
+			"update environment",
+			err,
+		)
+	}
+
+	return environmentFromRow(row)
+}
+
+func (r *EnvironmentRepository) DeleteEnvironment(
+	ctx context.Context,
+	id int64,
+) error {
+	_, err := r.queries.DeleteEnvironment(ctx, id)
+	if err != nil {
+		return classifyEnvironmentError("delete environment", err)
+	}
+
+	return nil
+}
+
+func environmentListLimitWithExtra(limit int32) (int32, error) {
+	if limit < 1 || limit == maxInt32 {
+		return 0, catalog.ErrInvalidArgument
+	}
+
+	return limit + 1, nil
+}
+
+func environmentPageFromRows(
+	rows []sqlcgen.Environment,
+	limit int32,
+) (catalog.EnvironmentPage, error) {
+	environments := make([]catalog.Environment, 0, len(rows))
+	for _, row := range rows {
+		environment, err := environmentFromRow(row)
+		if err != nil {
+			return catalog.EnvironmentPage{}, err
+		}
+		environments = append(environments, environment)
+	}
+
+	if len(environments) <= int(limit) {
+		return catalog.EnvironmentPage{
+			Environments: environments,
+		}, nil
+	}
+
+	last := environments[int(limit)-1]
+	next := catalog.EnvironmentCursor{
+		CreatedAt: last.CreatedAt,
+		ID:        last.ID,
+	}
+
+	return catalog.EnvironmentPage{
+		Environments: environments[:int(limit)],
+		Next:         &next,
+	}, nil
+}
+
+func classifyEnvironmentError(operation string, err error) error {
+	if errors.Is(err, pgx.ErrNoRows) {
+		return catalog.ErrNotFound
+	}
+
+	var postgresError *pgconn.PgError
+	if errors.As(err, &postgresError) {
+		switch postgresError.Code {
+		case "23505":
+			return catalog.ErrConflict
+
+		case "23503":
+			if postgresError.ConstraintName == "environments_service_id_fkey" {
 				return catalog.ErrNotFound
 			}
 			return catalog.ErrConflict

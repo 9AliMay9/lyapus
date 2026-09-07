@@ -358,7 +358,7 @@ func TestServiceServiceCreateServiceNormalizesAndDelegates(t *testing.T) {
 		Slug:        "catalog-api",
 		Name:        "\tCatalog API\t",
 		Description: &description,
-		Environments: []CreateEnvironmentInput{
+		Environments: []CreateInitialEnvironmentInput{
 			{
 				Slug: "development",
 				Name: "\tDevelopment\t",
@@ -786,7 +786,7 @@ func TestServiceServiceRejectsInvalidInputBeforeRepository(t *testing.T) {
 						TeamID: 7,
 						Slug:   "catalog-api",
 						Name:   "Catalog API",
-						Environments: []CreateEnvironmentInput{
+						Environments: []CreateInitialEnvironmentInput{
 							{
 								Slug: "Development",
 								Name: "Development",
@@ -884,6 +884,398 @@ func TestServiceServiceRejectsInvalidInputBeforeRepository(t *testing.T) {
 	}
 }
 
+func TestEnvironmentServiceCreateEnvironmentNormalizesAndDelegates(t *testing.T) {
+	repository := &recordingEnvironmentRepository{
+		environment: Environment{
+			ID:        11,
+			ServiceID: 7,
+			Slug:      "production",
+			Name:      "Production",
+		},
+	}
+	service := NewEnvironmentService(repository)
+
+	got, err := service.CreateEnvironment(context.Background(), CreateEnvironmentInput{
+		ServiceID: 7,
+		Slug:      "production",
+		Name:      "\tProduction\t",
+	})
+	if err != nil {
+		t.Fatalf("CreateEnvironment() error = %v", err)
+	}
+
+	if got != repository.environment {
+		t.Fatalf(
+			"CreateEnvironment() = %#v, want %#v",
+			got,
+			repository.environment,
+		)
+	}
+	if repository.createInput == nil {
+		t.Fatal("CreateEnvironment() did not call repository")
+	}
+
+	want := CreateEnvironmentInput{
+		ServiceID: 7,
+		Slug:      "production",
+		Name:      "Production",
+	}
+	if *repository.createInput != want {
+		t.Fatalf(
+			"CreateEnvironment() repository input %#v, want %#v",
+			*repository.createInput,
+			want,
+		)
+	}
+}
+
+func TestEnvironmentServiceListEnvironmentsDefaultsAndNormalizesInput(
+	t *testing.T,
+) {
+	t.Run("without service filter", func(t *testing.T) {
+		repository := &recordingEnvironmentRepository{}
+		service := NewEnvironmentService(repository)
+
+		_, err := service.ListEnvironments(
+			context.Background(),
+			ListEnvironmentsInput{},
+		)
+		if err != nil {
+			t.Fatalf("ListEnvironments() error = %v", err)
+		}
+		if repository.listInput == nil {
+			t.Fatal("ListEnvironments() did not call repository")
+		}
+		if repository.listInput.ServiceID != nil {
+			t.Fatalf(
+				"ListEnvironments() repository ServiceID = %d, want nil",
+				*repository.listInput.ServiceID,
+			)
+		}
+		if repository.listInput.Limit != defaultEnvironmentListLimit {
+			t.Fatalf(
+				"ListEnvironments() repository Limit = %d, want %d",
+				repository.listInput.Limit,
+				defaultEnvironmentListLimit,
+			)
+		}
+	})
+
+	t.Run("with service filter and cursor", func(t *testing.T) {
+		serviceID := int64(7)
+		cursor := EnvironmentCursor{
+			CreatedAt: time.Date(
+				2026,
+				time.September,
+				1,
+				12,
+				0,
+				0,
+				0,
+				time.FixedZone("CST", 8*60*60),
+			),
+			ID: 11,
+		}
+
+		repository := &recordingEnvironmentRepository{}
+		service := NewEnvironmentService(repository)
+
+		_, err := service.ListEnvironments(
+			context.Background(),
+			ListEnvironmentsInput{
+				ServiceID: &serviceID,
+				After:     &cursor,
+			},
+		)
+		if err != nil {
+			t.Fatalf("ListEnvironments() error = %v", err)
+		}
+		if repository.listInput == nil {
+			t.Fatal("ListEnvironments() did not call repository")
+		}
+		if repository.listInput.ServiceID == nil {
+			t.Fatal("ListEnvironments() repository ServiceID = nil, want value")
+		}
+		if *repository.listInput.ServiceID != serviceID {
+			t.Fatalf(
+				"ListEnvironments() repository ServiceID = %d, want %d",
+				*repository.listInput.ServiceID,
+				serviceID,
+			)
+		}
+		if repository.listInput.ServiceID == &serviceID {
+			t.Fatal("ListEnvironments() repository ServiceID aliases caller input")
+		}
+		if repository.listInput.After == nil {
+			t.Fatal("ListEnvironments() repository cursor = nil, want value")
+		}
+		if repository.listInput.After == &cursor {
+			t.Fatal("ListEnvironments() repository cursor aliases caller input")
+		}
+		if repository.listInput.After.ID != cursor.ID {
+			t.Fatalf(
+				"ListEnvironments() repository cursor ID = %d, want %d",
+				repository.listInput.After.ID,
+				cursor.ID,
+			)
+		}
+		if repository.listInput.After.CreatedAt.Location() != time.UTC {
+			t.Fatalf(
+				"ListEnvironments() repository cursor location = %s, want UTC",
+				repository.listInput.After.CreatedAt.Location(),
+			)
+		}
+		if !repository.listInput.After.CreatedAt.Equal(cursor.CreatedAt) {
+			t.Fatalf(
+				"ListEnvironments() repository cursor time = %s, want %s",
+				repository.listInput.After.CreatedAt,
+				cursor.CreatedAt,
+			)
+		}
+	})
+}
+
+func TestEnvironmentServiceUpdateEnvironmentNormalizesAndDelegates(t *testing.T) {
+	repository := &recordingEnvironmentRepository{
+		environment: Environment{
+			ID:        11,
+			ServiceID: 7,
+			Slug:      "production",
+			Name:      "Production",
+		},
+	}
+	service := NewEnvironmentService(repository)
+
+	name := "\tProduction v2\t"
+	got, err := service.UpdateEnvironment(context.Background(), 11, UpdateEnvironmentInput{
+		Name: &name,
+	})
+	if err != nil {
+		t.Fatalf("UpdateEnvironment() error = %v", err)
+	}
+
+	if got != repository.environment {
+		t.Fatalf(
+			"UpdateEnvironment() = %#v, want %#v",
+			got,
+			repository.environment,
+		)
+	}
+	if repository.updateID != 11 {
+		t.Fatalf(
+			"UpdateEnvironment() repository ID = %d, want 11",
+			repository.updateID,
+		)
+	}
+	if repository.updateInput == nil {
+		t.Fatal("UpdateEnvironment() did not call repository")
+	}
+	if repository.updateInput.Slug != nil {
+		t.Fatalf(
+			"UpdateEnvironment() repository slug = %q, want nil",
+			*repository.updateInput.Slug,
+		)
+	}
+	if repository.updateInput.Name == nil {
+		t.Fatal("UpdateEnvironment() repository name = nil, want value")
+	}
+	if *repository.updateInput.Name != "Production v2" {
+		t.Fatalf(
+			"UpdateEnvironment() repository name = %q, want %q",
+			*repository.updateInput.Name,
+			"Production v2",
+		)
+	}
+	if repository.updateInput.Name == &name {
+		t.Fatal("UpdateEnvironment() repository name aliases caller input")
+	}
+}
+
+func TestEnvironmentServiceGetAndDeleteDelegate(t *testing.T) {
+	repository := &recordingEnvironmentRepository{
+		environment: Environment{
+			ID: 11,
+		},
+	}
+	service := NewEnvironmentService(repository)
+
+	got, err := service.GetEnvironmentByID(context.Background(), 11)
+	if err != nil {
+		t.Fatalf("GetEnvironmentByID() error = %v", err)
+	}
+	if got != repository.environment {
+		t.Fatalf(
+			"GetEnvironmentByID() = %#v, want %#v",
+			got,
+			repository.environment,
+		)
+	}
+	if repository.getID != 11 {
+		t.Fatalf(
+			"GetEnvironmentByID() repository ID = %d, want 11",
+			repository.getID,
+		)
+	}
+
+	if err := service.DeleteEnvironment(context.Background(), 11); err != nil {
+		t.Fatalf("DeleteEnvironment() error = %v", err)
+	}
+	if repository.deleteID != 11 {
+		t.Fatalf(
+			"DeleteEnvironment() repository ID = %d, want 11",
+			repository.deleteID,
+		)
+	}
+}
+
+func TestEnvironmentServiceRejectsInvalidInputBeforeRepository(t *testing.T) {
+	tests := []struct {
+		name string
+		call func(*EnvironmentService) error
+	}{
+		{
+			name: "zero create service ID",
+			call: func(service *EnvironmentService) error {
+				_, err := service.CreateEnvironment(
+					context.Background(),
+					CreateEnvironmentInput{
+						ServiceID: 0,
+						Slug:      "production",
+						Name:      "Production",
+					},
+				)
+				return err
+			},
+		},
+		{
+			name: "invalid environment slug",
+			call: func(service *EnvironmentService) error {
+				_, err := service.CreateEnvironment(
+					context.Background(),
+					CreateEnvironmentInput{
+						ServiceID: 7,
+						Slug:      "Production",
+						Name:      "Production",
+					},
+				)
+				return err
+			},
+		},
+		{
+			name: "zero get environment ID",
+			call: func(service *EnvironmentService) error {
+				_, err := service.GetEnvironmentByID(context.Background(), 0)
+				return err
+			},
+		},
+		{
+			name: "zero update environment ID",
+			call: func(service *EnvironmentService) error {
+				name := "Production"
+
+				_, err := service.UpdateEnvironment(
+					context.Background(),
+					0,
+					UpdateEnvironmentInput{
+						Name: &name,
+					},
+				)
+				return err
+			},
+		},
+		{
+			name: "empty update",
+			call: func(service *EnvironmentService) error {
+				_, err := service.UpdateEnvironment(
+					context.Background(),
+					11,
+					UpdateEnvironmentInput{},
+				)
+				return err
+			},
+		},
+		{
+			name: "zero delete environment ID",
+			call: func(service *EnvironmentService) error {
+				return service.DeleteEnvironment(context.Background(), 0)
+			},
+		},
+		{
+			name: "zero service filter",
+			call: func(service *EnvironmentService) error {
+				serviceID := int64(0)
+
+				_, err := service.ListEnvironments(
+					context.Background(),
+					ListEnvironmentsInput{
+						ServiceID: &serviceID,
+					},
+				)
+				return err
+			},
+		},
+		{
+			name: "too large list limit",
+			call: func(service *EnvironmentService) error {
+				_, err := service.ListEnvironments(
+					context.Background(),
+					ListEnvironmentsInput{
+						Limit: maxEnvironmentListLimit + 1,
+					},
+				)
+				return err
+			},
+		},
+		{
+			name: "zero cursor ID",
+			call: func(service *EnvironmentService) error {
+				_, err := service.ListEnvironments(
+					context.Background(),
+					ListEnvironmentsInput{
+						After: &EnvironmentCursor{
+							CreatedAt: time.Now(),
+						},
+					},
+				)
+				return err
+			},
+		},
+		{
+			name: "zero cursor timestamp",
+			call: func(service *EnvironmentService) error {
+				_, err := service.ListEnvironments(
+					context.Background(),
+					ListEnvironmentsInput{
+						After: &EnvironmentCursor{
+							ID: 11,
+						},
+					},
+				)
+				return err
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repository := &recordingEnvironmentRepository{}
+			service := NewEnvironmentService(repository)
+
+			err := tt.call(service)
+
+			if !errors.Is(err, ErrInvalidArgument) {
+				t.Fatalf("error = %v, want ErrInvalidArgument", err)
+			}
+			if repository.callCount() != 0 {
+				t.Fatalf(
+					"repository call count = %d, want 0",
+					repository.callCount(),
+				)
+			}
+		})
+	}
+}
+
 type recordingServiceRepository struct {
 	createInput *CreateServiceInput
 	getID       int64
@@ -948,5 +1340,71 @@ func (r *recordingServiceRepository) DeleteService(
 }
 
 func (r *recordingServiceRepository) callCount() int {
+	return r.calls
+}
+
+type recordingEnvironmentRepository struct {
+	createInput *CreateEnvironmentInput
+	getID       int64
+	listInput   *ListEnvironmentsInput
+	updateID    int64
+	updateInput *UpdateEnvironmentInput
+	deleteID    int64
+	environment Environment
+	page        EnvironmentPage
+	err         error
+	calls       int
+}
+
+var _ EnvironmentRepository = (*recordingEnvironmentRepository)(nil)
+
+func (r *recordingEnvironmentRepository) CreateEnvironment(
+	_ context.Context,
+	input CreateEnvironmentInput,
+) (Environment, error) {
+	r.calls++
+	r.createInput = &input
+	return r.environment, r.err
+}
+
+func (r *recordingEnvironmentRepository) GetEnvironmentByID(
+	_ context.Context,
+	id int64,
+) (Environment, error) {
+	r.calls++
+	r.getID = id
+	return r.environment, r.err
+}
+
+func (r *recordingEnvironmentRepository) ListEnvironments(
+	_ context.Context,
+	input ListEnvironmentsInput,
+) (EnvironmentPage, error) {
+	r.calls++
+	r.listInput = &input
+	return r.page, r.err
+}
+
+func (r *recordingEnvironmentRepository) UpdateEnvironment(
+	_ context.Context,
+	id int64,
+	input UpdateEnvironmentInput,
+) (Environment, error) {
+	r.calls++
+	r.updateID = id
+	r.updateInput = &input
+	return r.environment, r.err
+}
+
+func (r *recordingEnvironmentRepository) DeleteEnvironment(
+	_ context.Context,
+	id int64,
+) error {
+	r.calls++
+	r.deleteID = id
+	return r.err
+}
+
+func (r *recordingEnvironmentRepository) callCount() int {
 	return r.calls
 }

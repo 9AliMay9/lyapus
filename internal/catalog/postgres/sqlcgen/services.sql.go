@@ -11,32 +11,6 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const createEnvironment = `-- name: CreateEnvironment :one
-INSERT INTO environments (service_id, slug, name)
-VALUES ($1, $2, $3)
-RETURNING id, service_id, slug, name, created_at, updated_at
-`
-
-type CreateEnvironmentParams struct {
-	ServiceID int64
-	Slug      string
-	Name      string
-}
-
-func (q *Queries) CreateEnvironment(ctx context.Context, arg CreateEnvironmentParams) (Environment, error) {
-	row := q.db.QueryRow(ctx, createEnvironment, arg.ServiceID, arg.Slug, arg.Name)
-	var i Environment
-	err := row.Scan(
-		&i.ID,
-		&i.ServiceID,
-		&i.Slug,
-		&i.Name,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
 const createService = `-- name: CreateService :one
 INSERT INTO services (team_id, slug, name, description)
 VALUES ($1, $2, $3, $4)
@@ -102,40 +76,6 @@ func (q *Queries) GetServiceByID(ctx context.Context, id int64) (Service, error)
 		&i.UpdatedAt,
 	)
 	return i, err
-}
-
-const listEnvironmentsByServiceID = `-- name: ListEnvironmentsByServiceID :many
-SELECT id, service_id, slug, name, created_at, updated_at
-FROM environments
-WHERE service_id = $1
-ORDER BY created_at ASC, id ASC
-`
-
-func (q *Queries) ListEnvironmentsByServiceID(ctx context.Context, serviceID int64) ([]Environment, error) {
-	rows, err := q.db.Query(ctx, listEnvironmentsByServiceID, serviceID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Environment
-	for rows.Next() {
-		var i Environment
-		if err := rows.Scan(
-			&i.ID,
-			&i.ServiceID,
-			&i.Slug,
-			&i.Name,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const listServicesAfterCursor = `-- name: ListServicesAfterCursor :many

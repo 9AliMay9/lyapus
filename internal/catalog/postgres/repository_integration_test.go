@@ -229,7 +229,7 @@ func TestServiceRepositoryIntegrationCreateGetAndTransaction(t *testing.T) {
 			Slug:        "catalog-api",
 			Name:        "Catalog API",
 			Description: &description,
-			Environments: []catalog.CreateEnvironmentInput{
+			Environments: []catalog.CreateInitialEnvironmentInput{
 				{
 					Slug: "staging",
 					Name: "Staging",
@@ -343,7 +343,7 @@ func TestServiceRepositoryIntegrationCreateGetAndTransaction(t *testing.T) {
 			TeamID: team.ID,
 			Slug:   "must-roll-back",
 			Name:   "Must Roll Back",
-			Environments: []catalog.CreateEnvironmentInput{
+			Environments: []catalog.CreateInitialEnvironmentInput{
 				{
 					Slug: "staging",
 					Name: "Staging",
@@ -742,6 +742,492 @@ func TestServiceRepositoryIntegrationListPaginationAndTeamFilter(t *testing.T) {
 	}
 }
 
+func TestEnvironmentRepositoryIntegrationCreateGetAndErrors(t *testing.T) {
+	environmentRepository, serviceRepository, teamRepository, _, ctx := setupEnvironmentRepositoryIntegration(t)
+
+	team := createIntegrationTeam(
+		t,
+		ctx,
+		teamRepository,
+		"platform",
+		"Platform",
+	)
+	service := createIntegrationService(
+		t,
+		ctx,
+		serviceRepository,
+		team.ID,
+		"catalog-api",
+		"Catalog API",
+	)
+
+	created, err := environmentRepository.CreateEnvironment(
+		ctx,
+		catalog.CreateEnvironmentInput{
+			ServiceID: service.ID,
+			Slug:      "production",
+			Name:      "Production",
+		},
+	)
+	if err != nil {
+		t.Fatalf("CreateEnvironment() error = %v", err)
+	}
+	if created.ID <= 0 {
+		t.Fatalf(
+			"CreateEnvironment() ID = %d, want a positive ID",
+			created.ID,
+		)
+	}
+	if created.ServiceID != service.ID {
+		t.Fatalf(
+			"CreateEnvironment() ServiceID = %d, want %d",
+			created.ServiceID,
+			service.ID,
+		)
+	}
+	if created.CreatedAt.IsZero() || created.UpdatedAt.IsZero() {
+		t.Fatalf(
+			"CreateEnvironment() timestamps = %#v, want non-zero values",
+			created,
+		)
+	}
+	if created.UpdatedAt.Before(created.CreatedAt) {
+		t.Fatalf(
+			"CreateEnvironment() UpdatedAt = %s, before CreatedAt = %s",
+			created.UpdatedAt,
+			created.CreatedAt,
+		)
+	}
+
+	got, err := environmentRepository.GetEnvironmentByID(ctx, created.ID)
+	if err != nil {
+		t.Fatalf("GetEnvironmentByID() error = %v", err)
+	}
+	if got != created {
+		t.Fatalf("GetEnvironmentByID() = %#v, want %#v", got, created)
+	}
+
+	_, err = environmentRepository.CreateEnvironment(
+		ctx,
+		catalog.CreateEnvironmentInput{
+			ServiceID: service.ID,
+			Slug:      "production",
+			Name:      "Another Production",
+		},
+	)
+	if !errors.Is(err, catalog.ErrConflict) {
+		t.Fatalf(
+			"CreateEnvironment() duplicate error = %v, want ErrConflict",
+			err,
+		)
+	}
+
+	_, err = environmentRepository.CreateEnvironment(
+		ctx,
+		catalog.CreateEnvironmentInput{
+			ServiceID: 999,
+			Slug:      "missing-parent",
+			Name:      "Missing Parent",
+		},
+	)
+	if !errors.Is(err, catalog.ErrNotFound) {
+		t.Fatalf(
+			"CreateEnvironment() missing parent error = %v, want ErrNotFound",
+			err,
+		)
+	}
+
+	_, err = environmentRepository.GetEnvironmentByID(ctx, 999)
+	if !errors.Is(err, catalog.ErrNotFound) {
+		t.Fatalf(
+			"GetEnvironmentByID() missing error = %v, want ErrNotFound",
+			err,
+		)
+	}
+}
+
+func TestEnvironmentRepositoryIntegrationUpdateAndDelete(t *testing.T) {
+	environmentRepository, serviceRepository, teamRepository, _, ctx := setupEnvironmentRepositoryIntegration(t)
+
+	team := createIntegrationTeam(
+		t,
+		ctx,
+		teamRepository,
+		"platform",
+		"Platform",
+	)
+	service := createIntegrationService(
+		t,
+		ctx,
+		serviceRepository,
+		team.ID,
+		"catalog-api",
+		"Catalog API",
+	)
+	created := createIntegrationEnvironment(
+		t,
+		ctx,
+		environmentRepository,
+		service.ID,
+		"production",
+		"Production",
+	)
+
+	updatedName := "Production v2"
+	updated, err := environmentRepository.UpdateEnvironment(
+		ctx,
+		created.ID,
+		catalog.UpdateEnvironmentInput{
+			Name: &updatedName,
+		},
+	)
+	if err != nil {
+		t.Fatalf("UpdateEnvironment() error = %v", err)
+	}
+	if updated.ID != created.ID {
+		t.Fatalf(
+			"UpdateEnvironment() ID = %d, want %d",
+			updated.ID,
+			created.ID,
+		)
+	}
+	if updated.ServiceID != created.ServiceID {
+		t.Fatalf(
+			"UpdateEnvironment() ServiceID = %d, want %d",
+			updated.ServiceID,
+			created.ServiceID,
+		)
+	}
+	if updated.Slug != created.Slug {
+		t.Fatalf(
+			"UpdateEnvironment() Slug = %q, want %q",
+			updated.Slug,
+			created.Slug,
+		)
+	}
+	if updated.Name != updatedName {
+		t.Fatalf(
+			"UpdateEnvironment() Name = %q, want %q",
+			updated.Name,
+			updatedName,
+		)
+	}
+	if updated.CreatedAt != created.CreatedAt {
+		t.Fatalf(
+			"UpdateEnvironment() CreatedAt = %s, want %s",
+			updated.CreatedAt,
+			created.CreatedAt,
+		)
+	}
+	if updated.UpdatedAt.Before(created.UpdatedAt) {
+		t.Fatalf(
+			"UpdateEnvironment() UpdatedAt = %s, before previous value %s",
+			updated.UpdatedAt,
+			created.UpdatedAt,
+		)
+	}
+
+	got, err := environmentRepository.GetEnvironmentByID(ctx, created.ID)
+	if err != nil {
+		t.Fatalf("GetEnvironmentByID() after update error = %v", err)
+	}
+	if got != updated {
+		t.Fatalf(
+			"GetEnvironmentByID() after update = %#v, want %#v",
+			got,
+			updated,
+		)
+	}
+
+	other := createIntegrationEnvironment(
+		t,
+		ctx,
+		environmentRepository,
+		service.ID,
+		"staging",
+		"Staging",
+	)
+	duplicateSlug := updated.Slug
+	_, err = environmentRepository.UpdateEnvironment(
+		ctx,
+		other.ID,
+		catalog.UpdateEnvironmentInput{
+			Slug: &duplicateSlug,
+		},
+	)
+	if !errors.Is(err, catalog.ErrConflict) {
+		t.Fatalf(
+			"UpdateEnvironment() duplicate slug error = %v, want ErrConflict",
+			err,
+		)
+	}
+
+	missingName := "Missing"
+	_, err = environmentRepository.UpdateEnvironment(
+		ctx,
+		999,
+		catalog.UpdateEnvironmentInput{
+			Name: &missingName,
+		},
+	)
+	if !errors.Is(err, catalog.ErrNotFound) {
+		t.Fatalf(
+			"UpdateEnvironment() missing error = %v, want ErrNotFound",
+			err,
+		)
+	}
+
+	deletable := createIntegrationEnvironment(
+		t,
+		ctx,
+		environmentRepository,
+		service.ID,
+		"deletable",
+		"Deletable",
+	)
+	if err := environmentRepository.DeleteEnvironment(ctx, deletable.ID); err != nil {
+		t.Fatalf("DeleteEnvironment() error = %v", err)
+	}
+
+	_, err = environmentRepository.GetEnvironmentByID(ctx, deletable.ID)
+	if !errors.Is(err, catalog.ErrNotFound) {
+		t.Fatalf(
+			"GetEnvironmentByID() after delete error = %v, want ErrNotFound",
+			err,
+		)
+	}
+
+	err = environmentRepository.DeleteEnvironment(ctx, deletable.ID)
+	if !errors.Is(err, catalog.ErrNotFound) {
+		t.Fatalf(
+			"DeleteEnvironment() missing error = %v, want ErrNotFound",
+			err,
+		)
+	}
+}
+
+func TestEnvironmentRepositoryIntegrationListPaginationAndServiceFilter(
+	t *testing.T,
+) {
+	environmentRepository, serviceRepository, teamRepository, _, ctx := setupEnvironmentRepositoryIntegration(t)
+
+	team := createIntegrationTeam(
+		t,
+		ctx,
+		teamRepository,
+		"platform",
+		"Platform",
+	)
+	catalogService := createIntegrationService(
+		t,
+		ctx,
+		serviceRepository,
+		team.ID,
+		"catalog-api",
+		"Catalog API",
+	)
+	otherService := createIntegrationService(
+		t,
+		ctx,
+		serviceRepository,
+		team.ID,
+		"other-api",
+		"Other API",
+	)
+
+	created := []catalog.Environment{
+		createIntegrationEnvironment(
+			t,
+			ctx,
+			environmentRepository,
+			catalogService.ID,
+			"development",
+			"Development",
+		),
+		createIntegrationEnvironment(
+			t,
+			ctx,
+			environmentRepository,
+			catalogService.ID,
+			"staging",
+			"Staging",
+		),
+		createIntegrationEnvironment(
+			t,
+			ctx,
+			environmentRepository,
+			catalogService.ID,
+			"production",
+			"Production",
+		),
+		createIntegrationEnvironment(
+			t,
+			ctx,
+			environmentRepository,
+			otherService.ID,
+			"other",
+			"Other",
+		),
+	}
+
+	first, err := environmentRepository.ListEnvironments(
+		ctx,
+		catalog.ListEnvironmentsInput{
+			Limit: 2,
+		},
+	)
+	if err != nil {
+		t.Fatalf("ListEnvironments() global first page error = %v", err)
+	}
+	if len(first.Environments) != 2 {
+		t.Fatalf(
+			"ListEnvironments() global first page length = %d, want 2",
+			len(first.Environments),
+		)
+	}
+	if first.Next == nil {
+		t.Fatal("ListEnvironments() global first page Next = nil, want cursor")
+	}
+	assertEnvironmentsInDescendingCursorOrder(t, first.Environments)
+
+	second, err := environmentRepository.ListEnvironments(
+		ctx,
+		catalog.ListEnvironmentsInput{
+			Limit: 2,
+			After: first.Next,
+		},
+	)
+	if err != nil {
+		t.Fatalf("ListEnvironments() global second page error = %v", err)
+	}
+	if len(second.Environments) != 2 {
+		t.Fatalf(
+			"ListEnvironments() global second page length = %d, want 2",
+			len(second.Environments),
+		)
+	}
+	if second.Next != nil {
+		t.Fatalf(
+			"ListEnvironments() global second page Next = %#v, want nil",
+			second.Next,
+		)
+	}
+
+	all := append(
+		append([]catalog.Environment{}, first.Environments...),
+		second.Environments...,
+	)
+	if len(all) != len(created) {
+		t.Fatalf(
+			"ListEnvironments() global total length = %d, want %d",
+			len(all),
+			len(created),
+		)
+	}
+
+	wantIDs := map[int64]struct{}{}
+	for _, environment := range created {
+		wantIDs[environment.ID] = struct{}{}
+	}
+	for _, environment := range all {
+		if _, ok := wantIDs[environment.ID]; !ok {
+			t.Fatalf(
+				"ListEnvironments() global returned unexpected environment ID %d",
+				environment.ID,
+			)
+		}
+		delete(wantIDs, environment.ID)
+	}
+	if len(wantIDs) != 0 {
+		t.Fatalf(
+			"ListEnvironments() global missed environment IDs %#v",
+			wantIDs,
+		)
+	}
+
+	serviceID := catalogService.ID
+	filteredFirst, err := environmentRepository.ListEnvironments(
+		ctx,
+		catalog.ListEnvironmentsInput{
+			ServiceID: &serviceID,
+			Limit:     2,
+		},
+	)
+	if err != nil {
+		t.Fatalf("ListEnvironments() filtered first page error = %v", err)
+	}
+	if len(filteredFirst.Environments) != 2 {
+		t.Fatalf(
+			"ListEnvironments() filtered first page length = %d, want 2",
+			len(filteredFirst.Environments),
+		)
+	}
+	if filteredFirst.Next == nil {
+		t.Fatal("ListEnvironments() filtered first page Next = nil, want cursor")
+	}
+	assertEnvironmentsInDescendingCursorOrder(
+		t,
+		filteredFirst.Environments,
+	)
+
+	filteredSecond, err := environmentRepository.ListEnvironments(
+		ctx,
+		catalog.ListEnvironmentsInput{
+			ServiceID: &serviceID,
+			Limit:     2,
+			After:     filteredFirst.Next,
+		},
+	)
+	if err != nil {
+		t.Fatalf("ListEnvironments() filtered second page error = %v", err)
+	}
+	if len(filteredSecond.Environments) != 1 {
+		t.Fatalf(
+			"ListEnvironments() filtered second page length = %d, want 1",
+			len(filteredSecond.Environments),
+		)
+	}
+	if filteredSecond.Next != nil {
+		t.Fatalf(
+			"ListEnvironments() filtered second page Next = %#v, want nil",
+			filteredSecond.Next,
+		)
+	}
+
+	filtered := append(
+		append([]catalog.Environment{}, filteredFirst.Environments...),
+		filteredSecond.Environments...,
+	)
+
+	wantCatalogServiceIDs := map[int64]struct{}{
+		created[0].ID: {},
+		created[1].ID: {},
+		created[2].ID: {},
+	}
+	for _, environment := range filtered {
+		if environment.ServiceID != catalogService.ID {
+			t.Fatalf(
+				"ListEnvironments() filtered ServiceID = %d, want %d",
+				environment.ServiceID,
+				catalogService.ID,
+			)
+		}
+		if _, ok := wantCatalogServiceIDs[environment.ID]; !ok {
+			t.Fatalf(
+				"ListEnvironments() filtered returned unexpected environment ID %d",
+				environment.ID,
+			)
+		}
+		delete(wantCatalogServiceIDs, environment.ID)
+	}
+	if len(wantCatalogServiceIDs) != 0 {
+		t.Fatalf(
+			"ListEnvironments() filtered missed environment IDs %#v",
+			wantCatalogServiceIDs,
+		)
+	}
+}
+
 func TestServiceRepositoryIntegrationConcurrentDuplicateCreate(t *testing.T) {
 	_, teamRepository, pool, ctx := setupServiceRepositoryIntegration(t)
 
@@ -861,6 +1347,30 @@ func setupServiceRepositoryIntegration(
 	return NewServiceRepository(pool), NewTeamRepository(pool), pool, ctx
 }
 
+func setupEnvironmentRepositoryIntegration(
+	t *testing.T,
+) (
+	*EnvironmentRepository,
+	*ServiceRepository,
+	*TeamRepository,
+	*pgxpool.Pool,
+	context.Context,
+) {
+	t.Helper()
+
+	pool := openIntegrationPool(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	t.Cleanup(cancel)
+
+	resetCatalogTables(t, ctx, pool)
+
+	return NewEnvironmentRepository(pool),
+		NewServiceRepository(pool),
+		NewTeamRepository(pool),
+		pool,
+		ctx
+}
+
 func createIntegrationTeam(
 	t *testing.T,
 	ctx context.Context,
@@ -904,6 +1414,31 @@ func createIntegrationService(
 	}
 
 	return detail.Service
+}
+
+func createIntegrationEnvironment(
+	t *testing.T,
+	ctx context.Context,
+	repository *EnvironmentRepository,
+	serviceID int64,
+	slug string,
+	name string,
+) catalog.Environment {
+	t.Helper()
+
+	environment, err := repository.CreateEnvironment(
+		ctx,
+		catalog.CreateEnvironmentInput{
+			ServiceID: serviceID,
+			Slug:      slug,
+			Name:      name,
+		},
+	)
+	if err != nil {
+		t.Fatalf("CreateEnvironment(%q) error = %v", slug, err)
+	}
+
+	return environment
 }
 
 func assertTeamsInDescendingCursorOrder(t *testing.T, teams []catalog.Team) {
@@ -950,6 +1485,33 @@ func assertServicesInDescendingCursorOrder(
 		if current.CreatedAt.Equal(next.CreatedAt) && current.ID <= next.ID {
 			t.Fatalf(
 				"Services with equal created_at are not ordered by id DESC: %d before %d",
+				current.ID,
+				next.ID,
+			)
+		}
+	}
+}
+
+func assertEnvironmentsInDescendingCursorOrder(
+	t *testing.T,
+	environments []catalog.Environment,
+) {
+	t.Helper()
+
+	for index := 0; index+1 < len(environments); index++ {
+		current := environments[index]
+		next := environments[index+1]
+
+		if current.CreatedAt.Before(next.CreatedAt) {
+			t.Fatalf(
+				"Environments are not ordered by created_at DESC: %s before %s",
+				current.CreatedAt,
+				next.CreatedAt,
+			)
+		}
+		if current.CreatedAt.Equal(next.CreatedAt) && current.ID <= next.ID {
+			t.Fatalf(
+				"Environments with equal created_at are not ordered by id DESC: %d before %d",
 				current.ID,
 				next.ID,
 			)

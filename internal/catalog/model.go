@@ -49,6 +49,33 @@ type Environment struct {
 	UpdatedAt time.Time
 }
 
+type EnvironmentCursor struct {
+	CreatedAt time.Time
+	ID        int64
+}
+
+type ListEnvironmentsInput struct {
+	ServiceID *int64
+	Limit     int32
+	After     *EnvironmentCursor
+}
+
+type EnvironmentPage struct {
+	Environments []Environment
+	Next         *EnvironmentCursor
+}
+
+type CreateEnvironmentInput struct {
+	ServiceID int64
+	Slug      string
+	Name      string
+}
+
+type UpdateEnvironmentInput struct {
+	Slug *string
+	Name *string
+}
+
 type ServiceDetail struct {
 	Service      Service
 	Environments []Environment
@@ -70,7 +97,7 @@ type ServicePage struct {
 	Next     *ServiceCursor
 }
 
-type CreateEnvironmentInput struct {
+type CreateInitialEnvironmentInput struct {
 	Slug string
 	Name string
 }
@@ -80,7 +107,7 @@ type CreateServiceInput struct {
 	Slug         string
 	Name         string
 	Description  *string
-	Environments []CreateEnvironmentInput
+	Environments []CreateInitialEnvironmentInput
 }
 
 type UpdateServiceInput struct {

@@ -17,7 +17,7 @@ func TestCreateServiceInputFromRequest(t *testing.T) {
 		Slug:        "catalog-api",
 		Name:        "Catalog API",
 		Description: &description,
-		Environments: []createEnvironmentRequest{
+		Environments: []createInitialEnvironmentRequest{
 			{
 				Slug: "staging",
 				Name: "Staging",

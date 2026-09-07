@@ -33,11 +33,11 @@ type serviceService interface {
 }
 
 type createServiceRequest struct {
-	TeamID       int64                      `json:"team_id"`
-	Slug         string                     `json:"slug"`
-	Name         string                     `json:"name"`
-	Description  *string                    `json:"description"`
-	Environments []createEnvironmentRequest `json:"environments"`
+	TeamID       int64                             `json:"team_id"`
+	Slug         string                            `json:"slug"`
+	Name         string                            `json:"name"`
+	Description  *string                           `json:"description"`
+	Environments []createInitialEnvironmentRequest `json:"environments"`
 }
 
 type updateServiceRequest struct {
@@ -46,7 +46,7 @@ type updateServiceRequest struct {
 	Description patchNullableString `json:"description"`
 }
 
-type createEnvironmentRequest struct {
+type createInitialEnvironmentRequest struct {
 	Slug string `json:"slug"`
 	Name string `json:"name"`
 }
@@ -66,15 +66,6 @@ type servicePageResponse struct {
 	NextCursor string            `json:"next_cursor"`
 }
 
-type environmentResponse struct {
-	ID        int64     `json:"id"`
-	ServiceID int64     `json:"service_id"`
-	Slug      string    `json:"slug"`
-	Name      string    `json:"name"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-}
-
 type serviceDetailResponse struct {
 	ID           int64                 `json:"id"`
 	TeamID       int64                 `json:"team_id"`
@@ -90,11 +81,11 @@ func createServiceInputFromRequest(
 	request createServiceRequest,
 ) catalog.CreateServiceInput {
 	environments := make(
-		[]catalog.CreateEnvironmentInput,
+		[]catalog.CreateInitialEnvironmentInput,
 		len(request.Environments),
 	)
 	for index, environment := range request.Environments {
-		environments[index] = catalog.CreateEnvironmentInput{
+		environments[index] = catalog.CreateInitialEnvironmentInput{
 			Slug: environment.Slug,
 			Name: environment.Name,
 		}
@@ -139,19 +130,6 @@ func serviceResponseFromCatalog(service catalog.Service) serviceResponse {
 		Description: service.Description,
 		CreatedAt:   service.CreatedAt.UTC(),
 		UpdatedAt:   service.UpdatedAt.UTC(),
-	}
-}
-
-func environmentResponseFromCatalog(
-	environment catalog.Environment,
-) environmentResponse {
-	return environmentResponse{
-		ID:        environment.ID,
-		ServiceID: environment.ServiceID,
-		Slug:      environment.Slug,
-		Name:      environment.Name,
-		CreatedAt: environment.CreatedAt.UTC(),
-		UpdatedAt: environment.UpdatedAt.UTC(),
 	}
 }
 

@@ -1029,7 +1029,7 @@ func TestHandlerCreateService(t *testing.T) {
 	if len(gotInput.Environments) != 1 {
 		t.Fatalf("CreateService() environments = %#v, want one environment", gotInput.Environments)
 	}
-	if gotInput.Environments[0] != (catalog.CreateEnvironmentInput{
+	if gotInput.Environments[0] != (catalog.CreateInitialEnvironmentInput{
 		Slug: "production",
 		Name: "Production",
 	}) {
@@ -2164,6 +2164,938 @@ func TestHandlerServiceMutationsRejectInvalidID(t *testing.T) {
 	}
 }
 
+func TestHandlerCreateEnvironment(t *testing.T) {
+	createdAt := time.Date(
+		2026,
+		time.September,
+		5,
+		8,
+		30,
+		0,
+		0,
+		time.FixedZone("CST", 8*60*60),
+	)
+	service := &recordingEnvironmentService{
+		environment: catalog.Environment{
+			ID:        11,
+			ServiceID: 7,
+			Slug:      "production",
+			Name:      "Production",
+			CreatedAt: createdAt,
+			UpdatedAt: createdAt,
+		},
+	}
+	handler := newTestHandlerWithDependencies(
+		&recordingTeamService{},
+		&recordingServiceService{},
+		service,
+	)
+
+	request := newJSONRequest(
+		stdhttp.MethodPost,
+		"/v1/environments",
+		`{"service_id":7,"slug":"production","name":"Production"}`,
+	)
+	recorder := httptest.NewRecorder()
+
+	handler.ServeHTTP(recorder, request)
+
+	response := recorder.Result()
+	defer response.Body.Close()
+
+	if response.StatusCode != stdhttp.StatusCreated {
+		t.Fatalf("status = %d, want %d", response.StatusCode, stdhttp.StatusCreated)
+	}
+	if service.createInput == nil {
+		t.Fatal("CreateEnvironment() was not called")
+	}
+	if service.createInput.ServiceID != 7 {
+		t.Fatalf("ServiceID = %d, want 7", service.createInput.ServiceID)
+	}
+	if service.createInput.Slug != "production" {
+		t.Fatalf("Slug = %q, want production", service.createInput.Slug)
+	}
+	if service.createInput.Name != "Production" {
+		t.Fatalf("Name = %q, want Production", service.createInput.Name)
+	}
+
+	var got environmentResponse
+	if err := json.NewDecoder(response.Body).Decode(&got); err != nil {
+		t.Fatalf("decode response body: %v", err)
+	}
+	if got.ID != 11 || got.ServiceID != 7 {
+		t.Fatalf("response = %#v, want ID 11 and ServiceID 7", got)
+	}
+	if got.Slug != "production" || got.Name != "Production" {
+		t.Fatalf("response = %#v, want production / Production", got)
+	}
+	if !got.CreatedAt.Equal(createdAt.UTC()) {
+		t.Fatalf("CreatedAt = %s, want %s", got.CreatedAt, createdAt.UTC())
+	}
+}
+
+func TestHandlerGetEnvironment(t *testing.T) {
+	createdAt := time.Date(
+		2026,
+		time.September,
+		5,
+		8,
+		30,
+		0,
+		0,
+		time.UTC,
+	)
+	service := &recordingEnvironmentService{
+		environment: catalog.Environment{
+			ID:        11,
+			ServiceID: 7,
+			Slug:      "production",
+			Name:      "Production",
+			CreatedAt: createdAt,
+			UpdatedAt: createdAt.Add(time.Minute),
+		},
+	}
+	handler := newTestHandlerWithDependencies(
+		&recordingTeamService{},
+		&recordingServiceService{},
+		service,
+	)
+
+	request := httptest.NewRequest(
+		stdhttp.MethodGet,
+		"/v1/environments/11",
+		nil,
+	)
+	recorder := httptest.NewRecorder()
+
+	handler.ServeHTTP(recorder, request)
+
+	response := recorder.Result()
+	defer response.Body.Close()
+
+	if response.StatusCode != stdhttp.StatusOK {
+		t.Fatalf("status = %d, want %d", response.StatusCode, stdhttp.StatusOK)
+	}
+	if service.getID == nil {
+		t.Fatal("GetEnvironmentByID() was not called")
+	}
+	if *service.getID != 11 {
+		t.Fatalf("GetEnvironmentByID() ID = %d, want 11", *service.getID)
+	}
+
+	var got environmentResponse
+	if err := json.NewDecoder(response.Body).Decode(&got); err != nil {
+		t.Fatalf("decode response body: %v", err)
+	}
+	if got.ID != 11 || got.ServiceID != 7 {
+		t.Fatalf("response = %#v, want ID 11 and ServiceID 7", got)
+	}
+	if !got.UpdatedAt.Equal(createdAt.Add(time.Minute)) {
+		t.Fatalf(
+			"UpdatedAt = %s, want %s",
+			got.UpdatedAt,
+			createdAt.Add(time.Minute),
+		)
+	}
+}
+
+func TestHandlerUpdateEnvironment(t *testing.T) {
+	updatedAt := time.Date(
+		2026,
+		time.September,
+		5,
+		8,
+		45,
+		0,
+		0,
+		time.UTC,
+	)
+	service := &recordingEnvironmentService{
+		environment: catalog.Environment{
+			ID:        11,
+			ServiceID: 7,
+			Slug:      "production",
+			Name:      "Production v2",
+			CreatedAt: updatedAt.Add(-time.Hour),
+			UpdatedAt: updatedAt,
+		},
+	}
+	handler := newTestHandlerWithDependencies(
+		&recordingTeamService{},
+		&recordingServiceService{},
+		service,
+	)
+
+	request := newJSONRequest(
+		stdhttp.MethodPatch,
+		"/v1/environments/11",
+		`{"name":"Production v2"}`,
+	)
+	recorder := httptest.NewRecorder()
+
+	handler.ServeHTTP(recorder, request)
+
+	response := recorder.Result()
+	defer response.Body.Close()
+
+	if response.StatusCode != stdhttp.StatusOK {
+		t.Fatalf("status = %d, want %d", response.StatusCode, stdhttp.StatusOK)
+	}
+	if service.updateID == nil {
+		t.Fatalf("UpdateEnvironment() was not called")
+	}
+	if *service.updateID != 11 {
+		t.Fatalf("UpdateEnvironment() ID = %d, want 11", *service.updateID)
+	}
+	if service.updateInput == nil {
+		t.Fatal("UpdateEnvironment() input = nil")
+	}
+	if service.updateInput.Slug != nil {
+		t.Fatalf("Slug = %#v, want nil", service.updateInput.Slug)
+	}
+	if service.updateInput.Name == nil || *service.updateInput.Name != "Production v2" {
+		t.Fatalf("Name = %#v, want Production v2", service.updateInput.Name)
+	}
+
+	var got environmentResponse
+	if err := json.NewDecoder(response.Body).Decode(&got); err != nil {
+		t.Fatalf("decode response body: %v", err)
+	}
+	if got.Name != "Production v2" {
+		t.Fatalf("Name = %q, want Production v2", got.Name)
+	}
+	if !got.UpdatedAt.Equal(updatedAt) {
+		t.Fatalf("UpdatedAt = %s, want %s", got.UpdatedAt, updatedAt)
+	}
+}
+
+func TestHandlerDeleteEnvironment(t *testing.T) {
+	service := &recordingEnvironmentService{}
+	handler := newTestHandlerWithDependencies(
+		&recordingTeamService{},
+		&recordingServiceService{},
+		service,
+	)
+
+	request := httptest.NewRequest(
+		stdhttp.MethodDelete,
+		"/v1/environments/11",
+		nil,
+	)
+	recorder := httptest.NewRecorder()
+
+	handler.ServeHTTP(recorder, request)
+
+	if recorder.Code != stdhttp.StatusNoContent {
+		t.Fatalf("status = %d, want %d", recorder.Code, stdhttp.StatusNoContent)
+	}
+	if recorder.Body.Len() != 0 {
+		t.Fatalf("response body = %q, want empty", recorder.Body.String())
+	}
+	if service.deleteID == nil {
+		t.Fatal("DeleteEnvironment() was not called")
+	}
+	if *service.deleteID != 11 {
+		t.Fatalf("DeleteEnvironment() ID = %d, want 11", *service.deleteID)
+	}
+}
+
+func TestHandlerEnvironmentMethodsRejectInvalidID(t *testing.T) {
+	tests := []struct {
+		method string
+		target string
+	}{
+		{method: stdhttp.MethodGet, target: "/v1/environments/0"},
+		{method: stdhttp.MethodGet, target: "/v1/environments/-1"},
+		{method: stdhttp.MethodGet, target: "/v1/environments/not-a-number"},
+		{method: stdhttp.MethodPatch, target: "/v1/environments/0"},
+		{method: stdhttp.MethodPatch, target: "/v1/environments/-1"},
+		{method: stdhttp.MethodPatch, target: "/v1/environments/not-a-number"},
+		{method: stdhttp.MethodDelete, target: "/v1/environments/0"},
+		{method: stdhttp.MethodDelete, target: "/v1/environments/-1"},
+		{method: stdhttp.MethodDelete, target: "/v1/environments/not-a-number"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.method+" "+tt.target, func(t *testing.T) {
+			service := &recordingEnvironmentService{}
+			handler := newTestHandlerWithDependencies(
+				&recordingTeamService{},
+				&recordingServiceService{},
+				service,
+			)
+
+			var request *stdhttp.Request
+			if tt.method == stdhttp.MethodPatch {
+				request = newJSONRequest(
+					tt.method,
+					tt.target,
+					`{"name":"Production"}`,
+				)
+			} else {
+				request = httptest.NewRequest(tt.method, tt.target, nil)
+			}
+
+			recorder := httptest.NewRecorder()
+
+			handler.ServeHTTP(recorder, request)
+
+			if service.getID != nil {
+				t.Fatalf(
+					"GetEnvironmentByID() ID = %d, want no call",
+					*service.getID,
+				)
+			}
+			if service.updateID != nil {
+				t.Fatalf(
+					"UpdateEnvironment() ID = %d, want no call",
+					*service.updateID,
+				)
+			}
+			if service.deleteID != nil {
+				t.Fatalf(
+					"DeleteEnvironment() ID = %d, want no call",
+					*service.deleteID,
+				)
+			}
+
+			assertErrorResponse(
+				t,
+				recorder,
+				stdhttp.StatusBadRequest,
+				"invalid_argument",
+				"environment ID must be a positive integer",
+			)
+		})
+	}
+}
+
+func TestHandlerCreateEnvironmentMapsCatalogErrors(t *testing.T) {
+	tests := []struct {
+		name        string
+		err         error
+		wantStatus  int
+		wantCode    string
+		wantMessage string
+	}{
+		{
+			name: "invalid argument",
+			err: &catalog.InvalidArgumentError{
+				Message: "service ID must be a positive integer",
+			},
+			wantStatus:  stdhttp.StatusBadRequest,
+			wantCode:    "invalid_argument",
+			wantMessage: "service ID must be a positive integer",
+		},
+		{
+			name:        "not found",
+			err:         catalog.ErrNotFound,
+			wantStatus:  stdhttp.StatusNotFound,
+			wantCode:    "not_found",
+			wantMessage: "resource not found",
+		},
+		{
+			name:        "conflict",
+			err:         catalog.ErrConflict,
+			wantStatus:  stdhttp.StatusConflict,
+			wantCode:    "conflict",
+			wantMessage: "resource conflict",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			service := &recordingEnvironmentService{
+				err: tt.err,
+			}
+			handler := newTestHandlerWithDependencies(
+				&recordingTeamService{},
+				&recordingServiceService{},
+				service,
+			)
+
+			request := newJSONRequest(
+				stdhttp.MethodPost,
+				"/v1/environments",
+				`{"service_id":7,"slug":"production","name":"Production"}`,
+			)
+			recorder := httptest.NewRecorder()
+
+			handler.ServeHTTP(recorder, request)
+
+			if service.createInput == nil {
+				t.Fatal("CreateEnvironment() was not called")
+			}
+			assertErrorResponse(
+				t,
+				recorder,
+				tt.wantStatus,
+				tt.wantCode,
+				tt.wantMessage,
+			)
+		})
+	}
+}
+
+func TestHandlerUpdateEnvironmentMapsCatalogErrors(t *testing.T) {
+	tests := []struct {
+		name        string
+		body        string
+		err         error
+		wantStatus  int
+		wantCode    string
+		wantMessage string
+	}{
+		{
+			name: "empty update",
+			body: `{}`,
+			err: &catalog.InvalidArgumentError{
+				Message: "at least one field must be provided",
+			},
+			wantStatus:  stdhttp.StatusBadRequest,
+			wantCode:    "invalid_argument",
+			wantMessage: "at least one field must be provided",
+		},
+		{
+			name:        "not found",
+			body:        `{"name":"Production"}`,
+			err:         catalog.ErrNotFound,
+			wantStatus:  stdhttp.StatusNotFound,
+			wantCode:    "not_found",
+			wantMessage: "resource not found",
+		},
+		{
+			name:        "conflict",
+			body:        `{"slug":"staging"}`,
+			err:         catalog.ErrConflict,
+			wantStatus:  stdhttp.StatusConflict,
+			wantCode:    "conflict",
+			wantMessage: "resource conflict",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			service := &recordingEnvironmentService{
+				err: tt.err,
+			}
+			handler := newTestHandlerWithDependencies(
+				&recordingTeamService{},
+				&recordingServiceService{},
+				service,
+			)
+
+			request := newJSONRequest(
+				stdhttp.MethodPatch,
+				"/v1/environments/11",
+				tt.body,
+			)
+			recorder := httptest.NewRecorder()
+
+			handler.ServeHTTP(recorder, request)
+
+			if service.updateID == nil {
+				t.Fatal("UpdateEnvironment() was not called")
+			}
+			if *service.updateID != 11 {
+				t.Fatalf("UpdateEnvironment() ID = %d, want 11", *service.updateID)
+			}
+			assertErrorResponse(
+				t,
+				recorder,
+				tt.wantStatus,
+				tt.wantCode,
+				tt.wantMessage,
+			)
+		})
+	}
+}
+
+func TestHandlerDeleteEnvironmentMapsCatalogErrors(t *testing.T) {
+	tests := []struct {
+		name        string
+		err         error
+		wantStatus  int
+		wantCode    string
+		wantMessage string
+	}{
+		{
+			name:        "not found",
+			err:         catalog.ErrNotFound,
+			wantStatus:  stdhttp.StatusNotFound,
+			wantCode:    "not_found",
+			wantMessage: "resource not found",
+		},
+		{
+			name:        "conflict",
+			err:         catalog.ErrConflict,
+			wantStatus:  stdhttp.StatusConflict,
+			wantCode:    "conflict",
+			wantMessage: "resource conflict",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			service := &recordingEnvironmentService{
+				err: tt.err,
+			}
+			handler := newTestHandlerWithDependencies(
+				&recordingTeamService{},
+				&recordingServiceService{},
+				service,
+			)
+
+			request := httptest.NewRequest(
+				stdhttp.MethodDelete,
+				"/v1/environments/11",
+				nil,
+			)
+			recorder := httptest.NewRecorder()
+
+			handler.ServeHTTP(recorder, request)
+
+			if service.deleteID == nil {
+				t.Fatal("DeleteEnvironment() was not called")
+			}
+			if *service.deleteID != 11 {
+				t.Fatalf("DeleteEnvironment() ID = %d, want 11", *service.deleteID)
+			}
+			assertErrorResponse(
+				t,
+				recorder,
+				tt.wantStatus,
+				tt.wantCode,
+				tt.wantMessage,
+			)
+		})
+	}
+}
+
+func TestHandlerGetEnvironmentMapsNotFound(t *testing.T) {
+	service := &recordingEnvironmentService{
+		err: catalog.ErrNotFound,
+	}
+	handler := newTestHandlerWithDependencies(
+		&recordingTeamService{},
+		&recordingServiceService{},
+		service,
+	)
+
+	request := httptest.NewRequest(
+		stdhttp.MethodGet,
+		"/v1/environments/11",
+		nil,
+	)
+	recorder := httptest.NewRecorder()
+
+	handler.ServeHTTP(recorder, request)
+
+	if service.getID == nil {
+		t.Fatal("GetEnvironmentByID() was not called")
+	}
+	if *service.getID != 11 {
+		t.Fatalf("GetEnvironmentByID() ID = %d, want 11", *service.getID)
+	}
+	assertErrorResponse(
+		t,
+		recorder,
+		stdhttp.StatusNotFound,
+		"not_found",
+		"resource not found",
+	)
+}
+
+func TestHandlerListEnvironments(t *testing.T) {
+	firstCreatedAt := time.Date(
+		2026,
+		time.September,
+		7,
+		12,
+		0,
+		0,
+		0,
+		time.FixedZone("CST", 8*60*60),
+	)
+	secondCreatedAt := firstCreatedAt.Add(-time.Minute)
+
+	service := &recordingEnvironmentService{
+		page: catalog.EnvironmentPage{
+			Environments: []catalog.Environment{
+				{
+					ID:        11,
+					ServiceID: 7,
+					Slug:      "production",
+					Name:      "Production",
+					CreatedAt: firstCreatedAt,
+					UpdatedAt: firstCreatedAt,
+				},
+				{
+					ID:        10,
+					ServiceID: 7,
+					Slug:      "staging",
+					Name:      "Staging",
+					CreatedAt: secondCreatedAt,
+					UpdatedAt: secondCreatedAt,
+				},
+			},
+			Next: &catalog.EnvironmentCursor{
+				CreatedAt: secondCreatedAt,
+				ID:        10,
+			},
+		},
+	}
+	handler := newTestHandlerWithDependencies(
+		&recordingTeamService{},
+		&recordingServiceService{},
+		service,
+	)
+
+	request := httptest.NewRequest(
+		stdhttp.MethodGet,
+		"/v1/environments?service_id=7&limit=2",
+		nil,
+	)
+	recorder := httptest.NewRecorder()
+
+	handler.ServeHTTP(recorder, request)
+
+	response := recorder.Result()
+	defer response.Body.Close()
+
+	if response.StatusCode != stdhttp.StatusOK {
+		t.Fatalf("status = %d, want %d", response.StatusCode, stdhttp.StatusOK)
+	}
+	if service.listInput == nil {
+		t.Fatal("ListEnvironments() was not called")
+	}
+	if service.listInput.ServiceID == nil || *service.listInput.ServiceID != 7 {
+		t.Fatalf("ServiceID = %#v, want 7", service.listInput.ServiceID)
+	}
+	if service.listInput.Limit != 2 {
+		t.Fatalf("Limit = %d, want 2", service.listInput.Limit)
+	}
+	if service.listInput.After != nil {
+		t.Fatalf("After = %#v, want nil", service.listInput.After)
+	}
+
+	var got environmentPageResponse
+	if err := json.NewDecoder(response.Body).Decode(&got); err != nil {
+		t.Fatalf("decode response body: %v", err)
+	}
+	if len(got.Items) != 2 {
+		t.Fatalf("response item count = %d, want 2", len(got.Items))
+	}
+	if got.Items[0].ID != 11 || got.Items[0].Slug != "production" {
+		t.Fatalf(
+			"first response item = %#v, want production environment",
+			got.Items[0],
+		)
+	}
+	if got.Items[1].ID != 10 || got.Items[1].Slug != "staging" {
+		t.Fatalf(
+			"second response item = %#v, want staging environment",
+			got.Items[1],
+		)
+	}
+
+	next, err := decodeEnvironmentCursor(got.NextCursor)
+	if err != nil {
+		t.Fatalf("decode next cursor: %v", err)
+	}
+	if next.ID != 10 || !next.CreatedAt.Equal(secondCreatedAt) {
+		t.Fatalf("next cursor = %#v, want second environment cursor", next)
+	}
+}
+
+func TestHandlerListEnvironmentsWithCursor(t *testing.T) {
+	cursorCreatedAt := time.Date(
+		2026,
+		time.September,
+		7,
+		12,
+		0,
+		0,
+		0,
+		time.UTC,
+	)
+	cursor, err := encodeEnvironmentCursor(catalog.EnvironmentCursor{
+		CreatedAt: cursorCreatedAt,
+		ID:        11,
+	})
+	if err != nil {
+		t.Fatalf("encode cursor: %v", err)
+	}
+
+	service := &recordingEnvironmentService{
+		page: catalog.EnvironmentPage{
+			Environments: []catalog.Environment{
+				{
+					ID:        10,
+					ServiceID: 7,
+					Slug:      "staging",
+					Name:      "Staging",
+					CreatedAt: cursorCreatedAt.Add(-time.Minute),
+					UpdatedAt: cursorCreatedAt.Add(-time.Minute),
+				},
+			},
+		},
+	}
+	handler := newTestHandlerWithDependencies(
+		&recordingTeamService{},
+		&recordingServiceService{},
+		service,
+	)
+
+	request := httptest.NewRequest(
+		stdhttp.MethodGet,
+		"/v1/environments?service_id=7&limit=1&cursor="+cursor,
+		nil,
+	)
+	recorder := httptest.NewRecorder()
+
+	handler.ServeHTTP(recorder, request)
+
+	response := recorder.Result()
+	defer response.Body.Close()
+
+	if response.StatusCode != stdhttp.StatusOK {
+		t.Fatalf("status = %d, want %d", response.StatusCode, stdhttp.StatusOK)
+	}
+	if service.listInput == nil {
+		t.Fatal("ListEnvironments() was not called")
+	}
+	if service.listInput.ServiceID == nil || *service.listInput.ServiceID != 7 {
+		t.Fatalf("ServiceID = %#v, want 7", service.listInput.ServiceID)
+	}
+	if service.listInput.Limit != 1 {
+		t.Fatalf("Limit = %d, want 1", service.listInput.Limit)
+	}
+	if service.listInput.After == nil {
+		t.Fatal("After = nil, want cursor")
+	}
+	if service.listInput.After.ID != 11 {
+		t.Fatalf("After ID = %d, want 11", service.listInput.After.ID)
+	}
+	if !service.listInput.After.CreatedAt.Equal(cursorCreatedAt) {
+		t.Fatalf(
+			"After created_at = %s, want %s",
+			service.listInput.After.CreatedAt,
+			cursorCreatedAt,
+		)
+	}
+
+	var got environmentPageResponse
+	if err := json.NewDecoder(response.Body).Decode(&got); err != nil {
+		t.Fatalf("decode response body: %v", err)
+	}
+	if len(got.Items) != 1 || got.Items[0].ID != 10 {
+		t.Fatalf("response items = %#v, want staging environment", got.Items)
+	}
+	if got.NextCursor != "" {
+		t.Fatalf("next cursor = %q, want empty", got.NextCursor)
+	}
+}
+
+func TestHandlerListEnvironmentsRejectsInvalidQuery(t *testing.T) {
+	tests := []struct {
+		name        string
+		target      string
+		wantMessage string
+	}{
+		{
+			name:        "empty service ID",
+			target:      "/v1/environments?service_id=",
+			wantMessage: "service ID must be a positive integer",
+		},
+		{
+			name:        "non-positive service ID",
+			target:      "/v1/environments?service_id=0",
+			wantMessage: "service ID must be a positive integer",
+		},
+		{
+			name:        "empty limit",
+			target:      "/v1/environments?limit=",
+			wantMessage: "limit must be an integer",
+		},
+		{
+			name:        "non-positive limit",
+			target:      "/v1/environments?limit=0",
+			wantMessage: "limit must be between 1 and 100",
+		},
+		{
+			name:        "limit above maximum",
+			target:      "/v1/environments?limit=101",
+			wantMessage: "limit must be between 1 and 100",
+		},
+		{
+			name:        "invalid cursor",
+			target:      "/v1/environments?cursor=not-a-valid-cursor%21",
+			wantMessage: "cursor is invalid",
+		},
+		{
+			name:        "repeated limit",
+			target:      "/v1/environments?limit=1&limit=2",
+			wantMessage: "limit must be provided once",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			service := &recordingEnvironmentService{}
+			handler := newTestHandlerWithDependencies(
+				&recordingTeamService{},
+				&recordingServiceService{},
+				service,
+			)
+
+			request := httptest.NewRequest(stdhttp.MethodGet, tt.target, nil)
+			recorder := httptest.NewRecorder()
+
+			handler.ServeHTTP(recorder, request)
+
+			if service.listInput != nil {
+				t.Fatalf(
+					"ListEnvironments() input = %#v, want no call",
+					*service.listInput,
+				)
+			}
+			assertErrorResponse(
+				t,
+				recorder,
+				stdhttp.StatusBadRequest,
+				"invalid_argument",
+				tt.wantMessage,
+			)
+		})
+	}
+}
+
+func TestHandlerEnvironmentRejectsInvalidRequestBody(t *testing.T) {
+	tests := []struct {
+		name   string
+		method string
+		target string
+		body   string
+	}{
+		{
+			name:   "create unknown field",
+			method: stdhttp.MethodPost,
+			target: "/v1/environments",
+			body: `{
+					"service_id":7,
+					"slug":"production",
+					"name":"Production",
+					"unexpected":true
+				}`,
+		},
+		{
+			name:   "update null string",
+			method: stdhttp.MethodPatch,
+			target: "/v1/environments/11",
+			body:   `{"name":null}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			service := &recordingEnvironmentService{}
+			handler := newTestHandlerWithDependencies(
+				&recordingTeamService{},
+				&recordingServiceService{},
+				service,
+			)
+
+			request := newJSONRequest(tt.method, tt.target, tt.body)
+			recorder := httptest.NewRecorder()
+
+			handler.ServeHTTP(recorder, request)
+
+			if service.createInput != nil {
+				t.Fatalf(
+					"CreateEnvironment() input = %#v, want no call",
+					*service.createInput,
+				)
+			}
+			if service.updateInput != nil {
+				t.Fatalf(
+					"UpdateEnvironment() input = %#v, want no call",
+					*service.updateInput,
+				)
+			}
+			assertErrorResponse(
+				t,
+				recorder,
+				stdhttp.StatusBadRequest,
+				"invalid_argument",
+				"invalid request body",
+			)
+		})
+	}
+}
+
+func TestHandlerEnvironmentRejectsUnsupportedMediaType(t *testing.T) {
+	tests := []struct {
+		name   string
+		method string
+		target string
+		body   string
+	}{
+		{
+			name:   "create",
+			method: stdhttp.MethodPost,
+			target: "/v1/environments",
+			body:   `{"service_id":7,"slug":"production","name":"Production"}`,
+		},
+		{
+			name:   "update",
+			method: stdhttp.MethodPatch,
+			target: "/v1/environments/11",
+			body:   `{"name":"Production"}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			service := &recordingEnvironmentService{}
+			handler := newTestHandlerWithDependencies(
+				&recordingTeamService{},
+				&recordingServiceService{},
+				service,
+			)
+
+			request := httptest.NewRequest(
+				tt.method,
+				tt.target,
+				strings.NewReader(tt.body),
+			)
+			request.Header.Set("Content-Type", "text/plain")
+			recorder := httptest.NewRecorder()
+
+			handler.ServeHTTP(recorder, request)
+			if service.createInput != nil {
+				t.Fatalf(
+					"CreateEnvironment() input = %#v, want no call",
+					*service.createInput,
+				)
+			}
+			if service.updateInput != nil {
+				t.Fatalf(
+					"UpdateEnvironment() input = %#v, want no call",
+					*service.updateInput,
+				)
+			}
+			assertErrorResponse(
+				t,
+				recorder,
+				stdhttp.StatusUnsupportedMediaType,
+				"unsupported_media_type",
+				"content type must be application/json",
+			)
+		})
+	}
+}
+
 func newJSONRequest(
 	method string,
 	target string,
@@ -2187,7 +3119,15 @@ func newTestHandlerWithServices(
 	teams teamService,
 	services serviceService,
 ) stdhttp.Handler {
-	return requestid.Middleware(NewHandler(teams, services))
+	return newTestHandlerWithDependencies(teams, services, nil)
+}
+
+func newTestHandlerWithDependencies(
+	teams teamService,
+	services serviceService,
+	environments environmentService,
+) stdhttp.Handler {
+	return requestid.Middleware(NewHandler(teams, services, environments))
 }
 
 func assertErrorResponse(
@@ -2329,6 +3269,60 @@ func (s *recordingServiceService) UpdateService(
 }
 
 func (s *recordingServiceService) DeleteService(
+	_ context.Context,
+	id int64,
+) error {
+	s.deleteID = &id
+	return s.err
+}
+
+type recordingEnvironmentService struct {
+	createInput *catalog.CreateEnvironmentInput
+	getID       *int64
+	listInput   *catalog.ListEnvironmentsInput
+	updateID    *int64
+	updateInput *catalog.UpdateEnvironmentInput
+	deleteID    *int64
+	environment catalog.Environment
+	page        catalog.EnvironmentPage
+	err         error
+}
+
+func (s *recordingEnvironmentService) CreateEnvironment(
+	_ context.Context,
+	input catalog.CreateEnvironmentInput,
+) (catalog.Environment, error) {
+	s.createInput = &input
+	return s.environment, s.err
+}
+
+func (s *recordingEnvironmentService) GetEnvironmentByID(
+	_ context.Context,
+	id int64,
+) (catalog.Environment, error) {
+	s.getID = &id
+	return s.environment, s.err
+}
+
+func (s *recordingEnvironmentService) ListEnvironments(
+	_ context.Context,
+	input catalog.ListEnvironmentsInput,
+) (catalog.EnvironmentPage, error) {
+	s.listInput = &input
+	return s.page, s.err
+}
+
+func (s *recordingEnvironmentService) UpdateEnvironment(
+	_ context.Context,
+	id int64,
+	input catalog.UpdateEnvironmentInput,
+) (catalog.Environment, error) {
+	s.updateID = &id
+	s.updateInput = &input
+	return s.environment, s.err
+}
+
+func (s *recordingEnvironmentService) DeleteEnvironment(
 	_ context.Context,
 	id int64,
 ) error {

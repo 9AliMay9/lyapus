@@ -30,9 +30,9 @@
 - [x] Team repository CRUD、稳定游标分页与 PostgreSQL integration test 完成。
 - [x] Service Create/Get/List 与 `team_id` 过滤完成。
 - [x] Service PATCH/Delete 已由 PR #21 合入，形成完整 CRUD。
-- [ ] Environment CRUD 与 `service_id` 过滤完成。
+- [x] Environment CRUD 与 `service_id` 过滤完成本地实现和验证；功能分支 clean-runner 验收待完成。
 - [x] Service + 初始 Environment 在一个事务内原子创建。
-- [ ] 父资源不存在、唯一冲突和仍被引用的删除均映射为稳定业务错误。
+- [x] 父资源不存在、唯一冲突和仍被引用的删除均映射为稳定业务错误。
 - [x] 并发创建相同 `(team_id, service.slug)` 恰好一个成功、一个冲突。
 
 ## HTTP 与工程质量
@@ -49,6 +49,7 @@
 - [x] PR #15 的 required `verify`、`smoke` 与 `atlas-community` checks 覆盖数据库依赖和 Team 创建 API 最小路径；PR #17 的同三项 checks 验证 Team 单项读取与 `limit=1` 列表读取；PR #18 的同三项 checks 验证完整 Team HTTP CRUD 链路。
 - [x] Service Create/Get/List 施工包的 required `verify`、`smoke` 与 `atlas-community` checks 已在 PR #20 clean runner 通过。
 - [x] Service PATCH/Delete 施工包的 required `verify`、`smoke` 与 `atlas-community` checks 已在 PR #21 clean runner 通过。
+- [x] Environment CRUD、`service_id` 过滤和稳定游标分页已有单元、真实 PostgreSQL integration、race 与真实 HTTP 本地证据。
 
 ## 可复现交付与证据
 

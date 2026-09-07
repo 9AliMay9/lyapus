@@ -22,3 +22,11 @@ type ServiceRepository interface {
 	UpdateService(ctx context.Context, id int64, input UpdateServiceInput) (Service, error)
 	DeleteService(ctx context.Context, id int64) error
 }
+
+type EnvironmentRepository interface {
+	CreateEnvironment(ctx context.Context, input CreateEnvironmentInput) (Environment, error)
+	GetEnvironmentByID(ctx context.Context, id int64) (Environment, error)
+	ListEnvironments(ctx context.Context, input ListEnvironmentsInput) (EnvironmentPage, error)
+	UpdateEnvironment(ctx context.Context, id int64, input UpdateEnvironmentInput) (Environment, error)
+	DeleteEnvironment(ctx context.Context, id int64) error
+}

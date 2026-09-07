@@ -25,8 +25,9 @@ type teamService interface {
 }
 
 type Handler struct {
-	teams    teamService
-	services serviceService
+	teams        teamService
+	services     serviceService
+	environments environmentService
 }
 
 type createTeamRequest struct {
@@ -65,10 +66,12 @@ type teamPageResponse struct {
 func NewHandler(
 	teams teamService,
 	services serviceService,
+	environments environmentService,
 ) stdhttp.Handler {
 	handler := Handler{
-		teams:    teams,
-		services: services,
+		teams:        teams,
+		services:     services,
+		environments: environments,
 	}
 
 	router := chi.NewRouter()
@@ -94,14 +97,19 @@ func NewHandler(
 
 	router.Post("/v1/teams", handler.createTeam)
 	router.Post("/v1/services", handler.createService)
+	router.Post("/v1/environments", handler.createEnvironment)
 	router.Get("/v1/teams", handler.listTeams)
 	router.Get("/v1/services", handler.listServices)
+	router.Get("/v1/environments", handler.listEnvironments)
 	router.Get("/v1/teams/{team_id}", handler.getTeam)
 	router.Get("/v1/services/{service_id}", handler.getService)
+	router.Get("/v1/environments/{environment_id}", handler.getEnvironment)
 	router.Patch("/v1/teams/{team_id}", handler.updateTeam)
 	router.Patch("/v1/services/{service_id}", handler.updateService)
+	router.Patch("/v1/environments/{environment_id}", handler.updateEnvironment)
 	router.Delete("/v1/teams/{team_id}", handler.deleteTeam)
 	router.Delete("/v1/services/{service_id}", handler.deleteService)
+	router.Delete("/v1/environments/{environment_id}", handler.deleteEnvironment)
 
 	return router
 }
@@ -175,6 +183,29 @@ func (h Handler) createService(w stdhttp.ResponseWriter, r *stdhttp.Request) {
 	)
 }
 
+func (h Handler) createEnvironment(w stdhttp.ResponseWriter, r *stdhttp.Request) {
+	var request createEnvironmentRequest
+	if err := decodeJSONBody(w, r, &request); err != nil {
+		writeRequestBodyError(w, r, err)
+		return
+	}
+
+	environment, err := h.environments.CreateEnvironment(
+		r.Context(),
+		createEnvironmentInputFromRequest(request),
+	)
+	if err != nil {
+		writeCatalogError(w, err, requestid.FromContext(r.Context()))
+		return
+	}
+
+	writeJSON(
+		w,
+		stdhttp.StatusCreated,
+		environmentResponseFromCatalog(environment),
+	)
+}
+
 func (h Handler) getTeam(w stdhttp.ResponseWriter, r *stdhttp.Request) {
 	id, err := parsePositiveTeamID(chi.URLParam(r, "team_id"))
 	if err != nil {
@@ -205,6 +236,24 @@ func (h Handler) getService(w stdhttp.ResponseWriter, r *stdhttp.Request) {
 	}
 
 	writeJSON(w, stdhttp.StatusOK, serviceDetailResponseFromCatalog(detail))
+}
+
+func (h Handler) getEnvironment(w stdhttp.ResponseWriter, r *stdhttp.Request) {
+	id, err := parsePositiveEnvironmentID(
+		chi.URLParam(r, "environment_id"),
+	)
+	if err != nil {
+		writeCatalogError(w, err, requestid.FromContext(r.Context()))
+		return
+	}
+
+	environment, err := h.environments.GetEnvironmentByID(r.Context(), id)
+	if err != nil {
+		writeCatalogError(w, err, requestid.FromContext(r.Context()))
+		return
+	}
+
+	writeJSON(w, stdhttp.StatusOK, environmentResponseFromCatalog(environment))
 }
 
 func (h Handler) updateTeam(w stdhttp.ResponseWriter, r *stdhttp.Request) {
@@ -289,6 +338,51 @@ func (h Handler) deleteService(w stdhttp.ResponseWriter, r *stdhttp.Request) {
 	w.WriteHeader(stdhttp.StatusNoContent)
 }
 
+func (h Handler) updateEnvironment(w stdhttp.ResponseWriter, r *stdhttp.Request) {
+	id, err := parsePositiveEnvironmentID(
+		chi.URLParam(r, "environment_id"),
+	)
+	if err != nil {
+		writeCatalogError(w, err, requestid.FromContext(r.Context()))
+		return
+	}
+
+	var request updateEnvironmentRequest
+	if err := decodeJSONBody(w, r, &request); err != nil {
+		writeRequestBodyError(w, r, err)
+		return
+	}
+
+	environment, err := h.environments.UpdateEnvironment(
+		r.Context(),
+		id,
+		updateEnvironmentInputFromRequest(request),
+	)
+	if err != nil {
+		writeCatalogError(w, err, requestid.FromContext(r.Context()))
+		return
+	}
+
+	writeJSON(w, stdhttp.StatusOK, environmentResponseFromCatalog(environment))
+}
+
+func (h Handler) deleteEnvironment(w stdhttp.ResponseWriter, r *stdhttp.Request) {
+	id, err := parsePositiveEnvironmentID(
+		chi.URLParam(r, "environment_id"),
+	)
+	if err != nil {
+		writeCatalogError(w, err, requestid.FromContext(r.Context()))
+		return
+	}
+
+	if err := h.environments.DeleteEnvironment(r.Context(), id); err != nil {
+		writeCatalogError(w, err, requestid.FromContext(r.Context()))
+		return
+	}
+
+	w.WriteHeader(stdhttp.StatusNoContent)
+}
+
 func (h Handler) listTeams(w stdhttp.ResponseWriter, r *stdhttp.Request) {
 	input, err := parseListTeamsInput(r)
 	if err != nil {
@@ -342,6 +436,33 @@ func (h Handler) listServices(w stdhttp.ResponseWriter, r *stdhttp.Request) {
 		return
 	}
 
+	writeJSON(w, stdhttp.StatusOK, response)
+}
+
+func (h Handler) listEnvironments(w stdhttp.ResponseWriter, r *stdhttp.Request) {
+	input, err := parseListEnvironmentsInput(r)
+	if err != nil {
+		writeCatalogError(w, err, requestid.FromContext(r.Context()))
+		return
+	}
+
+	page, err := h.environments.ListEnvironments(r.Context(), input)
+	if err != nil {
+		writeCatalogError(w, err, requestid.FromContext(r.Context()))
+		return
+	}
+
+	response, err := environmentPageResponseFromCatalog(page)
+	if err != nil {
+		writeError(
+			w,
+			stdhttp.StatusInternalServerError,
+			"internal",
+			"internal server error",
+			requestid.FromContext(r.Context()),
+		)
+		return
+	}
 	writeJSON(w, stdhttp.StatusOK, response)
 }
 
@@ -443,6 +564,62 @@ func parseListServicesInput(
 	return input, nil
 }
 
+func parseListEnvironmentsInput(
+	r *stdhttp.Request,
+) (catalog.ListEnvironmentsInput, error) {
+	input := catalog.ListEnvironmentsInput{}
+	query := r.URL.Query()
+
+	serviceID, hasServiceID, err := singleQueryValue(query, "service_id")
+	if err != nil {
+		return catalog.ListEnvironmentsInput{}, err
+	}
+	if hasServiceID {
+		parsed, err := parsePositiveServiceID(serviceID)
+		if err != nil {
+			return catalog.ListEnvironmentsInput{}, err
+		}
+		input.ServiceID = &parsed
+	}
+
+	limit, hasLimit, err := singleQueryValue(query, "limit")
+	if err != nil {
+		return catalog.ListEnvironmentsInput{}, err
+	}
+	if hasLimit {
+		parsed, err := strconv.ParseInt(limit, 10, 64)
+		if err != nil {
+			message := "limit must be an integer"
+			if errors.Is(err, strconv.ErrRange) {
+				message = "limit must be between 1 and 100"
+			}
+			return catalog.ListEnvironmentsInput{}, &catalog.InvalidArgumentError{
+				Message: message,
+			}
+		}
+		if parsed < 1 || parsed > 100 {
+			return catalog.ListEnvironmentsInput{}, &catalog.InvalidArgumentError{
+				Message: "limit must be between 1 and 100",
+			}
+		}
+		input.Limit = int32(parsed)
+	}
+
+	cursor, hasCursor, err := singleQueryValue(query, "cursor")
+	if err != nil {
+		return catalog.ListEnvironmentsInput{}, err
+	}
+	if hasCursor {
+		after, err := decodeEnvironmentCursor(cursor)
+		if err != nil {
+			return catalog.ListEnvironmentsInput{}, err
+		}
+		input.After = &after
+	}
+
+	return input, nil
+}
+
 func singleQueryValue(query url.Values, name string) (string, bool, error) {
 	values, present := query[name]
 	if !present {
@@ -507,6 +684,34 @@ func servicePageResponseFromCatalog(
 	return response, nil
 }
 
+func environmentPageResponseFromCatalog(
+	page catalog.EnvironmentPage,
+) (environmentPageResponse, error) {
+	items := make([]environmentResponse, len(page.Environments))
+	for i, environment := range page.Environments {
+		items[i] = environmentResponseFromCatalog(environment)
+	}
+
+	response := environmentPageResponse{
+		Items: items,
+	}
+
+	if page.Next == nil {
+		return response, nil
+	}
+
+	cursor, err := encodeEnvironmentCursor(*page.Next)
+	if err != nil {
+		return environmentPageResponse{}, fmt.Errorf(
+			"encode next environment cursor: %w",
+			err,
+		)
+	}
+
+	response.NextCursor = cursor
+	return response, nil
+}
+
 func parsePositiveTeamID(value string) (int64, error) {
 	id, err := strconv.ParseInt(value, 10, 64)
 	if err != nil || id < 1 {
@@ -523,6 +728,17 @@ func parsePositiveServiceID(value string) (int64, error) {
 	if err != nil || id < 1 {
 		return 0, &catalog.InvalidArgumentError{
 			Message: "service ID must be a positive integer",
+		}
+	}
+
+	return id, nil
+}
+
+func parsePositiveEnvironmentID(value string) (int64, error) {
+	id, err := strconv.ParseInt(value, 10, 64)
+	if err != nil || id < 1 {
+		return 0, &catalog.InvalidArgumentError{
+			Message: "environment ID must be a positive integer",
 		}
 	}
 

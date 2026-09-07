@@ -8,10 +8,12 @@ import (
 )
 
 const (
-	defaultTeamListLimit    int32 = 20
-	maxTeamListLimit        int32 = 100
-	defaultServiceListLimit int32 = 20
-	maxServiceListLimit     int32 = 100
+	defaultTeamListLimit        int32 = 20
+	maxTeamListLimit            int32 = 100
+	defaultServiceListLimit     int32 = 20
+	maxServiceListLimit         int32 = 100
+	defaultEnvironmentListLimit int32 = 20
+	maxEnvironmentListLimit     int32 = 100
 )
 
 var teamSlugPattern = regexp.MustCompile(`^[a-z][a-z0-9-]{0,62}$`)
@@ -143,6 +145,81 @@ func (s *ServiceService) DeleteService(ctx context.Context, id int64) error {
 	return s.repository.DeleteService(ctx, id)
 }
 
+type EnvironmentService struct {
+	repository EnvironmentRepository
+}
+
+func NewEnvironmentService(
+	repository EnvironmentRepository,
+) *EnvironmentService {
+	return &EnvironmentService{
+		repository: repository,
+	}
+}
+
+func (s *EnvironmentService) CreateEnvironment(
+	ctx context.Context,
+	input CreateEnvironmentInput,
+) (Environment, error) {
+	normalized, err := normalizeCreateEnvironmentInput(input)
+	if err != nil {
+		return Environment{}, err
+	}
+
+	return s.repository.CreateEnvironment(ctx, normalized)
+}
+
+func (s *EnvironmentService) GetEnvironmentByID(
+	ctx context.Context,
+	id int64,
+) (Environment, error) {
+	if err := validateEnvironmentID(id); err != nil {
+		return Environment{}, err
+	}
+
+	return s.repository.GetEnvironmentByID(ctx, id)
+}
+
+func (s *EnvironmentService) ListEnvironments(
+	ctx context.Context,
+	input ListEnvironmentsInput,
+) (EnvironmentPage, error) {
+	normalized, err := normalizeListEnvironmentsInput(input)
+	if err != nil {
+		return EnvironmentPage{}, err
+	}
+
+	return s.repository.ListEnvironments(ctx, normalized)
+}
+
+func (s *EnvironmentService) UpdateEnvironment(
+	ctx context.Context,
+	id int64,
+	input UpdateEnvironmentInput,
+) (Environment, error) {
+	if err := validateEnvironmentID(id); err != nil {
+		return Environment{}, err
+	}
+
+	normalized, err := normalizeUpdateEnvironmentInput(input)
+	if err != nil {
+		return Environment{}, err
+	}
+
+	return s.repository.UpdateEnvironment(ctx, id, normalized)
+}
+
+func (s *EnvironmentService) DeleteEnvironment(
+	ctx context.Context,
+	id int64,
+) error {
+	if err := validateEnvironmentID(id); err != nil {
+		return err
+	}
+
+	return s.repository.DeleteEnvironment(ctx, id)
+}
+
 func normalizeCreateTeamInput(input CreateTeamInput) (CreateTeamInput, error) {
 	slug, err := normalizeTeamSlug(input.Slug)
 	if err != nil {
@@ -182,9 +259,9 @@ func normalizeCreateServiceInput(
 		return CreateServiceInput{}, err
 	}
 
-	environments := make([]CreateEnvironmentInput, len(input.Environments))
+	environments := make([]CreateInitialEnvironmentInput, len(input.Environments))
 	for i, environment := range input.Environments {
-		normalizedEnvironment, err := normalizeCreateEnvironmentInput(environment)
+		normalizedEnvironment, err := normalizeCreateInitialEnvironmentInput(environment)
 		if err != nil {
 			return CreateServiceInput{}, err
 		}
@@ -239,20 +316,20 @@ func normalizeUpdateServiceInput(
 	return normalized, nil
 }
 
-func normalizeCreateEnvironmentInput(
-	input CreateEnvironmentInput,
-) (CreateEnvironmentInput, error) {
+func normalizeCreateInitialEnvironmentInput(
+	input CreateInitialEnvironmentInput,
+) (CreateInitialEnvironmentInput, error) {
 	slug, err := normalizeServiceSlug(input.Slug)
 	if err != nil {
-		return CreateEnvironmentInput{}, err
+		return CreateInitialEnvironmentInput{}, err
 	}
 
 	name, err := normalizeServiceName(input.Name)
 	if err != nil {
-		return CreateEnvironmentInput{}, err
+		return CreateInitialEnvironmentInput{}, err
 	}
 
-	return CreateEnvironmentInput{
+	return CreateInitialEnvironmentInput{
 		Slug: slug,
 		Name: name,
 	}, nil
@@ -345,6 +422,102 @@ func normalizeListServicesInput(
 	return input, nil
 }
 
+func normalizeCreateEnvironmentInput(
+	input CreateEnvironmentInput,
+) (CreateEnvironmentInput, error) {
+	if err := validateServiceID(input.ServiceID); err != nil {
+		return CreateEnvironmentInput{}, err
+	}
+
+	slug, err := normalizeEnvironmentSlug(input.Slug)
+	if err != nil {
+		return CreateEnvironmentInput{}, err
+	}
+
+	name, err := normalizeEnvironmentName(input.Name)
+	if err != nil {
+		return CreateEnvironmentInput{}, err
+	}
+
+	return CreateEnvironmentInput{
+		ServiceID: input.ServiceID,
+		Slug:      slug,
+		Name:      name,
+	}, nil
+}
+
+func normalizeUpdateEnvironmentInput(
+	input UpdateEnvironmentInput,
+) (UpdateEnvironmentInput, error) {
+	if input.Slug == nil && input.Name == nil {
+		return UpdateEnvironmentInput{}, invalidTeamArgument(
+			"at least one field must be provided",
+		)
+	}
+
+	var normalized UpdateEnvironmentInput
+
+	if input.Slug != nil {
+		slug, err := normalizeEnvironmentSlug(*input.Slug)
+		if err != nil {
+			return UpdateEnvironmentInput{}, err
+		}
+		normalized.Slug = &slug
+	}
+
+	if input.Name != nil {
+		name, err := normalizeEnvironmentName(*input.Name)
+		if err != nil {
+			return UpdateEnvironmentInput{}, err
+		}
+		normalized.Name = &name
+	}
+
+	return normalized, nil
+}
+
+func normalizeListEnvironmentsInput(
+	input ListEnvironmentsInput,
+) (ListEnvironmentsInput, error) {
+	if input.ServiceID != nil {
+		if err := validateServiceID(*input.ServiceID); err != nil {
+			return ListEnvironmentsInput{}, err
+		}
+
+		serviceID := *input.ServiceID
+		input.ServiceID = &serviceID
+	}
+
+	switch {
+	case input.Limit == 0:
+		input.Limit = defaultEnvironmentListLimit
+	case input.Limit < 0 || input.Limit > maxEnvironmentListLimit:
+		return ListEnvironmentsInput{}, invalidTeamArgument(
+			"limit must be between 1 and 100",
+		)
+	}
+
+	if input.After == nil {
+		return input, nil
+	}
+	if input.After.ID < 1 {
+		return ListEnvironmentsInput{}, invalidTeamArgument(
+			"cursor ID must be positive",
+		)
+	}
+	if input.After.CreatedAt.IsZero() {
+		return ListEnvironmentsInput{}, invalidTeamArgument(
+			"cursor created_at must be set",
+		)
+	}
+
+	after := *input.After
+	after.CreatedAt = after.CreatedAt.UTC()
+	input.After = &after
+
+	return input, nil
+}
+
 func validateTeamID(id int64) error {
 	if id < 1 {
 		return invalidTeamArgument("team ID must be positive")
@@ -356,6 +529,14 @@ func validateTeamID(id int64) error {
 func validateServiceID(id int64) error {
 	if id < 1 {
 		return invalidTeamArgument("service ID must be positive")
+	}
+
+	return nil
+}
+
+func validateEnvironmentID(id int64) error {
+	if id < 1 {
+		return invalidTeamArgument("environment ID must be positive")
 	}
 
 	return nil
@@ -383,6 +564,14 @@ func normalizeTeamName(name string) (string, error) {
 }
 
 func normalizeServiceName(name string) (string, error) {
+	return normalizeTeamName(name)
+}
+
+func normalizeEnvironmentSlug(slug string) (string, error) {
+	return normalizeTeamSlug(slug)
+}
+
+func normalizeEnvironmentName(name string) (string, error) {
 	return normalizeTeamName(name)
 }
 

@@ -1,6 +1,6 @@
 # M1 实际实施结果
 
-状态：M1 尚未完成；数据库基础设施、完整 Team HTTP CRUD、经 clean runner 验证的 Service HTTP CRUD、初始 Environment 事务创建和并发正确性已完成；Environment 独立 CRUD 与 `service_id` 过滤已完成本地验证，clean-runner 待验收。以下只记录已发生的事实。
+状态：M1 尚未完成；数据库基础设施、完整 Team HTTP CRUD、经 clean runner 验证的 Service HTTP CRUD、初始 Environment 事务创建和并发正确性已完成；Environment 独立 CRUD 与 `service_id` 过滤已在 PR #23 完成本地及 required clean-runner 验证，等待合并。以下只记录已发生的事实。
 
 ## 实际完成
 
@@ -41,13 +41,14 @@
 - 2026-08-25，Service Update/Delete 的 domain、SQL/sqlc、PostgreSQL adapter 与 HTTP transport 实现完成。普通测试、`go test -race ./...`、真实 PostgreSQL integration race 和独立 `_test` 库上的 `make verify` 通过，漏洞扫描为 `No vulnerabilities found.`。开发库实测名称 PATCH 保留未提供字段、description 显式 `null`、引用删除 409、无子资源删除 204 与删除后 GET 404；响应与完成日志 request ID 一致。API 经 `Ctrl-C` 优雅停止，开发与测试容器均已停止并自动删除。
 - 2026-08-26，PR #21 的 required `verify`、`smoke` 与 `atlas-community` checks 全部通过。clean-runner smoke 在独立 `service-smoke` Team 下验证 Service PATCH 保留 description、显式 `null` 清空、带 Environment 删除返回 409、无 Environment 删除返回空 204，以及删除后单项 GET 返回结构化 404；所有错误响应均核对 request ID 一致性。
 - 2026-09-07，Environment domain/service、独立 SQL/sqlc、PostgreSQL adapter 与 HTTP transport 完成本地实现。真实 PostgreSQL integration test 覆盖 Create/Get/Update/Delete、缺失父 Service、同 Service slug 冲突、全局及 `service_id` 过滤的两页稳定游标分页；普通、race、integration 与完整 `make verify` 均通过，漏洞扫描为 `No vulnerabilities found.`。
-- 2026-09-07，在可丢弃 PostgreSQL 16.14 开发库完成 migration dry-run、apply、status 后，实测 Team、Service 与两个 Environment 创建，Environment 单项读取、`service_id=1&limit=1` 两页列表、名称 PATCH、重复 slug 冲突、DELETE 204 与删除后 404。响应、错误信封和完成日志 request ID 符合契约；开发与测试容器均已停止并自动删除。功能分支的 clean-runner smoke 尚未执行。
+- 2026-09-07，在可丢弃 PostgreSQL 16.14 开发库完成 migration dry-run、apply、status 后，实测 Team、Service 与两个 Environment 创建，Environment 单项读取、`service_id=1&limit=1` 两页列表、名称 PATCH、重复 slug 冲突、DELETE 204 与删除后 404。响应、错误信封和完成日志 request ID 符合契约；开发与测试容器均已停止并自动删除。
+- 2026-09-07，PR #23 的 required `verify`、`smoke` 与 `atlas-community` checks 全部通过。clean-runner smoke 在独立 Service 下验证 Environment 创建、单项读取、按 `service_id` 的两页 cursor 列表、PATCH 字段保留、重复 slug 409、DELETE 空 204 与删除后结构化 404；成功与错误响应均检查 request ID。
 
 ## 与计划的偏差
 
 - 尚未引入 Compose；本次使用一次性容器仅作为运行证据，不能替代最终 Compose 空环境验收。
 - `/readyz` 暂时返回最小探针体 `{"status":"not_ready"}`；它已有全局 request-ID，但尚未改成 catalog 的错误信封，仍应保持健康探针的最小契约。
-- 三类资源 CRUD 已在源码和本地环境实现；Environment 纵切面尚无功能分支 clean-runner 证据，因此不能写成已合入或已完成 PR 验收。
+- 三类资源 CRUD 已在源码、本地环境和 required clean runner 验证；PR #23 尚未合并，因此不能写成已进入 `main`。
 - 初版 Service smoke 把 Service 创建到既有 `ci-smoke` Team 下，令后续 Team DELETE 正确返回 409 而非旧断言的 204。该失败暴露的是测试数据归属冲突，不是应用缺陷；修复后将 Service 链路改用独立父 Team，并在同一 PR 的 clean runner 通过。
 
 ## 证据

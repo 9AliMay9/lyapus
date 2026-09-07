@@ -21,9 +21,9 @@
 - 实现保持模块化单体边界：domain/service 位于 `internal/catalog`，SQL/sqlc 与 pgx 错误分类留在 PostgreSQL adapter，HTTP DTO/cursor/handler 留在 catalog transport，`cmd/apiserver` 只负责装配。
 - 独立 `environments.sql` 与 HTTP 文件按资源职责拆分；Service detail 仍复用 Environment 查询，不引入跨层生成类型泄漏或无真实复用需求的通用抽象。
 - 本纵切面符合施工包与 v3.1 M1 最小版对 Service/Environment 模型、CRUD、校验、错误、分页/过滤和真实数据库测试的要求；没有扩大到 RBAC、审计、复杂幂等、k6 或 pprof 深度项。
-- `.github/workflows/verify.yml` 已覆盖 Environment 创建、单项读取、过滤分页、PATCH、冲突、DELETE 与删除后 404；PR #23 的 required `verify`、`smoke` 与 `atlas-community` checks 全部通过。PR 尚未合并。
+- `.github/workflows/verify.yml` 已覆盖 Environment 创建、单项读取、过滤分页、PATCH、冲突、DELETE 与删除后 404；PR #23 的 required `verify`、`smoke` 与 `atlas-community` checks 全部通过，并以 squash commit `4b311b9` 合入 `main`。
 
 ## 下一步
 
-- 推送 CI 事实回填并复验 required checks，随后 squash merge PR #23。
-- 合并后回填最终 commit；随后进入 Compose 空环境交付，查询计划实验仍是 M1 v0.1 的独立阻塞项。
+- 先补绕过 Go 校验的真实 PostgreSQL 约束行为矩阵，尤其是格式、长度和 `updated_at >= created_at` 等尚无直接证据的 `CHECK`。
+- 随后进入 Compose 空环境交付并补根 README 演示；查询计划实验仍是 M1 v0.1 的独立阻塞项。

@@ -118,7 +118,33 @@ git log -1 --oneline
 
 ## 常见失败处理
 
-`Permission denied (publickey)` 通常表示当前终端没有启动 agent、私钥未加入 agent，或 GitHub 账号尚未添加对应公钥。重新执行“恢复 SSH agent”中的三条命令；不要改用明文密码、上传私钥，或关闭 SSH 主机验证。若网页已删除远程分支而本地仍显示 `remotes/origin/<branch>`，恢复 SSH 身份后执行 `git fetch --prune` 清理过期远程引用。
+`Permission denied (publickey)` 通常表示当前终端没有启动 agent、私钥未加入 agent，或 GitHub 账号尚未添加对应公钥。重新执行“恢复 SSH agent”中的三条命令；不要改用明文密码、上传私钥，或关闭 SSH 主机验证。
+
+`ssh: connect to host github.com port 22: Connection timed out` 表示尚未进入密钥认证，优先按网络问题处理。先比较 GitHub SSH 的 22 端口与官方备用 443 端口：
+
+```bash
+nc -vz -w 5 github.com 22
+nc -vz -w 5 ssh.github.com 443
+ssh -G github.com |
+  rg '^(hostname|user|port|proxycommand|proxyjump|identityfile) '
+```
+
+若 22 超时而 443 可达，先验证备用端点：
+
+```bash
+ssh -T -p 443 git@ssh.github.com
+```
+
+首次连接 `[ssh.github.com]:443` 时必须核对主机指纹，不能盲目接受。GitHub 当前公布的 Ed25519 指纹为 `SHA256:+DiY3wvvV6TuJJhbpZisF/zLDA0zPMSvHdkr4UvCOqU`；仍应以 [GitHub 官方 SSH key fingerprints](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/githubs-ssh-key-fingerprints) 页面为最终依据。认证成功后，可只为本次 Git 命令改走 443：
+
+```bash
+GIT_SSH_COMMAND='ssh -p 443 -o HostName=ssh.github.com' \
+  git push -u origin <branch>
+```
+
+该命令保留现有 `origin`，不修改全局或仓库 SSH 配置。若 22 之后恢复，普通 `git push` 仍按原配置连接；只有长期、可重复地受限时，才另行审阅并持久化 SSH config。不要用关闭 host-key 检查、改用明文密码或复制私钥来绕过连接问题。
+
+若网页已删除远程分支而本地仍显示 `remotes/origin/<branch>`，恢复 SSH 身份后执行 `git fetch --prune` 清理过期远程引用。
 
 ## 会话结束与密钥处置
 

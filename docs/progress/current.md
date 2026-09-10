@@ -4,7 +4,7 @@
 
 - 当前阶段：M0 已完成终局审计；M1 已完成数据库基础设施和 Team、Service、Environment 三类资源的完整 HTTP CRUD 纵切面。Team CRUD/稳定分页施工包已由 PR #13 以 squash commit `f4df01f` 合入 `main`；Team service、创建 API、全局 request ID 与 API smoke 已由 PR #15 以 squash commit `8e84c20` 合入 `main`；Team HTTP read 与 cursor 分页已由 PR #17 以 squash commit `284021e` 合入 `main`；Team HTTP mutate 已由 PR #18 以 squash commit `de7e2d3` 合入 `main`；Service Create/Get/List、初始 Environment 事务创建和并发冲突已由 PR #20 以 squash commit `43c627d` 合入 `main`；Service PATCH/Delete 已由 PR #21 以 squash commit `41f2651` 合入 `main`；Environment 独立 CRUD 与 `service_id` 过滤已由 PR #23 以 squash commit `4b311b9` 合入 `main`。
 - M0 结论：真实实现完整满足仓库内施工包，并基本符合原始 v3.1 工程基线预期，可以进入 M1。
-- M1 状态：施工包、Atlas 决策、schema、两份 versioned migration、sqlc 基线与 CI 门禁已完成；`LYAPUS_DATABASE_URL`、`pgxpool` 启动 Ping/关闭路径及数据库感知 `/readyz` 已完成并作真实运行验证。三类资源均已具备 repository/service/HTTP CRUD、本地与 required clean-runner 证据。Service 支持全局及 `team_id` 过滤的稳定游标分页，并以显式事务原子创建 Service 与可选初始 Environment；两个独立 repository 并发创建同一 Service 已验证恰好一个成功、一个冲突。Environment 支持全局及 `service_id` 过滤的稳定游标分页。严格 JSON、415 媒体类型、统一错误、全局 request ID 与不透明 cursor 保持既有边界。M1 v0.1 仍缺完整的真实 PostgreSQL `CHECK` 约束行为矩阵、Compose 空环境交付、查询计划实验和根 README 的数据模型/API/五分钟演示。
+- M1 状态：施工包、Atlas 决策、schema、两份 versioned migration、sqlc 基线与 CI 门禁已完成；`LYAPUS_DATABASE_URL`、`pgxpool` 启动 Ping/关闭路径及数据库感知 `/readyz` 已完成并作真实运行验证。三类资源均已具备 repository/service/HTTP CRUD、本地与 required clean-runner 证据。Service 支持全局及 `team_id` 过滤的稳定游标分页，并以显式事务原子创建 Service 与可选初始 Environment；两个独立 repository 并发创建同一 Service 已验证恰好一个成功、一个冲突。Environment 支持全局及 `service_id` 过滤的稳定游标分页。严格 JSON、415 媒体类型、统一错误、全局 request ID 与不透明 cursor 保持既有边界。当前 `test/catalog-db-constraints` 分支已完成直接 SQL 约束测试和本地收口审阅：17 个函数、100 个子测试分段通过，integration race 与 `make verify` 通过；尚待本次 PR/CI 与合并。M1 v0.1 仍缺 Compose 空环境交付、查询计划实验和根 README 的数据模型/API/五分钟演示。
 - M1 最小范围：Team、Service、Environment CRUD，PostgreSQL migration/约束/事务/并发正确性，单元与真实数据库测试，Compose 空环境复现，以及一份查询计划优化记录。
 - M1 默认实现：Go 1.26.6、PostgreSQL 16.14、`pgx/v5` + `pgxpool`、chi/v5、sqlc 1.31.1、手写 SQL + repository adapter、identity bigint 和不透明游标。chi 保持标准 HTTP handler；sqlc 生成类型不越过 PostgreSQL adapter。选择理由与适用边界见施工包。
 - Migration 已由 ADR-0004 最终确定：P-0001 完成固定 Atlas Community v1.2.0 的两次 migration（空库 apply、已有库前滚、重复 apply、status 与完整性篡改拦截）、同一 `db/schema.sql` 的 sqlc 1.31.1 解析/生成、本机可复现 Community 构建，以及 PR #8 中 required `atlas-community` CI 实跑。未来触发退出条件时才以新 ADR 记录并回退 `golang-migrate`。
@@ -30,15 +30,15 @@
 ## 与原始 v3.1 M1 最小版的差距
 
 - 已成立：Service/Environment/归属模型，三类资源 CRUD、校验、统一错误、分页/过滤，关键单元测试、真实数据库 repository 测试和 race，以及 Service + 初始 Environment 事务与并发唯一冲突。
-- 部分成立：migration、外键和唯一约束已有真实证据；schema 中格式、长度、时间 `CHECK` 已声明，但尚缺绕过 Go 校验的直接 PostgreSQL 成功/失败测试，因此原始最小项 3 不能整体勾选。
+- 约束实证本地成立：当前分支已补齐本次清单要求的字段 CHECK 插入边界、唯一性范围、外键和引用删除测试；结合既有 migration、事务与并发证据，原始最小项 3 的本地证据已具备，本次 PR/CI 与合并仍待完成。未穷尽 NULL、UPDATE 或全部 Unicode 空白行为。
 - 尚未成立：Docker Compose 从空 project/空卷复现；带数据量、SQL、参数及 `EXPLAIN (ANALYZE, BUFFERS)` 的索引前后查询计划记录；根 README 的数据模型、API 示例和五分钟演示路径。
 - 不阻塞 v0.1：API Token、最小 RBAC、审计日志、复杂幂等/乐观并发、更丰富过滤排序、HTTP E2E、k6 与 pprof 均属于原始“深度增强”，当前未实现也不得写成最小版缺陷。
 
 ## 下一次从这里开始
 
-1. 先确认基线：`git status --short --branch` 应显示干净的 `main...origin/main`，`git log -1 --oneline` 应为 `4b311b9 feat: add environment catalog API (#23)`；若本次文档同步已经另行合并，则以该文档 PR 的 squash commit 为准。
-2. 首读 `docs/project-context.md`、`docs/standards/README.md`、本文件、`docs/stages/m1-go-backend/{README,plan,contracts,checklist,outcome}.md`、ADR-0004、数据库 migration/integration runbook，以及 `docs/progress/sessions/2026-09-07-environment-catalog.md`。
-3. 第一段建议建立 `test/catalog-db-constraints`：用绕过 Go domain 校验的真实 SQL integration tests 补齐 FK、unique、slug/name/description 格式或长度、`updated_at >= created_at` 的成功/失败矩阵；不放宽 domain 校验，也不修改已经正确的 schema。完成独立 `_test` 数据库验证和 `make verify` 后收口 PR。
+1. 当前工作分支为 `test/catalog-db-constraints`，基线 commit 为 `7a9fa16 docs: align post-PR-23 audit (#24)`；新增测试和本次文档尚未提交，不应期待干净的 main。先用 `git status --short --branch` 确认实际状态并保留工作区修改。
+2. 首读 `docs/project-context.md`、`docs/standards/README.md`、本文件、`docs/stages/m1-go-backend/{README,plan,contracts,checklist,outcome}.md`、ADR-0004、数据库 migration/integration runbook，以及 `docs/progress/sessions/2026-09-10-catalog-db-constraints.md`。
+3. 本次约束测试已通过本地 integration race、`make verify` 和收口审阅。下一步由项目所有者按 GitHub runbook 提交测试及文档、创建 PR，核对 required `verify`、`smoke`、`atlas-community` 后合并并同步 main；将真实 PR/commit/CI 结果回填，不能提前写成已合并。临时测试容器尚未收到停止确认，清理时先确认实际目标。
 4. 随后建立 `feat/m1-compose-delivery`：增加 Dockerfile、固定 PostgreSQL 16.14 的 Compose、显式 migration 步骤、API 启动/健康顺序、dev/test 隔离和空 project/空卷验收；migration 不进入应用启动路径。同步补齐根 README 的数据模型、API 示例和五分钟演示。
 5. 再以独立实验完成 Service 按 Team 游标列表的查询计划与索引前后证据；最后执行 M1 v0.1 总验收与 release 收口。不要提前进入 M1 深度增强或 M2。
 
@@ -46,6 +46,7 @@
 
 ## 协作审阅约定
 
+- 2026-09-10 起，所有手敲代码按“手敲完成 → 静态复查与必要修正 → 运行验证 → 下一段”推进；静态复查也检查助手交付代码本身的正确性，不能仅核对转写。具体规则以 `../standards/collaboration.md` 为准，替代此前静态复查通过即交付下一段的顺序。
 - 日常学习、施工和测试解释使用适合连续协作的模型配置；阶段设计、高影响判断和收口一致性审阅使用当时可用的高能力配置。
 - 功能性 PR、独立施工包或阶段达到收口点时，协作助手先提醒并等待项目所有者明确确认模型/参数已经调整，再开始核对实现、施工包、原始方案、证据和文档一致性。
 - 完整触发条件、审阅范围和例外以 `../standards/collaboration.md` 的“高能力收口审阅门禁”为准；该约定是协作流程，不是项目运行时依赖或对外承诺。

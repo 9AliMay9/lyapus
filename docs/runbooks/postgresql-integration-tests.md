@@ -19,6 +19,20 @@ LYAPUS_TEST_DATABASE_URL="$LYAPUS_TEST_DATABASE_URL" make integration
 
 预期 `go test -tags=integration -count=1 ./...` 实际运行。若变量缺失，`make integration` 必须以明确错误退出；若数据库名不以 `_test` 结尾，测试辅助代码必须拒绝执行。
 
+## 约束测试与整体回归
+
+新增 `constraints_integration_test.go` 直接执行 SQL，检查三表字段 CHECK 插入边界、唯一性范围、外键和引用删除。代码手敲完成后先静态复查，修正并复查通过后再运行。已配置上述独立测试库时，可依次执行：
+
+```bash
+go test -tags=integration -count=1 -v -run '^TestCatalogConstraintsIntegration' ./internal/catalog/postgres
+go test -tags=integration -race -count=1 ./internal/catalog/postgres
+make verify
+```
+
+当前约束矩阵应运行 17 个函数、100 个子测试；`no tests to run` 不算通过。后两条命令用于施工包整体回归，不必在每次手敲一个函数后重复运行。`make verify` 的普通 race 不含 integration 标签，因此整体回归单独执行 integration race。不要同时启动这些命令，它们共享会被清空的测试表。
+
+本地通过记录及证据边界见 [约束测试收口复盘](../progress/sessions/2026-09-10-catalog-db-constraints.md)。
+
 ## 清理与失败处理
 
 - 测试开始时会通过 `TRUNCATE ... RESTART IDENTITY CASCADE` 清理 catalog 表；只可对已通过 `_test` 保护的可丢弃数据库运行。

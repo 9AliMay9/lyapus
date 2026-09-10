@@ -21,6 +21,8 @@
 
 ## 验证
 
+- 2026-09-10，当前 `test/catalog-db-constraints` 分支新增直接 SQL 约束测试：17 个函数、100 个子测试分段通过。项目所有者在 PostgreSQL 16.14 临时 `_test` 库完成两份 migration 的 dry-run/apply/status（版本 `20260729030502`，pending 0）；随后 `go test -tags=integration -race -count=1 ./internal/catalog/postgres` 通过（4.594s），`make verify` 全部通过，漏洞扫描为 `No vulnerabilities found.`。本次收口审阅已在项目所有者确认配置后完成；尚无本分支 PR/CI 或合并证据。详细覆盖与限制见 `../../progress/sessions/2026-09-10-catalog-db-constraints.md`。
+
 - `go test ./...`：2026-07-30 本地通过。
 - 使用一次性 PostgreSQL 16.14 容器：应用启动时 Ping 成功，`/livez` 与 `/readyz` 均返回 200。
 - 保持 API 进程运行时停止数据库：`/livez` 仍返回 200，`/readyz` 返回 503；重新建立同配置数据库后，未重启 API 的 `/readyz` 恢复 200。
@@ -48,7 +50,7 @@
 
 - 尚未引入 Compose；本次使用一次性容器仅作为运行证据，不能替代最终 Compose 空环境验收。
 - `/readyz` 暂时返回最小探针体 `{"status":"not_ready"}`；它已有全局 request-ID，但尚未改成 catalog 的错误信封，仍应保持健康探针的最小契约。
-- 三类资源 CRUD 已在源码、本地环境和 required clean runner 验证，并全部进入 `main`。schema 已声明外键、唯一以及格式、长度和时间 `CHECK`，但现有集成测试尚未用绕过 Go 校验的真实 SQL 完整证明所有 `CHECK` 成功/失败行为。
+- 三类资源 CRUD 已在源码、本地环境和 required clean runner 验证，并全部进入 `main`。当前分支已用直接 SQL 验证字段 CHECK 插入边界、唯一性范围、外键及引用删除；本地验证与收口审阅完成，本次 PR/CI 与合并尚待完成。测试未穷尽 NULL、UPDATE 与 Unicode 空白组合，不将选定边界用例称为所有数据库行为的证明。
 - 初版 Service smoke 把 Service 创建到既有 `ci-smoke` Team 下，令后续 Team DELETE 正确返回 409 而非旧断言的 204。该失败暴露的是测试数据归属冲突，不是应用缺陷；修复后将 Service 链路改用独立父 Team，并在同一 PR 的 clean runner 通过。
 
 ## 证据

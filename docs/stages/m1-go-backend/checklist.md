@@ -21,7 +21,8 @@
 - [x] `/livez` 保持进程语义；`/readyz` 真实反映数据库可用性和超时。
 - [x] 建立 `db/schema.sql`、首个 versioned migration 和完整性校验文件。
 - [x] 空库 apply、重复 apply 与 status 验证通过。
-- [ ] 使用绕过 Go 校验的真实 SQL 用例验证外键、唯一、slug/name/description 格式或长度及 `updated_at >= created_at` 约束的成功/失败行为；现有 repository integration 已覆盖外键与唯一冲突，尚未完整覆盖 `CHECK`。
+- [x] 使用绕过 Go 校验的真实 SQL 用例验证外键、唯一、slug/name/description 格式或长度及 `updated_at >= created_at` 约束的成功/失败行为；当前分支 17 个函数、100 个子测试本地通过，覆盖字段 CHECK 插入边界与引用删除，并通过 integration race 和 `make verify`。
+- [ ] 本次约束测试施工包通过 required `verify`、`smoke`、`atlas-community` CI 并合入 `main`。
 - [x] migration runbook 已按实际工具命令验证。
 
 ## 数据模型与业务

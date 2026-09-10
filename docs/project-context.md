@@ -6,7 +6,7 @@
 
 ## 当前范围
 
-- M0 工程基线已经完成终局审计；M1 已完成 migration、数据库基础设施，以及 Team、Service、Environment 三类资源的完整 HTTP CRUD。Environment 独立 CRUD 与 `service_id` 过滤已由 PR #23 以 squash commit `4b311b9` 合入 `main`。数据库约束实证已在当前分支完成本地验证与收口审阅，尚待 PR/CI 和合并；M1 v0.1 仍缺 Compose 空环境交付、查询计划实验和根 README 演示文档。
+- M0 工程基线已经完成终局审计；M1 已完成 migration、数据库基础设施，以及 Team、Service、Environment 三类资源的完整 HTTP CRUD。Environment 独立 CRUD 与 `service_id` 过滤已由 PR #23 以 squash commit `4b311b9` 合入 `main`。数据库约束实证已完成本地验证、收口审阅与 required CI，并由 PR #25 以 `51fd1d2` 合入 `main`；M1 v0.1 仍缺 Compose 空环境交付、查询计划实验和根 README 演示文档。
 - 近期可投递目标是 M1–M3；M4–M8 是后续演化路线，不是当前阻塞项。
 - 首先做模块化单体；不为制造“微服务感”提前拆分服务。
 - 当前主仓库的规范地址：`github.com/9AliMay9/lyapus`。

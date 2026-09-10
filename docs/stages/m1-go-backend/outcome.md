@@ -21,7 +21,7 @@
 
 ## 验证
 
-- 2026-09-10，当前 `test/catalog-db-constraints` 分支新增直接 SQL 约束测试：17 个函数、100 个子测试分段通过。项目所有者在 PostgreSQL 16.14 临时 `_test` 库完成两份 migration 的 dry-run/apply/status（版本 `20260729030502`，pending 0）；随后 `go test -tags=integration -race -count=1 ./internal/catalog/postgres` 通过（4.594s），`make verify` 全部通过，漏洞扫描为 `No vulnerabilities found.`。本次收口审阅已在项目所有者确认配置后完成；尚无本分支 PR/CI 或合并证据。详细覆盖与限制见 `../../progress/sessions/2026-09-10-catalog-db-constraints.md`。
+- 2026-09-10，`test/catalog-db-constraints` 分支新增直接 SQL 约束测试：17 个函数、100 个子测试分段通过。项目所有者在 PostgreSQL 16.14 临时 `_test` 库完成两份 migration 的 dry-run/apply/status（版本 `20260729030502`，pending 0）；随后 `go test -tags=integration -race -count=1 ./internal/catalog/postgres` 通过（4.594s），`make verify` 全部通过，漏洞扫描为 `No vulnerabilities found.`。本次收口审阅已在项目所有者确认配置后完成；PR #25 的 required `verify`、`smoke`、`atlas-community` 全部通过，已以 `51fd1d2` 合入 `main`。详细覆盖与限制见 `../../progress/sessions/2026-09-10-catalog-db-constraints.md`。
 
 - `go test ./...`：2026-07-30 本地通过。
 - 使用一次性 PostgreSQL 16.14 容器：应用启动时 Ping 成功，`/livez` 与 `/readyz` 均返回 200。
@@ -50,12 +50,12 @@
 
 - 尚未引入 Compose；本次使用一次性容器仅作为运行证据，不能替代最终 Compose 空环境验收。
 - `/readyz` 暂时返回最小探针体 `{"status":"not_ready"}`；它已有全局 request-ID，但尚未改成 catalog 的错误信封，仍应保持健康探针的最小契约。
-- 三类资源 CRUD 已在源码、本地环境和 required clean runner 验证，并全部进入 `main`。当前分支已用直接 SQL 验证字段 CHECK 插入边界、唯一性范围、外键及引用删除；本地验证与收口审阅完成，本次 PR/CI 与合并尚待完成。测试未穷尽 NULL、UPDATE 与 Unicode 空白组合，不将选定边界用例称为所有数据库行为的证明。
+- 三类资源 CRUD 已在源码、本地环境和 required clean runner 验证，并全部进入 `main`。PR #25 已用直接 SQL 验证字段 CHECK 插入边界、唯一性范围、外键及引用删除；本地验证、收口审阅与 required CI 完成，已以 `51fd1d2` 合入 `main`。测试未穷尽 NULL、UPDATE 与 Unicode 空白组合，不将选定边界用例称为所有数据库行为的证明。
 - 初版 Service smoke 把 Service 创建到既有 `ci-smoke` Team 下，令后续 Team DELETE 正确返回 409 而非旧断言的 204。该失败暴露的是测试数据归属冲突，不是应用缺陷；修复后将 Service 链路改用独立父 Team，并在同一 PR 的 clean runner 通过。
 
 ## 证据
 
-- Git commit / release：数据库基础设施已由 `df0154d`（PR #10）合入；Team Create/Get repository 已由 `57f19d4`（PR #11）合入；Team CRUD/稳定分页已由 `f4df01f`（PR #13）合入；Team service/创建 API 已由 `8e84c20`（PR #15）合入；Team HTTP read 已由 `284021e`（PR #17）合入；Team HTTP mutate 已由 `de7e2d3`（PR #18）合入；Service Create/Get/List 已由 `43c627d`（PR #20）合入；Service mutation 已由 `41f2651`（PR #21）合入；Environment catalog 已由 `4b311b9`（PR #23）合入；M1 release 待完成。
+- Git commit / release：数据库基础设施已由 `df0154d`（PR #10）合入；Team Create/Get repository 已由 `57f19d4`（PR #11）合入；Team CRUD/稳定分页已由 `f4df01f`（PR #13）合入；Team service/创建 API 已由 `8e84c20`（PR #15）合入；Team HTTP read 已由 `284021e`（PR #17）合入；Team HTTP mutate 已由 `de7e2d3`（PR #18）合入；Service Create/Get/List 已由 `43c627d`（PR #20）合入；Service mutation 已由 `41f2651`（PR #21）合入；Environment catalog 已由 `4b311b9`（PR #23）合入；约束测试已由 `51fd1d2`（PR #25）合入；M1 release 待完成。
 - Migration ADR 与 runbook：ADR-0004 与 migration runbook 已完成。
 - 查询计划 benchmark：待完成。
 - 会话与学习记录：数据库基础设施及 Team、Service、Environment 纵切面会话已记录；M1 总结待完成。

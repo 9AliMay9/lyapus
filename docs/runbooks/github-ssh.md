@@ -44,8 +44,8 @@ git push -u origin <branch>
 
 1. 在 GitHub 页面创建以 `main` 为 base 的 Pull Request。
 2. 确认 Files changed 只包含本次预期范围；不要把临时探针、凭据或无关格式化混入。
-3. 等待全部 required checks 成功。若失败，修复同一分支后再次推送；不要绕过 required checks。
-4. 选择适合本次变更的合并方式；短生命周期、多个临时 commit 的分支通常使用 squash merge。
+3. 等待第一轮 required checks 成功。若失败，修复同一分支后再次推送；不要绕过 required checks。
+4. 在同一分支补充 CI run 链接、验证范围与限制，完成收口审阅和相关文档同步，然后再次 commit/push 更新原 PR。不要另建第二个 PR。最新提交的 required checks 全部通过后才合并；文档已齐备时不强制增加提交。最后一轮成功由 PR/Checks 保存，不为回填该结果再次提交。短生命周期、多个临时 commit 的分支通常使用 squash merge。
 5. 合并后在本地执行：
 
 ```bash
@@ -55,6 +55,8 @@ git status --short
 ```
 
 确认工作区干净后，再删除已完成的本地与远程分支。若是 squash merge，本地 Git 可能不会把原分支识别为已合并；确认 PR 已合并且分支只含该任务后，才使用 `git branch -D <branch>` 清理本地引用。
+
+完整约定见 [同一 PR 内完成 CI 证据与文档收口](../standards/collaboration.md#同一-pr-内完成-ci-证据与文档收口)。一次成功记录不代表长期稳定性；合并 SHA 在发生前不得预填，合并后可按需集中补入后续阶段总结，不默认创建额外的合并确认分支。
 
 ## 可选：GitHub CLI
 

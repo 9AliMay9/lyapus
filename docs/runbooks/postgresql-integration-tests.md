@@ -4,7 +4,7 @@
 
 本 runbook 用真实 PostgreSQL 验证 repository 的 SQL、sqlc adapter、数据库约束与错误分类。它只适用于可丢弃的测试数据库；测试代码会拒绝数据库名不以 `_test` 结尾的 URL，但操作者仍须在运行前确认目标。
 
-应用启动不执行 migration；测试数据库必须先按 [数据库 migration](database-migrations.md) 显式建立。一次性本地容器是当前开发验证路径，不替代尚未完成的 Compose 空环境交付。
+应用启动不执行 migration；测试数据库必须先按 [数据库 migration](database-migrations.md) 显式建立。独立 Compose project 的本地已验证流程见 [Compose 交付](compose-delivery.md)。
 
 ## 本地运行
 
@@ -37,7 +37,7 @@ make verify
 
 - 测试开始时会通过 `TRUNCATE ... RESTART IDENTITY CASCADE` 清理 catalog 表；只可对已通过 `_test` 保护的可丢弃数据库运行。
 - migration 失败时先运行 `migrate status`，检查 migration 历史与 `atlas.sum`；不要修改已应用 migration 来“修复”测试库。
-- 测试结束后停止一次性容器会自动删除其数据。对持久测试数据库的清理必须先确认名称与连接目标。
+- 只有使用 `--rm` 且没有持久挂载的一次性容器才会在停止后自动删除其数据。Compose 命名卷不随容器停止自动删除；删除测试卷前必须确认 project、卷标签与目标。开发库也以 `_test` 结尾，后缀检查不能防止误连开发库。
 
 ## CI 边界
 

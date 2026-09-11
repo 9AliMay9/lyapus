@@ -80,7 +80,7 @@
 5. **业务服务（三类资源完成）**：Team、Service 与 Environment 的业务边界已集中在 catalog service；Service 创建输入包含可选初始 Environment 并保持 repository 事务边界，mutation 保持归属不可变并支持 description 显式清空。Environment 校验、更新字段与列表输入沿用同级稳定契约。
 6. **HTTP transport（三类资源完成）**：chi、全局 request ID、严格 JSON/媒体类型、错误工具、完成日志与三类资源 HTTP CRUD 已接真实 repository；Service 创建与单项 GET 展开 Environment，集合与 PATCH 不展开。Environment CRUD、`service_id` 过滤与 cursor 分页已由 PR #23 通过 required clean-runner smoke，并以 squash commit `4b311b9` 合入 `main`。
 7. **约束实证（已完成）**：直接 SQL integration tests 的 17 个函数、100 个子测试覆盖字段 CHECK 插入边界、唯一性范围、外键及引用删除；integration race 与 `make verify` 通过，收口审阅与 required CI 完成，PR #25 已以 `51fd1d2` 合入 `main`。schema 与历史 migration 未修改。
-8. **交付路径**：建立 Dockerfile、Compose、migration runbook，确保空 project/空卷可以按顺序完成 migration、启动和 API 演示；同步补齐根 README 的数据模型、API 示例和五分钟路径。
+8. **交付路径（本地验证完成，CI 待补）**：Dockerfile、Compose、新 project/空卷显式迁移、API 演示、数据库中断恢复和独立测试清理已在本地验证；README 与 runbook 已补齐。仍需容器交付 clean-runner 检查、最终文本复走及退出验收。
 9. **查询计划实验**：构造明确数据规模，对 Service 按 Team 的游标列表查询保存索引前后证据。
 10. **收口**：更新根 README、架构图、知识笔记、`outcome.md` 和当前进度；在 clean runner 与空 Compose project 上完成最终验收。
 
@@ -150,7 +150,8 @@ make race
 make integration
 make verify
 docker compose config
-docker compose up --build
+# 按 Compose runbook 显式迁移后再启动 API，不以空库直接 up 替代迁移。
+docker compose -p lyapus-dev up -d --no-build --pull never apiserver
 ```
 
 最终验收还必须包含 API CRUD 示例、数据库不可用时 `/readyz` 失败、并发冲突、空卷迁移和查询计划实验；命令与结果记录在 `outcome.md` 及对应证据文档。

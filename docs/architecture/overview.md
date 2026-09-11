@@ -25,7 +25,7 @@ internal/catalog domain ←── PostgreSQL repository adapter ←── sqlcge
 - HTTP server 为每个请求生成 request ID，并输出含 request ID、方法、路径、状态、耗时的 JSON 完成日志；收到 `SIGINT` 或 `SIGTERM` 后以 10 秒超时执行优雅关闭。
 - `internal/catalog` 已有 Team、Service 与 Environment domain model，三类资源均具备 repository/service/HTTP CRUD。Service 与 Environment 列表使用基于 `(created_at, id)` 的稳定游标分页，并分别支持 `team_id` 与 `service_id` 等值过滤。创建 Service 与可选初始 Environment 使用一个显式 pgx 事务；Service 创建与单项 GET 响应展开 Environment，集合与 PATCH 响应不展开。Service PATCH 区分 description 未提供、字符串和显式 `null`，DELETE 在仍有 Environment 时返回冲突。chi、HTTP DTO 与 sqlc 类型均未进入 domain。
 
-Environment 独立 CRUD 已由 PR #23 通过 required clean runner，并以 squash commit `4b311b9` 合入 `main`。当前仍未实现 Compose、Kafka、OpenTelemetry、Kubernetes、前端或 AI 组件；这些内容不能画入已实现数据流。PR #25 新增 `constraints_integration_test.go`，以直接 SQL 验证三表字段 CHECK 插入边界、唯一性范围、外键与引用删除；17 个测试函数、100 个子测试已有本地通过证据，并通过 integration race 与 `make verify`。本次仅增加测试，运行时架构和 schema 不变；三项 required CI 已通过，并以 `51fd1d2` 合入 `main`。
+Environment 独立 CRUD 已由 PR #23 通过 required clean runner，并以 squash commit `4b311b9` 合入 `main`。Compose 本地运行路径已实现（见根目录 `compose.yaml`）；当前仍未实现 Kafka、OpenTelemetry、Kubernetes、前端或 AI 组件；这些内容不能画入已实现数据流。PR #25 新增 `constraints_integration_test.go`，以直接 SQL 验证三表字段 CHECK 插入边界、唯一性范围、外键与引用删除；17 个测试函数、100 个子测试已有本地通过证据，并通过 integration race 与 `make verify`。本次仅增加测试，运行时架构和 schema 不变；三项 required CI 已通过，并以 `51fd1d2` 合入 `main`。
 
 ## 与原始目录示意的映射
 
@@ -39,6 +39,6 @@ v3.1 方案书的 M0–M2 目录树是职责与演化方向示意，不是要求
 | `migrations` | `db/schema.sql`、`db/migrations`、`db/queries` | 将声明式 schema、版本迁移和 sqlc 查询集中在同一数据库目录；职责未减少。 |
 | `tests/integration` | 各包内 `*_integration_test.go` | 测试与被测 adapter 同包放置，仍通过 `integration` build tag 和独立 `_test` 数据库运行。 |
 | `docs/adr` | `docs/architecture/decisions` | 使用完整名称区分 accepted decision 与 proposal。 |
-| `deploy/compose`、`configs`、`cmd/worker`、`internal/auth` | 尚未建立 | 对应能力尚未进入当前实现；遵守“不提前建立空目录”。Compose 会在 M1 交付施工包中建立，worker/auth 分别等待后续真实需求。 |
+| `deploy/compose`、`configs`、`cmd/worker`、`internal/auth` | 尚未建立 | 对应能力尚未进入当前实现；遵守“不提前建立空目录”。Compose 已直接使用根目录 `compose.yaml`，不新增 `deploy/compose` 空目录，worker/auth 分别等待后续真实需求。 |
 
 这些差异保持方案书的结构规则：单一 Go module、`cmd/` 只装配、业务默认进入 `internal/`、数据库类型不泄漏到 API、没有真实第二用例前不抽象通用层。

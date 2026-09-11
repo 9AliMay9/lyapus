@@ -21,6 +21,10 @@
 
 ## 验证
 
+- 2026-09-11 补充：Compose API 停止后 exit 0、OOMKilled=false，日志确认关闭信号与 server 停止，重启后 readiness 200；独立 `compose` CI job 已实现且静态复查通过，实跑及 required 配置待确认。
+
+- 2026-09-11，Compose 本地开发/测试隔离、空卷显式迁移、API 创建回读和数据库恢复全部通过；integration race 为 4.562s，完整 `make verify` 无漏洞发现。测试 project/卷已清理，开发演示数据保留。本次新容器交付 CI 尚未运行；细节见 [Compose 复盘](../../progress/sessions/2026-09-11-compose-delivery.md)。
+
 - 2026-09-10，`test/catalog-db-constraints` 分支新增直接 SQL 约束测试：17 个函数、100 个子测试分段通过。项目所有者在 PostgreSQL 16.14 临时 `_test` 库完成两份 migration 的 dry-run/apply/status（版本 `20260729030502`，pending 0）；随后 `go test -tags=integration -race -count=1 ./internal/catalog/postgres` 通过（4.594s），`make verify` 全部通过，漏洞扫描为 `No vulnerabilities found.`。本次收口审阅已在项目所有者确认配置后完成；PR #25 的 required `verify`、`smoke`、`atlas-community` 全部通过，已以 `51fd1d2` 合入 `main`。详细覆盖与限制见 `../../progress/sessions/2026-09-10-catalog-db-constraints.md`。
 
 - `go test ./...`：2026-07-30 本地通过。
@@ -48,7 +52,7 @@
 
 ## 与计划的偏差
 
-- 尚未引入 Compose；本次使用一次性容器仅作为运行证据，不能替代最终 Compose 空环境验收。
+- 2026-09-11 已在本机新 Compose project/卷完成显式迁移、API 启动、读写、中断恢复和 dev/test 隔离；当前 CI smoke 仍使用 go run，容器交付 clean-runner 与最终 README 复走尚待完成。详见 [本轮复盘](../../progress/sessions/2026-09-11-compose-delivery.md)。
 - `/readyz` 暂时返回最小探针体 `{"status":"not_ready"}`；它已有全局 request-ID，但尚未改成 catalog 的错误信封，仍应保持健康探针的最小契约。
 - 三类资源 CRUD 已在源码、本地环境和 required clean runner 验证，并全部进入 `main`。PR #25 已用直接 SQL 验证字段 CHECK 插入边界、唯一性范围、外键及引用删除；本地验证、收口审阅与 required CI 完成，已以 `51fd1d2` 合入 `main`。测试未穷尽 NULL、UPDATE 与 Unicode 空白组合，不将选定边界用例称为所有数据库行为的证明。
 - 初版 Service smoke 把 Service 创建到既有 `ci-smoke` Team 下，令后续 Team DELETE 正确返回 409 而非旧断言的 204。该失败暴露的是测试数据归属冲突，不是应用缺陷；修复后将 Service 链路改用独立父 Team，并在同一 PR 的 clean runner 通过。

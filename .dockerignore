@@ -1,0 +1,25 @@
+# Repository and assistant metadata
+.git
+.agents
+.codex
+
+# Local environment files
+.env
+.env.*
+
+# Local tools and build artifacts
+.tools
+bin
+coverage.out
+**/*.test
+**/*.out
+
+# Temporary files and logs
+tmp
+**/*.log
+
+# Editor files
+.idea
+.vscode
+**/*.swp
+**/*.swo

@@ -55,9 +55,9 @@
 
 ## 可复现交付与证据
 
-- [x] Dockerfile 与 Compose 本地新 project/新卷建立数据库、宿主机 Atlas 显式迁移并启动 API；容器交付 CI 仍待验收。
+- [x] Dockerfile 与 Compose 本地新 project/新卷建立数据库、宿主机 Atlas 显式迁移并启动 API；容器交付首轮 CI 已通过。
 - [x] 停止数据库后 `/livez` 仍成功而 `/readyz` 返回 503；恢复后 readiness 恢复。
-- [x] 根 README 包含数据模型、API 示例和五分钟演示路径（依赖/镜像已准备；最终文本待复走，不声明全新主机计时通过）。
+- [x] 根 README 包含数据模型、API 示例和五分钟演示路径（依赖/镜像已准备；独立 project 业务演示已复走，不声明全新主机计时通过）。
 - [ ] Service 按 Team 列表查询有明确数据量与索引前后的 `EXPLAIN (ANALYZE, BUFFERS)` 证据。
 - [ ] 查询优化记录注明环境、数据量、SQL、参数、结果和限制。
 - [ ] `outcome.md`、当前架构、学习笔记、进度和会话记录均按实际结果更新。

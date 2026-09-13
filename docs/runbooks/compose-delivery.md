@@ -113,6 +113,6 @@ docker volume ls --filter name=lyapus-integration_postgres_data
 
 预期容器和卷为空，开发 API 仍能读取原数据。本次开发 project 和开发卷有意保留，不声明已清理，也不对其执行 `down --volumes`。
 
-失败时保留最小日志检查，勿重算历史 migration checksum、关闭 TLS 校验或清卷重试来掩盖原因。诊断入口：`docker compose -p <目标project> logs --tail=80 <服务名>`。数据库停止后的恢复命令见上节。最终没有运行新提交的 CI，不把本地成功写成 clean-runner 成功。
+失败时保留最小日志检查，勿重算历史 migration checksum、关闭 TLS 校验或清卷重试来掩盖原因。诊断入口：`docker compose -p <目标project> logs --tail=80 <服务名>`。数据库停止后的恢复命令见上节。PR #27 首轮 compose CI 已通过；后续提交仍须等待最新 required checks，不能以旧结果替代。
 
 依据：[Compose 网络](https://docs.docker.com/compose/how-tos/networking/)、[项目名称与隔离](https://docs.docker.com/compose/how-tos/project-name/)。

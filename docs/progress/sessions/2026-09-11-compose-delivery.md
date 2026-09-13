@@ -24,11 +24,21 @@
 
 ## 尚未完成的验收
 
-- 原 CI smoke 继续使用 `go run`；已在同一 workflow 新增独立 `compose` job，覆盖镜像构建、新数据库迁移、探针、Team 创建/回读、诊断和清理。新增 job 已通过 YAML 解析、Bash 语法检查和静态复查，尚未实跑。项目所有者同意将它加入合并门禁；实际 ruleset 配置与首次 CI 证据仍待确认，不能声明已经成为 required check。
-- 新 README/操作手册尚待按最终文本复走；五分钟是已准备好工具/镜像后的演示路径，不是全新机器下载与启动计时承诺。
+- 原 CI smoke 继续使用 `go run`；已在同一 workflow 新增独立 `compose` job，覆盖镜像构建、新数据库迁移、探针、Team 创建/回读、诊断和清理。新增 job 已通过静态复查及 PR #27 首轮实跑；2026-09-12 的 `gh pr checks 27 --required` 输出确认它与原三项共同成为 required checks，且四项均成功。
+- 2026-09-13 已在独立 project 复走 README 业务演示（替代端口、已有镜像）；五分钟是已准备好工具/镜像后的演示路径，不是全新机器下载与启动计时承诺。
 - Compose API 停止验收已补齐：`docker compose -p lyapus-dev stop apiserver` 后 `status=exited exit=0 oom=false`，日志包含 `shutdown_signal_received` 和 `http_server_stopped`；重新启动后 readiness 200。证明本次停止/恢复，不证明有在途长请求时的排空行为。
 - M1 查询计划实验、最终资源记录、最终验收及 release 未完成。当前审阅和文档同步完成不等于交付包可立即合并。
 
 ## 学习要点
+
+### 2026-09-13 独立演示复走与清理
+
+使用 `lyapus-readme-check` project、新卷、`lyapus_readme_test` 库、数据库端口 55434 和 API 端口 8081，复用已有镜像，避免影响原开发环境。实际库名与两份迁移 dry-run 输出已核对；本轮 apply/status 完成由项目所有者确认，不将缺少的终端输出重构为独立记录。两个健康端点 200，Team 与带两个 Environment 的 Service 创建 201；名称转写错误经 PATCH 修正为 200，Team 列表、Service 过滤列表/详情、Environment 过滤列表均 200。证明已有工具与镜像条件下的业务演示复走，不是全新机器构建或五分钟计时证明。
+
+清理前核对了两个容器和卷 project 标签；`down --volumes` 实际删除本轮两个容器、网络和卷，专用连接变量已 unset，之后容器及卷列表为空。演示卷数据已删除不保留；原开发 API 8080 仍返回 200 和 2026-09-11 的原 Service、两个 Environment，开发 project 与镜像有意保留。
+
+### 2026-09-12 CI 与门禁补证
+
+PR #27 首次提交 `7cdac0c` 的 [Actions run 34615373246](https://github.com/9AliMay9/lyapus/actions/runs/34615373246) 四项均成功：atlas-community 35s、compose 1m16s、smoke 52s、verify 2m41s。项目所有者提供 required-only 输出，确认四项都属于合并门禁。它证明本次 clean-runner 构建、显式迁移、健康检查和 Team 写入回读，不证明长期稳定性、完整 Compose CRUD 或 dev/test 隔离的 CI 覆盖；后两者相应依赖既有 smoke 和本地证据。最终 README 业务演示复走已完成，文档提交后最新 CI 仍待完成，不提前记录合并。
 
 服务名是内部 DNS 与地址解耦，不是隐藏宿主机 IP；容器 loopback 与宿主机 loopback 不同；镜像可以共享而卷不共享；`LYAPUS_TEST_DATABASE_URL` 不会重配已运行 API。URL 中的 `&` 必须用引号保护，否则 shell 会后台执行前半段命令。

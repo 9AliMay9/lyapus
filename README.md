@@ -2,7 +2,7 @@
 
 一个以 Go 为主语言、以 OpenTelemetry 为遥测标准、以 SLO 与故障闭环为可靠性核心，并逐步演化为平台工程与 AI 可观测性实践的项目。
 
-M0（工程基线）已经完成。M1 正在施工：当前已有 PostgreSQL migration、`pgxpool` 启动与 readiness、sqlc 基线，以及 Team、Service、Environment 三类资源的完整 HTTP CRUD。Environment 独立 CRUD 与 `service_id` 过滤已由 PR #23 以 squash commit `4b311b9` 合入 `main`。数据库约束测试已通过本地验证、收口审阅及三项 required CI，并由 PR #25 以 squash commit `51fd1d2` 合入 `main`。Compose 本地新 project/新卷交付、隔离测试和中断恢复已验证，README 演示路径已补齐；本次容器交付的 clean-runner 验收、查询计划实验及 M1 最终验收仍待完成。当前也没有消息队列、OpenTelemetry、前端或 AI 功能。
+M0（工程基线）已经完成。M1 正在施工：当前已有 PostgreSQL migration、`pgxpool` 启动与 readiness、sqlc 基线，以及 Team、Service、Environment 三类资源的完整 HTTP CRUD。Environment 独立 CRUD 与 `service_id` 过滤已由 PR #23 以 squash commit `4b311b9` 合入 `main`。数据库约束测试已通过本地验证、收口审阅及三项 required CI，并由 PR #25 以 squash commit `51fd1d2` 合入 `main`。Compose 本地新 project/新卷交付、隔离测试和中断恢复已验证，README 演示路径已补齐；本次容器交付首轮 CI 与独立 project 演示复走已通过；查询计划实验及 M1 最终验收仍待完成。当前也没有消息队列、OpenTelemetry、前端或 AI 功能。
 
 ## 前置条件
 
@@ -55,7 +55,7 @@ Team 1 ── N Service 1 ── N Environment
 
 ## 五分钟演示路径（依赖与镜像已准备）
 
-先按 Compose runbook 完成数据库迁移与 API 启动。这是演示步骤，不承诺首次下载、构建或全新主机在五分钟内完成；最终文档尚待复走。以下创建会保留演示数据，重复执行可能返回 409，不要为重跑清空未知数据库。
+先按 Compose runbook 完成数据库迁移与 API 启动。这是演示步骤，不承诺首次下载、构建或全新主机在五分钟内完成；2026-09-13 已在独立 project、新卷和替代端口上复走业务演示，复用已构建镜像，未作计时验收。以下创建会保留演示数据，重复执行可能返回 409，不要为重跑清空未知数据库。
 
 ```bash
 curl --noproxy '*' --silent --show-error --include --max-time 10 http://127.0.0.1:8080/livez
@@ -116,13 +116,13 @@ curl -fsS http://127.0.0.1:8080/readyz
 
 - 后续容器常态总内存目标不高于约 6 GiB，为操作系统、云端 Agent、页缓存和峰值留出余量；M0 尚无应用容器，因此该目标尚未形成容量结论。
 - 磁盘使用达到 70% 时预警并停止扩张实验数据；达到 80% 时停止新的数据写入实验，先保存证据并清理。
-- M0 不产生持久业务数据；M1 当前只引入必要的 PostgreSQL dev/test 数据，Compose 本地路径已验证，clean-runner 验收仍待完成；M2 增加受控故障工作负载与 Kafka 数据；M3 通过短保留期和 TTL 控制遥测数据。每阶段都要重新记录实际峰值，不能把预算当成已验证容量。
+- M0 不产生持久业务数据；M1 当前只引入必要的 PostgreSQL dev/test 数据，Compose 本地路径已验证，首轮 clean-runner 验收已通过；M2 增加受控故障工作负载与 Kafka 数据；M3 通过短保留期和 TTL 控制遥测数据。每阶段都要重新记录实际峰值，不能把预算当成已验证容量。
 
 详细的脱敏测量见 [M0 空闲资源基线](docs/benchmarks/m0-idle-resource-baseline.md)。实例身份、真实 IP、账单、租期、代理端口和私有运维配置不进入公开仓库。
 
 ## 贡献与合并
 
-对 `main` 的改动使用短生命周期分支和 Pull Request。`protect-main` ruleset 要求分支与目标分支保持最新，并要求 `verify`、`smoke`、`atlas-community` 三个检查通过；不要绕过检查或直接向 `main` 推送。完整操作见 [GitHub SSH 与 PR runbook](docs/runbooks/github-ssh.md)。
+对 `main` 的改动使用短生命周期分支和 Pull Request。`protect-main` ruleset 要求分支与目标分支保持最新，并要求 `verify`、`smoke`、`atlas-community`、`compose` 四个检查通过；不要绕过检查或直接向 `main` 推送。完整操作见 [GitHub SSH 与 PR runbook](docs/runbooks/github-ssh.md)。
 
 ## 文档
 

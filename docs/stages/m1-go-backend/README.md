@@ -1,6 +1,6 @@
 # M1：常规 Go 后端
 
-状态：Atlas migration、schema/sqlc 基线、数据库基础设施，以及 Team、Service、Environment 三类资源的完整 HTTP CRUD 已完成；Environment 纵切面已由 PR #23 以 squash commit `4b311b9` 合入 `main`。数据库约束实证已完成本地验证、收口审阅与 required CI，并由 PR #25 以 `51fd1d2` 合入 `main`；Compose 本地空 project/空卷路径已验证，README 演示文档已建立；容器交付 clean-runner 验收、查询计划实验仍待完成，M1 v0.1 尚未完成。
+状态：Atlas migration、schema/sqlc 基线、数据库基础设施，以及 Team、Service、Environment 三类资源的完整 HTTP CRUD 已完成；Environment 纵切面已由 PR #23 以 squash commit `4b311b9` 合入 `main`。数据库约束实证已完成本地验证、收口审阅与 required CI，并由 PR #25 以 `51fd1d2` 合入 `main`；Compose 本地空 project/空卷路径已验证，README 演示文档已建立；容器交付首轮 CI 和演示复走已通过；查询计划实验仍待完成，M1 v0.1 尚未完成。
 
 施工前依次阅读：
 

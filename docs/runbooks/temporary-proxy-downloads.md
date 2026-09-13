@@ -29,6 +29,7 @@ env \
 
 - `go install`、`curl`、包管理器或其他由当前 shell 启动的 HTTPS 下载：使用本 runbook 的临时环境。
 - `docker pull`：由常驻的 Docker/containerd systemd 服务发起；shell 前缀不会配置它们，应使用 Docker daemon runbook。
+- `docker build`：客户端认证、daemon 镜像拉取和构建容器依赖下载是不同作用域；临时 shell 环境不会自动传给 Dockerfile 的 `RUN`。本机回环代理的已验证构建方式见 [三层代理排障](docker-daemon-proxy.md#构建时的三层代理2026-09-11-已验证)。
 - `git@github.com:...`：使用 SSH 身份与 ssh-agent；HTTP 代理变量不能替代 SSH key。
 
 若仍失败，记录脱敏错误并区分 DNS、连接本地代理、CONNECT/TLS、上游认证和实际依赖版本，不要同时改动无关网络配置。

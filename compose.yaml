@@ -1,0 +1,43 @@
+services:
+  postgres:
+    image: postgres:16.14
+    environment:
+      POSTGRES_USER: lyapus
+      POSTGRES_PASSWORD: lyapus
+      POSTGRES_DB: "${LYAPUS_POSTGRES_DB:-lyapus_dev_test}"
+    ports:
+      - "127.0.0.1:${LYAPUS_POSTGRES_PORT:-55432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          PGPASSWORD="$${POSTGRES_PASSWORD}"
+          psql -h 127.0.0.1
+          -U "$${POSTGRES_USER}"
+          -d "$${POSTGRES_DB}"
+          -v ON_ERROR_STOP=1
+          -c 'SELECT 1' >/dev/null
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
+    stop_grace_period: 30s
+
+  apiserver:
+    image: lyapus-apiserver:m1-dev
+    build:
+      context: .
+    environment:
+      LYAPUS_HTTP_ADDR: "0.0.0.0:8080"
+      LYAPUS_DATABASE_URL: "postgres://lyapus:lyapus@postgres:5432/${LYAPUS_POSTGRES_DB:-lyapus_dev_test}?sslmode=disable"
+    ports:
+      - "127.0.0.1:${LYAPUS_HTTP_PORT:-8080}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    stop_grace_period: 15s
+
+volumes:
+  postgres_data:

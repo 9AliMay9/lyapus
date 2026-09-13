@@ -825,3 +825,144 @@ jobs:
             cat created.headers created.json missing.headers missing.json server.log
             exit 1
           fi
+
+  compose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    env:
+      COMPOSE_PROJECT_NAME: lyapus-compose-ci
+      LYAPUS_POSTGRES_DB: lyapus_compose_ci_test
+      LYAPUS_POSTGRES_PORT: "55432"
+      LYAPUS_HTTP_PORT: "8080"
+      LYAPUS_DATABASE_URL: "postgres://lyapus:lyapus@127.0.0.1:55432/lyapus_compose_ci_test?sslmode=disable"
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Build pinned Atlas Community
+        run: ./scripts/install-atlas-community.sh
+
+      - name: Validate Compose and build API image
+        run: |
+          set -euo pipefail
+
+          docker compose config --quiet
+          docker compose --progress plain build apiserver
+
+      - name: Start database and apply migrations
+        run: |
+          set -euo pipefail
+
+          docker compose up -d --wait --wait-timeout 120 postgres
+
+          ./.tools/bin/atlas migrate apply \
+            --dir "file://db/migrations" \
+            --url "$LYAPUS_DATABASE_URL"
+
+          ./.tools/bin/atlas migrate status \
+            --dir "file://db/migrations" \
+            --url "$LYAPUS_DATABASE_URL"
+
+          ./.tools/bin/atlas migrate apply \
+            --dir "file://db/migrations" \
+            --url "$LYAPUS_DATABASE_URL"
+
+      - name: Start API and verify container delivery
+        run: |
+          set -euo pipefail
+
+          docker compose up -d --no-build --pull never apiserver
+
+          ready=false
+          for _ in $(seq 1 30); do
+            if curl --noproxy '*' --fail --silent --show-error \
+              --max-time 2 \
+              http://127.0.0.1:8080/readyz >/dev/null; then
+              ready=true
+              break
+            fi
+            sleep 1
+          done
+
+          if [ "$ready" != true ]; then
+            echo "API did not become ready" >&2
+            exit 1
+          fi
+
+          for endpoint in livez readyz; do
+            status="$(
+              curl --noproxy '*' --silent --show-error \
+                --max-time 10 \
+                --output "$endpoint.json" \
+                --write-out '%{http_code}' \
+                "http://127.0.0.1:8080/$endpoint"
+            )"
+            test "$status" = 200
+            python3 -c 'import json, sys; assert json.load(open(sys.argv[1])) == {"status": "ok"}' "$endpoint.json"
+          done
+
+          created_status="$(
+            curl --noproxy '*' --silent --show-error \
+              --max-time 10 \
+              --request POST \
+              --header 'Content-Type: application/json' \
+              --data '{"slug":"compose-ci","name":"Compose CI"}' \
+              --output compose-created.json \
+              --write-out '%{http_code}' \
+              http://127.0.0.1:8080/v1/teams
+          )"
+          test "$created_status" = 201
+
+          created_id="$(
+            python3 -c '
+          import json
+          data = json.load(open("compose-created.json"))
+          assert type(data["id"]) is int and data["id"] > 0
+          assert data["slug"] == "compose-ci"
+          assert data["name"] == "Compose CI"
+          print(data["id"])
+          '
+          )"
+
+          get_status="$(
+            curl --noproxy '*' --silent --show-error \
+              --max-time 10 \
+              --output compose-get.json \
+              --write-out '%{http_code}' \
+              "http://127.0.0.1:8080/v1/teams/$created_id"
+          )"
+          test "$get_status" = 200
+
+          python3 -c '
+          import json
+          created = json.load(open("compose-created.json"))
+          fetched = json.load(open("compose-get.json"))
+          assert fetched == created
+          '
+
+      - name: Show Compose diagnostics
+        if: always()
+        run: |
+          docker compose ps -a
+          docker compose logs --no-color --tail=100
+          for response in livez.json readyz.json compose-created.json compose-get.json; do
+            if [ -f "$response" ]; then
+              cat "$response"
+            fi
+          done
+
+      - name: Clean up Compose project
+        if: always()
+        run: docker compose down --volumes --remove-orphans

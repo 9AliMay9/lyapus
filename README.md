@@ -34,7 +34,7 @@ export LYAPUS_TEST_DATABASE_URL='<postgres-test-url>'
 make verify
 ```
 
-运行服务前，另行设置已迁移的开发数据库 URL：
+API 启动方式二选一：上面的 Compose 路径已启动容器 API，不需要再执行 `make run`。若选择在宿主机运行 Go 服务，只启动数据库并完成迁移，保持容器 API 停止，再设置开发数据库 URL：
 
 ```bash
 export LYAPUS_DATABASE_URL='<postgres-dev-url>'
@@ -88,7 +88,7 @@ curl --noproxy '*' --silent --show-error --include 'http://127.0.0.1:8080/v1/env
 
 ## 开发命令
 
-以下命令可在仓库根目录执行：
+以下是仓库根目录可用的命令清单，不是需要依次执行的启动脚本；`make run` 与 Compose API 是替代路径，默认均占用 8080，不能同时启动。`make integration` 与 `make verify` 必须指向独立、可丢弃的测试库：
 
 ```bash
 make fmt

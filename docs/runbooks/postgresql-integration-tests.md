@@ -2,7 +2,7 @@
 
 ## 用途与边界
 
-本 runbook 用真实 PostgreSQL 验证 repository 的 SQL、sqlc adapter、数据库约束与错误分类。它只适用于可丢弃的测试数据库；测试代码会拒绝数据库名不以 `_test` 结尾的 URL，但操作者仍须在运行前确认目标。
+本 runbook 用真实 PostgreSQL 验证 repository 的 SQL、sqlc adapter、数据库约束与错误分类。它只适用于可丢弃的测试数据库；测试代码在连接前检查 pgx 实际解析的数据库名，拒绝不以 `_test` 结尾的名称及历史开发库 `lyapus_dev_test`。URL 查询参数覆盖和百分号编码后的实际库名也纳入检查，但操作者仍须在运行前确认目标；名称检查不是数据库权限隔离。
 
 应用启动不执行 migration；测试数据库必须先按 [数据库 migration](database-migrations.md) 显式建立。独立 Compose project 的本地已验证流程见 [Compose 交付](compose-delivery.md)。
 

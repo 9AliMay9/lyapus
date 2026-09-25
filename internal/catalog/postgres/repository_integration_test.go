@@ -7,7 +7,6 @@ import (
 	"errors"
 	"net/url"
 	"os"
-	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -1529,21 +1528,25 @@ func openIntegrationPool(t *testing.T) *pgxpool.Pool {
 
 	parsedURL, err := url.Parse(databaseURL)
 	if err != nil {
-		t.Fatalf("parse %s: %v", testDatabaseURLVariable, err)
+		t.Fatalf("%s must be a valid PostgreSQL URL", testDatabaseURLVariable)
 	}
 	if parsedURL.Scheme != "postgres" && parsedURL.Scheme != "postgresql" {
 		t.Fatalf("%s must use a PostgreSQL URL", testDatabaseURLVariable)
 	}
 
-	databaseName := strings.TrimPrefix(parsedURL.Path, "/")
-	if !strings.HasSuffix(databaseName, "_test") {
-		t.Fatalf("%s database must end with _test", testDatabaseURLVariable)
+	poolConfig, err := pgxpool.ParseConfig(databaseURL)
+	if err != nil {
+		t.Fatalf("parse %s configuration failed", testDatabaseURLVariable)
+	}
+
+	if err := validateIntegrationDatabaseName(poolConfig.ConnConfig.Database); err != nil {
+		t.Fatalf("unsafe %s target: %v", testDatabaseURLVariable, err)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	pool, err := pgxpool.New(ctx, databaseURL)
+	pool, err := pgxpool.NewWithConfig(ctx, poolConfig)
 	if err != nil {
 		t.Fatalf("create integration pool: %v", err)
 	}

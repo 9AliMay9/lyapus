@@ -269,17 +269,24 @@ jobs:
           )"
 
           if [ "$created_status" != 201 ] ||
-            ! grep --ignore-case --quiet '^x-request-id: [^[:space:]]' created.headers ||
-            ! grep --fixed-strings --quiet '"slug":"ci-smoke"' created.json; then
+            ! grep --ignore-case --quiet '^x-request-id: [^[:space:]]' created.headers; then
             cat created.headers created.json server.log
             exit 1
           fi
 
-          created_id="$(
-            sed -n 's/.*"id":\([0-9][0-9]*\).*/\1/p' created.json
-          )"
+          if ! created_id="$(
+            python3 -c '
+          import json
 
-          if [ -z "$created_id" ]; then
+          with open("created.json") as response:
+              data = json.load(response)
+
+          assert type(data["id"]) is int and data["id"] > 0
+          assert data["slug"] == "ci-smoke"
+          assert data["name"] == "CI Smoke"
+          print(data["id"])
+          '
+          )"; then
             cat created.headers created.json server.log
             exit 1
           fi
@@ -293,9 +300,23 @@ jobs:
           )"
 
           if [ "$get_status" != 200 ] ||
-            ! grep --ignore-case --quiet '^x-request-id: [^[:space:]]' get.headers ||
-            ! grep --fixed-strings --quiet '"id":'"$created_id" get.json ||
-            ! grep --fixed-strings --quiet '"slug":"ci-smoke"' get.json; then
+            ! grep --ignore-case --quiet '^x-request-id: [^[:space:]]' get.headers; then
+            cat created.headers created.json get.headers get.json server.log
+            exit 1
+          fi
+
+          if ! python3 -c '
+          import json
+          import sys
+
+          with open("get.json") as response:
+              data = json.load(response)
+
+          assert type(data["id"]) is int
+          assert data["id"] == int(sys.argv[1])
+          assert data["slug"] == "ci-smoke"
+          assert data["name"] == "CI Smoke"
+          ' "$created_id"; then
             cat created.headers created.json get.headers get.json server.log
             exit 1
           fi
@@ -309,9 +330,27 @@ jobs:
           )"
 
           if [ "$list_status" != 200 ] ||
-            ! grep --ignore-case --quiet '^x-request-id: [^[:space:]]' list.headers ||
-            ! grep --fixed-strings --quiet '"items":[{"id":'"$created_id" list.json ||
-            ! grep --fixed-strings --quiet '"next_cursor":""' list.json; then
+            ! grep --ignore-case --quiet '^x-request-id: [^[:space:]]' list.headers; then
+            cat created.headers created.json list.headers list.json server.log
+            exit 1
+          fi
+
+          if ! python3 -c '
+          import json
+          import sys
+
+          with open("list.json") as response:
+              data = json.load(response)
+
+          assert type(data["items"]) is list
+          assert len(data["items"]) == 1
+          item = data["items"][0]
+          assert type(item["id"]) is int
+          assert item["id"] == int(sys.argv[1])
+          assert item["slug"] == "ci-smoke"
+          assert item["name"] == "CI Smoke"
+          assert data["next_cursor"] == ""
+          ' "$created_id"; then
             cat created.headers created.json list.headers list.json server.log
             exit 1
           fi
@@ -328,17 +367,24 @@ jobs:
           )"
 
           if [ "$service_parent_status" != 201 ] ||
-            ! grep --ignore-case --quiet '^x-request-id: [^[:space:]]' service-parent.headers ||
-            ! grep --fixed-strings --quiet '"slug":"service-smoke"' service-parent.json; then
+            ! grep --ignore-case --quiet '^x-request-id: [^[:space:]]' service-parent.headers; then
             cat service-parent.headers service-parent.json server.log
             exit 1
           fi
 
-          service_team_id="$(
-            sed -n 's/.*"id":\([0-9][0-9]*\).*/\1/p' service-parent.json
-          )"
+          if ! service_team_id="$(
+            python3 -c '
+          import json
 
-          if [ -z "$service_team_id" ]; then
+          with open("service-parent.json") as response:
+              data = json.load(response)
+
+          assert type(data["id"]) is int and data["id"] > 0
+          assert data["slug"] == "service-smoke"
+          assert data["name"] == "Service Smoke"
+          print(data["id"])
+          '
+          )"; then
             cat service-parent.headers service-parent.json server.log
             exit 1
           fi
@@ -355,20 +401,36 @@ jobs:
           )"
 
           if [ "$service_created_status" != 201 ] ||
-            ! grep --ignore-case --quiet '^x-request-id: [^[:space:]]' service-created.headers ||
-            ! grep --fixed-strings --quiet '"team_id":'"$service_team_id" service-created.json ||
-            ! grep --fixed-strings --quiet '"slug":"catalog"' service-created.json ||
-            ! grep --fixed-strings --quiet '"environments":[{"id":' service-created.json ||
-            ! grep --fixed-strings --quiet '"slug":"production"' service-created.json; then
+            ! grep --ignore-case --quiet '^x-request-id: [^[:space:]]' service-created.headers; then
             cat service-created.headers service-created.json server.log
             exit 1
           fi
 
-          service_created_id="$(
-            sed -n 's/.*"id":\([0-9][0-9]*\),"team_id":.*/\1/p' service-created.json
-          )"
+          if ! service_created_id="$(
+            python3 -c '
+          import json
+          import sys
 
-          if [ -z "$service_created_id" ]; then
+          with open("service-created.json") as response:
+              data = json.load(response)
+
+          assert type(data["id"]) is int and data["id"] > 0
+          assert type(data["team_id"]) is int
+          assert data["team_id"] == int(sys.argv[1])
+          assert data["slug"] == "catalog"
+          assert data["name"] == "Service Catalog"
+          assert data["description"] == "CI smoke service"
+          assert type(data["environments"]) is list
+          assert len(data["environments"]) == 1
+          environment = data["environments"][0]
+          assert type(environment["id"]) is int and environment["id"] > 0
+          assert type(environment["service_id"]) is int
+          assert environment["service_id"] == data["id"]
+          assert environment["slug"] == "production"
+          assert environment["name"] == "Production"
+          print(data["id"])
+          ' "$service_team_id"
+          )"; then
             cat service-created.headers service-created.json server.log
             exit 1
           fi
@@ -382,12 +444,38 @@ jobs:
           )"
 
           if [ "$service_get_status" != 200 ] ||
-            ! grep --ignore-case --quiet '^x-request-id: [^[:space:]]' service-get.headers ||
-            ! grep --fixed-strings --quiet '"id":'"$service_created_id" service-get.json ||
-            ! grep --fixed-strings --quiet '"team_id":'"$service_team_id" service-get.json ||
-            ! grep --fixed-strings --quiet '"slug":"catalog"' service-get.json ||
-            ! grep --fixed-strings --quiet '"environments":[{"id":' service-get.json ||
-            ! grep --fixed-strings --quiet '"slug":"production"' service-get.json; then
+            ! grep --ignore-case --quiet '^x-request-id: [^[:space:]]' service-get.headers; then
+            cat service-created.headers service-created.json service-get.headers service-get.json server.log
+            exit 1
+          fi
+
+          if ! python3 -c '
+          import json
+          import sys
+
+          with open("service-get.json") as response:
+              data = json.load(response)
+
+          with open("service-created.json") as response:
+              created = json.load(response)
+
+          assert type(data["id"]) is int
+          assert data["id"] == int(sys.argv[1])
+          assert type(data["team_id"]) is int
+          assert data["team_id"] == int(sys.argv[2])
+          assert data["slug"] == "catalog"
+          assert data["name"] == "Service Catalog"
+          assert data["description"] == "CI smoke service"
+          assert type(data["environments"]) is list
+          assert len(data["environments"]) == 1
+          environment = data["environments"][0]
+          assert type(environment["id"]) is int
+          assert environment["id"] == created["environments"][0]["id"]
+          assert type(environment["service_id"]) is int
+          assert environment["service_id"] == data["id"]
+          assert environment["slug"] == "production"
+          assert environment["name"] == "Production"
+          ' "$service_created_id" "$service_team_id"; then
             cat service-created.headers service-created.json service-get.headers service-get.json server.log
             exit 1
           fi
@@ -401,12 +489,31 @@ jobs:
           )"
 
           if [ "$service_list_status" != 200 ] ||
-            ! grep --ignore-case --quiet '^x-request-id: [^[:space:]]' service-list.headers ||
-            ! grep --fixed-strings --quiet '"items":[{"id":'"$service_created_id" service-list.json ||
-            ! grep --fixed-strings --quiet '"team_id":'"$service_team_id" service-list.json ||
-            ! grep --fixed-strings --quiet '"slug":"catalog"' service-list.json ||
-            ! grep --fixed-strings --quiet '"next_cursor":""' service-list.json ||
-            grep --fixed-strings --quiet '"environments"' service-list.json; then
+            ! grep --ignore-case --quiet '^x-request-id: [^[:space:]]' service-list.headers; then
+            cat service-created.headers service-created.json service-list.headers service-list.json server.log
+            exit 1
+          fi
+
+          if ! python3 -c '
+          import json
+          import sys
+
+          with open("service-list.json") as response:
+              data = json.load(response)
+
+          assert type(data["items"]) is list
+          assert len(data["items"]) == 1
+          item = data["items"][0]
+          assert type(item["id"]) is int
+          assert item["id"] == int(sys.argv[1])
+          assert type(item["team_id"]) is int
+          assert item["team_id"] == int(sys.argv[2])
+          assert item["slug"] == "catalog"
+          assert item["name"] == "Service Catalog"
+          assert item["description"] == "CI smoke service"
+          assert "environments" not in item
+          assert data["next_cursor"] == ""
+          ' "$service_created_id" "$service_team_id"; then
             cat service-created.headers service-created.json service-list.headers service-list.json server.log
             exit 1
           fi
@@ -423,13 +530,27 @@ jobs:
           )"
 
           if [ "$service_updated_status" != 200 ] ||
-            ! grep --ignore-case --quiet '^x-request-id: [^[:space:]]' service-updated.headers ||
-            ! grep --fixed-strings --quiet '"id":'"$service_created_id" service-updated.json ||
-            ! grep --fixed-strings --quiet '"team_id":'"$service_team_id" service-updated.json ||
-            ! grep --fixed-strings --quiet '"slug":"catalog"' service-updated.json ||
-            ! grep --fixed-strings --quiet '"name":"Service Catalog Updated"' service-updated.json ||
-            ! grep --fixed-strings --quiet '"description":"CI smoke service"' service-updated.json ||
-            grep --fixed-strings --quiet '"environments"' service-updated.json; then
+            ! grep --ignore-case --quiet '^x-request-id: [^[:space:]]' service-updated.headers; then
+            cat service-updated.headers service-updated.json server.log
+            exit 1
+          fi
+
+          if ! python3 -c '
+          import json
+          import sys
+
+          with open("service-updated.json") as response:
+              data = json.load(response)
+
+          assert type(data["id"]) is int
+          assert data["id"] == int(sys.argv[1])
+          assert type(data["team_id"]) is int
+          assert data["team_id"] == int(sys.argv[2])
+          assert data["slug"] == "catalog"
+          assert data["name"] == "Service Catalog Updated"
+          assert data["description"] == "CI smoke service"
+          assert "environments" not in data
+          ' "$service_created_id" "$service_team_id"; then
             cat service-updated.headers service-updated.json server.log
             exit 1
           fi
@@ -446,11 +567,27 @@ jobs:
           )"
 
           if [ "$service_cleared_status" != 200 ] ||
-            ! grep --ignore-case --quiet '^x-request-id: [^[:space:]]' service-cleared.headers ||
-            ! grep --fixed-strings --quiet '"id":'"$service_created_id" service-cleared.json ||
-            ! grep --fixed-strings --quiet '"name":"Service Catalog Updated"' service-cleared.json ||
-            ! grep --fixed-strings --quiet '"description":null' service-cleared.json ||
-            grep --fixed-strings --quiet '"environments"' service-cleared.json; then
+            ! grep --ignore-case --quiet '^x-request-id: [^[:space:]]' service-cleared.headers; then
+            cat service-cleared.headers service-cleared.json server.log
+            exit 1
+          fi
+
+          if ! python3 -c '
+          import json
+          import sys
+
+          with open("service-cleared.json") as response:
+              data = json.load(response)
+
+          assert type(data["id"]) is int
+          assert data["id"] == int(sys.argv[1])
+          assert type(data["team_id"]) is int
+          assert data["team_id"] == int(sys.argv[2])
+          assert data["slug"] == "catalog"
+          assert data["name"] == "Service Catalog Updated"
+          assert data["description"] is None
+          assert "environments" not in data
+          ' "$service_created_id" "$service_team_id"; then
             cat service-cleared.headers service-cleared.json server.log
             exit 1
           fi
@@ -495,19 +632,30 @@ jobs:
           )"
 
           if [ "$service_deletable_status" != 201 ] ||
-            ! grep --ignore-case --quiet '^x-request-id: [^[:space:]]' service-deletable.headers ||
-            ! grep --fixed-strings --quiet '"team_id":'"$service_team_id" service-deletable.json ||
-            ! grep --fixed-strings --quiet '"slug":"deletable"' service-deletable.json ||
-            ! grep --fixed-strings --quiet '"environments":[]' service-deletable.json; then
+            ! grep --ignore-case --quiet '^x-request-id: [^[:space:]]' service-deletable.headers; then
             cat service-deletable.headers service-deletable.json server.log
             exit 1
           fi
 
-          service_deletable_id="$(
-            sed -n 's/.*"id":\([0-9][0-9]*\),"team_id":.*/\1/p' service-deletable.json
-          )"
+          if ! service_deletable_id="$(
+            python3 -c '
+          import json
+          import sys
 
-          if [ -z "$service_deletable_id" ]; then
+          with open("service-deletable.json") as response:
+              data = json.load(response)
+
+          assert type(data["id"]) is int and data["id"] > 0
+          assert type(data["team_id"]) is int
+          assert data["team_id"] == int(sys.argv[1])
+          assert data["slug"] == "deletable"
+          assert data["name"] == "Deletable Service"
+          assert data["description"] is None
+          assert type(data["environments"]) is list
+          assert data["environments"] == []
+          print(data["id"])
+          ' "$service_team_id"
+          )"; then
             cat service-deletable.headers service-deletable.json server.log
             exit 1
           fi
@@ -566,18 +714,27 @@ jobs:
           )"
 
           if [ "$environment_created_status" != 201 ] ||
-            ! grep --ignore-case --quiet '^x-request-id: [^[:space:]]' environment-created.headers ||
-            ! grep --fixed-strings --quiet '"service_id":'"$service_created_id" environment-created.json ||
-            ! grep --fixed-strings --quiet '"slug":"staging"' environment-created.json; then
+            ! grep --ignore-case --quiet '^x-request-id: [^[:space:]]' environment-created.headers; then
             cat environment-created.headers environment-created.json server.log
             exit 1
           fi
 
-          environment_created_id="$(
-            sed -n 's/.*"id":\([0-9][0-9]*\),"service_id":.*/\1/p' environment-created.json
-          )"
+          if ! environment_created_id="$(
+            python3 -c '
+          import json
+          import sys
 
-          if [ -z "$environment_created_id" ]; then
+          with open("environment-created.json") as response:
+              data = json.load(response)
+
+          assert type(data["id"]) is int and data["id"] > 0
+          assert type(data["service_id"]) is int
+          assert data["service_id"] == int(sys.argv[1])
+          assert data["slug"] == "staging"
+          assert data["name"] == "Staging"
+          print(data["id"])
+          ' "$service_created_id"
+          )"; then
             cat environment-created.headers environment-created.json server.log
             exit 1
           fi
@@ -591,10 +748,25 @@ jobs:
           )"
 
           if [ "$environment_get_status" != 200 ] ||
-            ! grep --ignore-case --quiet '^x-request-id: [^[:space:]]' environment-get.headers ||
-            ! grep --fixed-strings --quiet '"id":'"$environment_created_id" environment-get.json ||
-            ! grep --fixed-strings --quiet '"service_id":'"$service_created_id" environment-get.json ||
-            ! grep --fixed-strings --quiet '"slug":"staging"' environment-get.json; then
+            ! grep --ignore-case --quiet '^x-request-id: [^[:space:]]' environment-get.headers; then
+            cat environment-get.headers environment-get.json server.log
+            exit 1
+          fi
+
+          if ! python3 -c '
+          import json
+          import sys
+
+          with open("environment-get.json") as response:
+              data = json.load(response)
+
+          assert type(data["id"]) is int
+          assert data["id"] == int(sys.argv[1])
+          assert type(data["service_id"]) is int
+          assert data["service_id"] == int(sys.argv[2])
+          assert data["slug"] == "staging"
+          assert data["name"] == "Staging"
+          ' "$environment_created_id" "$service_created_id"; then
             cat environment-get.headers environment-get.json server.log
             exit 1
           fi
@@ -607,16 +779,34 @@ jobs:
               "http://127.0.0.1:8080/v1/environments?service_id=$service_created_id&limit=1"
           )"
 
-          environment_next_cursor="$(
-            sed -n 's/.*"next_cursor":"\([^"]*\)".*/\1/p' environment-list.json
-          )"
-
           if [ "$environment_list_status" != 200 ] ||
-            ! grep --ignore-case --quiet '^x-request-id: [^[:space:]]' environment-list.headers ||
-            ! grep --fixed-strings --quiet '"items":[{"id":'"$environment_created_id" environment-list.json ||
-            ! grep --fixed-strings --quiet '"service_id":'"$service_created_id" environment-list.json ||
-            ! grep --fixed-strings --quiet '"slug":"staging"' environment-list.json ||
-            [ -z "$environment_next_cursor" ]; then
+            ! grep --ignore-case --quiet '^x-request-id: [^[:space:]]' environment-list.headers; then
+            cat environment-list.headers environment-list.json server.log
+            exit 1
+          fi
+
+          if ! environment_next_cursor="$(
+            python3 -c '
+          import json
+          import sys
+
+          with open("environment-list.json") as response:
+              data = json.load(response)
+
+          assert type(data["items"]) is list
+          assert len(data["items"]) == 1
+          item = data["items"][0]
+          assert type(item["id"]) is int
+          assert item["id"] == int(sys.argv[1])
+          assert type(item["service_id"]) is int
+          assert item["service_id"] == int(sys.argv[2])
+          assert item["slug"] == "staging"
+          assert item["name"] == "Staging"
+          assert type(data["next_cursor"]) is str
+          assert data["next_cursor"] != ""
+          print(data["next_cursor"])
+          ' "$environment_created_id" "$service_created_id"
+          )"; then
             cat environment-list.headers environment-list.json server.log
             exit 1
           fi
@@ -630,10 +820,29 @@ jobs:
           )"
 
           if [ "$environment_second_page_status" != 200 ] ||
-            ! grep --ignore-case --quiet '^x-request-id: [^[:space:]]' environment-second-page.headers ||
-            ! grep --fixed-strings --quiet '"service_id":'"$service_created_id" environment-second-page.json ||
-            ! grep --fixed-strings --quiet '"slug":"production"' environment-second-page.json ||
-            ! grep --fixed-strings --quiet '"next_cursor":""' environment-second-page.json; then
+            ! grep --ignore-case --quiet '^x-request-id: [^[:space:]]' environment-second-page.headers; then
+            cat environment-second-page.headers environment-second-page.json server.log
+            exit 1
+          fi
+
+          if ! python3 -c '
+          import json
+          import sys
+
+          with open ("environment-second-page.json") as response:
+            data = json.load(response)
+
+          assert type(data["items"]) is list
+          assert len(data["items"]) == 1
+          item = data["items"][0]
+          assert type(item["id"]) is int and item["id"] > 0
+          assert item["id"] != int(sys.argv[1])
+          assert type(item["service_id"]) is int
+          assert item["service_id"] == int(sys.argv[2])
+          assert item["slug"] == "production"
+          assert item["name"] == "Production"
+          assert data["next_cursor"] == ""
+          ' "$environment_created_id" "$service_created_id"; then
             cat environment-second-page.headers environment-second-page.json server.log
             exit 1
           fi
@@ -650,11 +859,25 @@ jobs:
           )"
 
           if [ "$environment_updated_status" != 200 ] ||
-            ! grep --ignore-case --quiet '^x-request-id: [^[:space:]]' environment-updated.headers ||
-            ! grep --fixed-strings --quiet '"id":'"$environment_created_id" environment-updated.json ||
-            ! grep --fixed-strings --quiet '"service_id":'"$service_created_id" environment-updated.json ||
-            ! grep --fixed-strings --quiet '"slug":"staging"' environment-updated.json ||
-            ! grep --fixed-strings --quiet '"name":"Staging Updated"' environment-updated.json; then
+            ! grep --ignore-case --quiet '^x-request-id: [^[:space:]]' environment-updated.headers; then
+            cat environment-updated.headers environment-updated.json server.log
+            exit 1
+          fi
+
+          if ! python3 -c '
+          import json
+          import sys
+
+          with open("environment-updated.json") as response:
+              data = json.load(response)
+
+          assert type(data["id"]) is int
+          assert data["id"] == int(sys.argv[1])
+          assert type(data["service_id"]) is int
+          assert data["service_id"] == int(sys.argv[2])
+          assert data["slug"] == "staging"
+          assert data["name"] == "Staging Updated"
+          ' "$environment_created_id" "$service_created_id"; then
             cat environment-updated.headers environment-updated.json server.log
             exit 1
           fi
@@ -742,10 +965,23 @@ jobs:
           )"
 
           if [ "$updated_status" != 200 ] ||
-            ! grep --ignore-case --quiet '^x-request-id: [^[:space:]]' updated.headers ||
-            ! grep --fixed-strings --quiet '"id":'"$created_id" updated.json ||
-            ! grep --fixed-strings --quiet '"slug":"ci-smoke"' updated.json ||
-            ! grep --fixed-strings --quiet '"name":"CI Smoke Updated"' updated.json; then
+            ! grep --ignore-case --quiet '^x-request-id: [^[:space:]]' updated.headers; then
+            cat created.headers created.json updated.headers updated.json server.log
+            exit 1
+          fi
+
+          if ! python3 -c '
+          import json
+          import sys
+
+          with open("updated.json") as response:
+              data = json.load(response)
+
+          assert type(data["id"]) is int
+          assert data["id"] == int(sys.argv[1])
+          assert data["slug"] == "ci-smoke"
+          assert data["name"] == "CI Smoke Updated"
+          ' "$created_id"; then
             cat created.headers created.json updated.headers updated.json server.log
             exit 1
           fi

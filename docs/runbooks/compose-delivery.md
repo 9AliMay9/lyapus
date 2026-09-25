@@ -8,6 +8,8 @@
 
 首次运行前确认未设置会覆盖默认值的 `LYAPUS_POSTGRES_DB`、`LYAPUS_POSTGRES_PORT`、`LYAPUS_HTTP_PORT`，并检查本地 `.env`。改变数据库名不会重建已有卷中的数据库；不要对旧卷盲目更换初始化变量。
 
+当前源码默认开发库名为 `lyapus_dev`；下列默认命令针对新卷。历史 `lyapus-dev` 卷可能仍包含 `lyapus_dev_test`，不能直接套用新默认值执行 `up`，也不能为消除错误删除旧卷。保留旧库时须显式设置 `LYAPUS_POSTGRES_DB=lyapus_dev_test` 并使用匹配的开发 URL；迁移或重建须另行确认数据保留方案。本轮尚未迁移或重建现有开发卷。
+
 ## 开发环境：构建、数据库、迁移、API
 
 检查目标没有已有容器、卷和端口占用；如有则先核对用途，不删除覆盖：
@@ -30,7 +32,7 @@ docker build --progress=plain -t lyapus-apiserver:m1-dev .
 
 ```bash
 docker compose -p lyapus-dev up -d --wait --wait-timeout 120 postgres
-export LYAPUS_DATABASE_URL='postgres://lyapus:lyapus@127.0.0.1:55432/lyapus_dev_test?sslmode=disable'
+export LYAPUS_DATABASE_URL='postgres://lyapus:lyapus@127.0.0.1:55432/lyapus_dev?sslmode=disable'
 ./.tools/bin/atlas migrate apply --dry-run --dir 'file://db/migrations' --url "$LYAPUS_DATABASE_URL"
 ```
 
@@ -64,7 +66,7 @@ curl --noproxy '*' --silent --show-error --include --max-time 10 http://127.0.0.
 
 ## 独立 integration project
 
-两个 project 使用相同镜像，但有独立容器、网络、卷和数据库文件，不共享业务数据。卷位于宿主机磁盘并不意味着是同一目录。隔离不是权限屏障：开发库也以 `_test` 结尾，测试辅助代码的后缀保护不能识别误连开发库。
+两个 project 使用相同镜像，但有独立容器、网络、卷和数据库文件，不共享业务数据。卷位于宿主机磁盘并不意味着是同一目录。当前测试辅助代码在连接前检查 pgx 实际解析的数据库名，要求 `_test` 后缀且明确拒绝历史开发库 `lyapus_dev_test`；新默认开发库 `lyapus_dev` 也被拒绝。命名保护不是权限屏障，不代表任意其他 `_test` 库都可安全清表，仍须确认目标。
 
 先确认 `lyapus-integration` 容器和卷不存在、55433 空闲：
 

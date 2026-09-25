@@ -55,6 +55,9 @@
 
 ## 可复现交付与证据
 
+- [x] review-followups 本地修复与回归：有效库名防护、Environment 规范化入口、smoke JSON 精确断言；普通/race/独立数据库 integration race 与 `make verify` 通过，开发数据保留，测试资源清理，本地收口审阅完成。
+- [ ] review-followups 最新四项 required CI 通过并在同一 PR 内收口；不以分段模拟替代真实 HTTP smoke。
+
 - [x] Dockerfile 与 Compose 本地新 project/新卷建立数据库、宿主机 Atlas 显式迁移并启动 API；容器交付首轮 CI 已通过。
 - [x] 停止数据库后 `/livez` 仍成功而 `/readyz` 返回 503；恢复后 readiness 恢复。
 - [x] 根 README 包含数据模型、API 示例和五分钟演示路径（依赖/镜像已准备；独立 project 业务演示已复走，不声明全新主机计时通过）。

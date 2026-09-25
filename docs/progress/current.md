@@ -31,12 +31,20 @@
 
 - 已成立：Service/Environment/归属模型，三类资源 CRUD、校验、统一错误、分页/过滤，关键单元测试、真实数据库 repository 测试和 race，以及 Service + 初始 Environment 事务与并发唯一冲突。
 - 约束实证已成立：PR #25 已补齐本次清单要求的字段 CHECK 插入边界、唯一性范围、外键和引用删除测试；结合既有 migration、事务与并发证据，原始最小项 3 的本地与 CI 证据已具备，已由 PR #25 合入 `main`。未穷尽 NULL、UPDATE 或全部 Unicode 空白行为。
-- 尚未成立：查询计划实验之外的本轮交付已取得首轮 CI 和独立演示复走证据，文档更新后的最新 CI 仍待确认；带数据量、SQL、参数及 `EXPLAIN (ANALYZE, BUFFERS)` 的索引前后查询计划记录。Compose 本地新 project/空卷已验证，README 模型与演示路径已补齐。
+- 尚未成立：带数据量、SQL、参数及 `EXPLAIN (ANALYZE, BUFFERS)` 的索引前后查询计划记录及 M1 总验收。Compose 本地新 project/空卷、独立演示复走和 PR #27 最新 required CI 已通过并合并；当前 review-followups 的真实数据库回归已通过，最新 CI 尚待完成。
 - 不阻塞 v0.1：API Token、最小 RBAC、审计日志、复杂幂等/乐观并发、更丰富过滤排序、HTTP E2E、k6 与 pprof 均属于原始“深度增强”，当前未实现也不得写成最小版缺陷。
 
 ## 下一次从这里开始
 
-### 2026-09-11 Compose 复盘后接续点（优先于下方历史交接）
+### 当前接续点：Copilot 审阅后续修复（优先于下方历史交接）
+
+- PR #27 最新四项 required checks 已由项目所有者提供通过输出，随后以 `8126a09` 合入 main。当前工作分支为 `fix/review-followups`，尚未提交本轮修改。
+- 已实现：开发库默认名改为 `lyapus_dev`；测试连接前校验 pgx 解析的真实库名并拒绝旧开发库；初始 Environment 改用自身规范化函数；smoke 数字 ID 校验和提取改用结构化 JSON 断言。
+- 已验证：项目所有者执行 `go vet ./...`、普通测试和 race（均 `-count=1`），以及带 integration 标签的 11 个名称/解析防护子测试，全部通过。CI 断言分段模拟、YAML/Python/Shell 静态检查通过，不等于真实 HTTP smoke 已通过。
+- 本轮独立 integration project/卷已完成两份迁移，版本 `20260729030502`、pending 0。integration race（4.435s）和 `make verify` 全部通过，漏洞扫描无发现。开发 API 回读原数据成功；测试容器、网络、卷已删除并确认无残留，测试 URL 已取消。本地收口审阅完成，下一步提交同一分支并创建 PR，验证本轮 HTTP smoke 与四项 required CI；尚未合并。
+- 现有开发卷尚未迁移或重建；不能按新默认库名直接重建 dev 容器。README 启动路径及 Compose 过时验收描述已同步，详见 [本轮记录](sessions/review-followups.md)。查询计划实验与 M1 总验收仍待完成。
+
+### 2026-09-11 Compose 复盘后接续点（历史记录，已被上方接续点取代）
 
 - PR #26 已由项目所有者提供合并输出，基线 `cd1d382`；当前 `feat/m1-compose-delivery` 已有 Dockerfile、Compose 和文档未提交变更，保留现有修改。
 - 本机新开发 project/卷完成构建、宿主机 Atlas 显式迁移、API 创建/回读、数据库中断恢复。独立 integration project/卷完成 migration、integration race（4.562s）和 `make verify`，测试资源已删除，开发 API/卷和演示数据保留。

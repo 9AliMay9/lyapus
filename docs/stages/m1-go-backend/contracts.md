@@ -182,7 +182,7 @@ PostgreSQL 可识别的 unique violation、foreign key violation 等通过 SQLST
 - 单元测试不连接数据库，覆盖参数校验、业务错误、事务调用边界、JSON、错误映射、分页和 handler。
 - 单元测试依赖 catalog repository 接口，不直接 mock 或暴露 sqlc 生成类型。
 - integration test 使用真实 PostgreSQL 16.14 与真实 migrations，不以 mock 或 SQLite 替代。
-- 集成测试数据库名必须以 `_test` 结尾；测试辅助代码在清库或迁移前主动校验，防止误操作开发库。
+- 集成测试辅助代码在建立连接和清表前校验 pgx 实际解析的数据库名：必须以 `_test` 结尾，并拒绝历史开发库 `lyapus_dev_test`；新开发库默认名为 `lyapus_dev`。该保护不覆盖操作者单独执行的 Atlas 命令，不是权限隔离；显式迁移前仍须人工确认目标。
 - 本地集成测试使用独立 Compose project 和一次性卷；测试结束清理该 project，不操作日常开发卷。
 - 并发测试使用独立数据库连接并记录同步起点，不能用串行循环冒充并发。
 - `make verify` 在本地和 required CI 中都必须真实执行 integration tests 与 race detector；缺少数据库依赖时应失败并给出明确说明，不能静默跳过。

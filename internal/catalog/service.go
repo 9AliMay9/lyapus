@@ -319,12 +319,12 @@ func normalizeUpdateServiceInput(
 func normalizeCreateInitialEnvironmentInput(
 	input CreateInitialEnvironmentInput,
 ) (CreateInitialEnvironmentInput, error) {
-	slug, err := normalizeServiceSlug(input.Slug)
+	slug, err := normalizeEnvironmentSlug(input.Slug)
 	if err != nil {
 		return CreateInitialEnvironmentInput{}, err
 	}
 
-	name, err := normalizeServiceName(input.Name)
+	name, err := normalizeEnvironmentName(input.Name)
 	if err != nil {
 		return CreateInitialEnvironmentInput{}, err
 	}

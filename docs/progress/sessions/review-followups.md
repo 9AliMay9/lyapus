@@ -35,9 +35,19 @@
 - 选择继续保留旧开发卷，不在本次修复中新增数据库迁移/重命名操作；重复的内联 smoke 断言可在后续出现维护需求时抽取，本轮不扩展成测试框架重构。
 - 本地审阅允许进入 PR/CI 阶段，不代表允许立即合并。收到第一轮 CI 证据后，在同一分支补充本记录，最终以最新提交四项 required checks 为门禁。
 
+## PR #28 首轮 CI 证据
+
+项目所有者提供提交 `c8a2ad7` 的推送、[PR #28](https://github.com/9AliMay9/lyapus/pull/28) 创建与 `gh pr checks --required --watch` 输出：四项成功，0 failing、0 skipped、0 pending。
+
+- [verify](https://github.com/9AliMay9/lyapus/actions/runs/36146668446/job/108109442084)：4m12s。
+- [smoke](https://github.com/9AliMay9/lyapus/actions/runs/36146668446/job/108111018688)：59s，本轮 JSON 精确断言已在真实 HTTP 链路执行通过。
+- [atlas-community](https://github.com/9AliMay9/lyapus/actions/runs/36146668446/job/108109442475)：2m9s。
+- [compose](https://github.com/9AliMay9/lyapus/actions/runs/36146668446/job/108109442452)：2m16s。
+
+本次文档补交仍在原分支、原 PR；提交后须等待新一轮 required checks。此记录只证明上述提交的该次运行，不保证长期稳定性，不声明 PR 已合并。最终门禁及合并状态以 PR 页面为准，不为反复记录最终 CI 再新增提交。
+
 ## 待完成与边界
 
-- 本轮真实 HTTP smoke 和最新提交的四项 required CI；历史 PR #27 的成功不能替代。
-- 同一 PR 内补齐 CI 证据及合并；本记录不声明上述步骤已经完成。
+- CI 证据文档补交后，最新提交的四项 required checks 及同一 PR 合并；不能以首轮或历史 PR #27 的成功替代。
 - 保留现有开发数据，旧 dev 卷尚未迁移或重建。数据库名称防护不替代操作者确认与权限控制。
 - Python `assert` 用于测试预期；执行环境不能开启 `-O` / `PYTHONOPTIMIZE`，生产安全校验不得依赖可被禁用的断言。

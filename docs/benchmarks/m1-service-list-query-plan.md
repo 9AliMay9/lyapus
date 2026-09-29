@@ -4,8 +4,8 @@
 
 在相同数据上分别回答两个问题：历史 `(team_id, id)` 索引与现有排序复合索引有什么差别？已有复合索引时，深页 OR 游标条件能否变为索引范围条件？这不是 HTTP 吞吐或容量压测。
 
-- 基线：`1405708`（PR #28）；实验及实现位于 `perf/m1-service-query-plan` 工作区，尚未提交的变更不能冒充基线已有能力。最终源码和证据由包含本文的提交固定。
-- PostgreSQL 实验执行输出由项目所有者提供；正反序十二份原始文件由助手直接读取归档。本地回归于 2026-09-29 通过；本分支 required CI、合并和 M1 最终验收尚未完成。
+- 实验基线：`1405708`（PR #28）；优化源码、脚本及证据由 `bdc9517`（`perf/m1-service-query-plan`，PR #29）固定。不能将优化结果冒充基线已有能力。
+- PostgreSQL 实验执行输出由项目所有者提供；正反序十二份原始文件由助手直接读取归档。本地回归于 2026-09-29 通过；PR #29 提交 `bdc9517` 的首轮四项 required CI 已通过；文档补交后的最新检查、合并和 M1 最终验收尚未完成。
 - 采用现有 `(team_id, created_at DESC, id DESC)` 索引，将且仅将 `ListServicesAfterCursorByTeamID` 改为 `(created_at, id) < (cursor_time, cursor_id)`。不修改 schema、历史 migration、API cursor 或其他列表查询。
 - 在本数据集深页中，OR 过滤掉800行；行比较把游标边界纳入 `Index Cond`。正反执行顺序均观察到行比较更快，但耗时明显受顺序影响，不宣称固定倍数提速。
 
@@ -109,6 +109,8 @@ docker compose -p lyapus-query-plan exec -T \
 集成测试会清表，绝不连接55434实验库。实验库虽以 `_test` 结尾，仍会通过通用测试库名防护；名称防护不能替代操作者选择正确目标。
 
 ## 限制与后续
+
+PR #29 首轮四项 required CI 已通过（提交 `bdc9517`），见[运行记录](../progress/sessions/2026-09-29-service-query-plan.md)。CI 验证既有工作流，不重跑本文的性能测量；文档补交后仍须通过最新检查再合并。
 
 - EXPLAIN 使用字面量，不是 pgx prepared statement 的 generic/custom plan 对照；真实 repository 测试证明正确执行，不证明所有参数分布下沿用实验计划。
 - 不证明冷缓存、并发写入、偏斜团队、大量不同参数、HTTP 延迟、QPS 或生产容量；未新增索引或量化写放大收益。

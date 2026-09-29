@@ -65,6 +65,7 @@
 - [x] Service 按 Team 列表查询有100 Team / 100000 Service与索引前后 EXPLAIN 证据，见 [报告](../../benchmarks/m1-service-list-query-plan.md)。
 - [x] 查询优化记录注明环境、数据量、SQL、参数、原始正反序计划、结果和限制；本地 regression/race/make verify 通过。
 - [ ] 查询优化分支最新四项 required CI 通过并合并。
+- [x] 查询优化 PR #29 提交 `bdc9517` 首轮四项 required CI 通过，见 [运行证据](../../progress/sessions/2026-09-29-service-query-plan.md)；不代表补交后的最新门禁或 M1 总验收已完成。
 - [ ] `outcome.md`、当前架构、学习笔记、进度和会话记录均按实际结果更新。
 - [ ] clean runner 与空 Compose project 完成最终验收。
 - [ ] 原始方案七项最小交付全部成立并发布 M1 v0.1。

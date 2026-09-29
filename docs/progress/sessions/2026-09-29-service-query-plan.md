@@ -25,13 +25,28 @@ v3.1 M1 最小项6要求一份查询计划及优化前后记录；本轮提供�
 
 升级验证清单：审阅 Community 源码差异和构建要求；更新固定 tag 与核实后的完整 commit；用独立空库验证 diff/apply/status、重复 apply、无变更 diff及历史完整性拒绝；验证已有迁移链与 sqlc 生成一致性；运行 make verify 和最新四项 required CI；同步 ADR 的版本补充记录、安装脚本及 runbook。保留旧版本可复现安装入口，不改已应用 migration 或用 migrate hash 掩盖差异。仅同一工具版本更新不必另造选型 ADR，若授权/功能边界改变则重新决策。
 
+## PR #29 首轮 CI 证据
+
+所有者推送 `bdc9517` 并创建 [PR #29](https://github.com/9AliMay9/lyapus/pull/29)，随后提供 `gh pr checks --required --watch` 的最终输出：4 successful，0 failing/pending/skipped/cancelled。
+
+| Required check | 耗时 | 运行证据 |
+| --- | --- | --- |
+| atlas-community | 36s | [job](https://github.com/9AliMay9/lyapus/actions/runs/36524867702/job/109265564342) |
+| compose | 1m24s | [job](https://github.com/9AliMay9/lyapus/actions/runs/36524867702/job/109265564409) |
+| smoke | 59s | [job](https://github.com/9AliMay9/lyapus/actions/runs/36524867702/job/109266202642) |
+| verify | 2m35s | [job](https://github.com/9AliMay9/lyapus/actions/runs/36524867702/job/109265564583) |
+
+证据来源为所有者终端回传，助手未另行读取远端 job 日志。结合仓库 workflow，该轮覆盖既有迁移、生成一致性、测试、HTTP smoke 与容器交付门禁；CI 没有重跑10万行查询计划实验，不将本地性能数字描述为 clean-runner 测量，也不宣称长期稳定性。
+
+本次只补充文档，不改 SQL 或运行配置，不递归开启同级收口审阅。补交后必须等待最新提交的四项 required checks；本记录不提前宣称 PR 已合并，M1 总验收仍待完成。
+
 ## 当前资源与下一步
 
 - 旧开发 project/库/卷已于09-26删除，详见[记录](2026-09-26-dev-cleanup.md)，没有恢复开发 API。
 - 查询实验：lyapus-query-plan / lyapus_query_plan_test / 55434 / lyapus-query-plan_postgres_data。
 - 集成测试：lyapus-integration / lyapus_integration_test / 55433 / lyapus-integration_postgres_data。
 - 上述两项目已由所有者于2026-09-29清理，详情如下；实验原始十二份输出已归档，不再只依赖 /tmp。助手未代执行删除。
-- 本地审阅完成，尚无本分支 PR/required CI 证据。后续审查 diff、提交同一分支、首轮 CI、同一 PR 补证据、最新 CI 后合并。M1 最终验收另行安排。
+- 本地审阅完成；PR #29 提交 `bdc9517` 首轮四项 required CI 已通过，见下方运行记录。本次补充文档仍在同一分支，需等待补交后最新四项检查成功再合并。M1 最终验收另行安排。
 
 ### 临时资源清理实证
 

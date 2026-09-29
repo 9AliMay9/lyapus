@@ -8,7 +8,9 @@
 
 首次运行前确认未设置会覆盖默认值的 `LYAPUS_POSTGRES_DB`、`LYAPUS_POSTGRES_PORT`、`LYAPUS_HTTP_PORT`，并检查本地 `.env`。改变数据库名不会重建已有卷中的数据库；不要对旧卷盲目更换初始化变量。
 
-当前源码默认开发库名为 `lyapus_dev`；下列默认命令针对新卷。历史 `lyapus-dev` 卷可能仍包含 `lyapus_dev_test`，不能直接套用新默认值执行 `up`，也不能为消除错误删除旧卷。保留旧库时须显式设置 `LYAPUS_POSTGRES_DB=lyapus_dev_test` 并使用匹配的开发 URL；迁移或重建须另行确认数据保留方案。本轮尚未迁移或重建现有开发卷。
+当前源码默认开发库名为 `lyapus_dev`；下列默认命令针对新卷。2026-09-26，本机旧 `lyapus-dev` 项目和 `lyapus-dev_postgres_data` 卷已由所有者确认后删除，旧库 `lyapus_dev_test` 及演示数据不再保留，开发环境尚未重建；详见 [清理记录](../progress/sessions/2026-09-26-dev-cleanup.md)。因此当前 8080 没有 API，不能继续以原 Service 1 回读验证。
+
+其他机器若仍保留旧卷，不能直接套用新默认值执行 `up`，也不能为消除错误删除卷。保留旧库时须显式设置 `LYAPUS_POSTGRES_DB=lyapus_dev_test` 并使用匹配的开发 URL；迁移或重建须另行确认数据保留方案。本机重建前也须检查其他 shell 和 `.env` 的旧覆盖项；已有镜像可能来自旧源码，应先重新构建，再按数据库启动、显式迁移、API 启动顺序执行。
 
 ## 开发环境：构建、数据库、迁移、API
 
@@ -113,7 +115,7 @@ docker compose -p lyapus-integration ps -a
 docker volume ls --filter name=lyapus-integration_postgres_data
 ```
 
-预期容器和卷为空，开发 API 仍能读取原数据。本次开发 project 和开发卷有意保留，不声明已清理，也不对其执行 `down --volumes`。
+预期测试容器和卷为空；只有开发 API 正在运行且演示数据已建立时，才额外回读开发数据。2026-09-11/25 的测试清理未删除开发项目；2026-09-26 所有者另行明确决定清理旧开发项目和卷，已完成，不能再沿用“开发环境仍运行”的历史状态。测试清理命令不得擅自改为开发 project。
 
 失败时保留最小日志检查，勿重算历史 migration checksum、关闭 TLS 校验或清卷重试来掩盖原因。诊断入口：`docker compose -p <目标project> logs --tail=80 <服务名>`。数据库停止后的恢复命令见上节。PR #27 首轮 compose CI 已通过；后续提交仍须等待最新 required checks，不能以旧结果替代。
 

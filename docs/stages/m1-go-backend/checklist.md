@@ -57,13 +57,15 @@
 
 - [x] review-followups 本地修复与回归：有效库名防护、Environment 规范化入口、smoke JSON 精确断言；普通/race/独立数据库 integration race 与 `make verify` 通过，开发数据保留，测试资源清理，本地收口审阅完成。
 - [x] review-followups PR #28 提交 `c8a2ad7` 的四项 required CI 通过，包含真实 HTTP smoke；运行证据见本轮记录。
-- [ ] review-followups 文档补交后的最新四项 required CI 通过并在同一 PR 内合并；最终状态以 PR 页面为准。
+- [x] review-followups 文档补交后的最新四项 required CI 通过，PR #28 已以 `1405708` 合并。
 
 - [x] Dockerfile 与 Compose 本地新 project/新卷建立数据库、宿主机 Atlas 显式迁移并启动 API；容器交付首轮 CI 已通过。
 - [x] 停止数据库后 `/livez` 仍成功而 `/readyz` 返回 503；恢复后 readiness 恢复。
 - [x] 根 README 包含数据模型、API 示例和五分钟演示路径（依赖/镜像已准备；独立 project 业务演示已复走，不声明全新主机计时通过）。
-- [ ] Service 按 Team 列表查询有明确数据量与索引前后的 `EXPLAIN (ANALYZE, BUFFERS)` 证据。
-- [ ] 查询优化记录注明环境、数据量、SQL、参数、结果和限制。
+- [x] Service 按 Team 列表查询有100 Team / 100000 Service与索引前后 EXPLAIN 证据，见 [报告](../../benchmarks/m1-service-list-query-plan.md)。
+- [x] 查询优化记录注明环境、数据量、SQL、参数、原始正反序计划、结果和限制；本地 regression/race/make verify 通过。
+- [ ] 查询优化分支最新四项 required CI 通过并合并。
+- [x] 查询优化 PR #29 提交 `bdc9517` 首轮四项 required CI 通过，见 [运行证据](../../progress/sessions/2026-09-29-service-query-plan.md)；不代表补交后的最新门禁或 M1 总验收已完成。
 - [ ] `outcome.md`、当前架构、学习笔记、进度和会话记录均按实际结果更新。
 - [ ] clean runner 与空 Compose project 完成最终验收。
 - [ ] 原始方案七项最小交付全部成立并发布 M1 v0.1。

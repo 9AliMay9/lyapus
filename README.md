@@ -2,9 +2,11 @@
 
 一个以 Go 为主语言、以 OpenTelemetry 为遥测标准、以 SLO 与故障闭环为可靠性核心，并逐步演化为平台工程与 AI 可观测性实践的项目。
 
-M0（工程基线）已经完成。M1 正在施工：当前已有 PostgreSQL migration、`pgxpool` 启动与 readiness、sqlc 基线，以及 Team、Service、Environment 三类资源的完整 HTTP CRUD。Environment 独立 CRUD 与 `service_id` 过滤已由 PR #23 以 squash commit `4b311b9` 合入 `main`。数据库约束测试已通过本地验证、收口审阅及三项 required CI，并由 PR #25 以 squash commit `51fd1d2` 合入 `main`。Compose 本地新 project/新卷交付、隔离测试和中断恢复已验证，README 演示路径已补齐；本次容器交付首轮 CI 与独立 project 演示复走已通过；查询计划实验及 M1 最终验收仍待完成。当前也没有消息队列、OpenTelemetry、前端或 AI 功能。
+M0（工程基线）已经完成。M1 正在施工：当前已有 PostgreSQL migration、`pgxpool` 启动与 readiness、sqlc 基线，以及 Team、Service、Environment 三类资源的完整 HTTP CRUD。Environment 独立 CRUD 与 `service_id` 过滤已由 PR #23 以 squash commit `4b311b9` 合入 `main`。数据库约束测试已通过本地验证、收口审阅及三项 required CI，并由 PR #25 以 squash commit `51fd1d2` 合入 `main`。Compose 本地新 project/新卷交付、隔离测试和中断恢复已验证，README 演示路径已补齐；本次容器交付首轮 CI 与独立 project 演示复走已通过；查询计划实验与本地回归已完成，PR #29 首轮四项 CI 已通过，补交后的最新提交门禁及 M1 最终验收仍待完成。当前也没有消息队列、OpenTelemetry、前端或 AI 功能。
 
 ## 前置条件
+
+本轮查询计划、优化范围与性能结论限制见 [M1 Service 查询计划报告](docs/benchmarks/m1-service-list-query-plan.md)。
 
 - Go（版本以 `go.mod` 为准）
 - GNU Make

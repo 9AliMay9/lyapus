@@ -4,7 +4,7 @@
 
 - 当前阶段：M0 已完成终局审计；M1 已完成数据库基础设施和 Team、Service、Environment 三类资源的完整 HTTP CRUD 纵切面。Team CRUD/稳定分页施工包已由 PR #13 以 squash commit `f4df01f` 合入 `main`；Team service、创建 API、全局 request ID 与 API smoke 已由 PR #15 以 squash commit `8e84c20` 合入 `main`；Team HTTP read 与 cursor 分页已由 PR #17 以 squash commit `284021e` 合入 `main`；Team HTTP mutate 已由 PR #18 以 squash commit `de7e2d3` 合入 `main`；Service Create/Get/List、初始 Environment 事务创建和并发冲突已由 PR #20 以 squash commit `43c627d` 合入 `main`；Service PATCH/Delete 已由 PR #21 以 squash commit `41f2651` 合入 `main`；Environment 独立 CRUD 与 `service_id` 过滤已由 PR #23 以 squash commit `4b311b9` 合入 `main`。
 - M0 结论：真实实现完整满足仓库内施工包，并基本符合原始 v3.1 工程基线预期，可以进入 M1。
-- M1 状态：施工包、Atlas 决策、schema、两份 versioned migration、sqlc 基线与 CI 门禁已完成；`LYAPUS_DATABASE_URL`、`pgxpool` 启动 Ping/关闭路径及数据库感知 `/readyz` 已完成并作真实运行验证。三类资源均已具备 repository/service/HTTP CRUD、本地与 required clean-runner 证据。Service 支持全局及 `team_id` 过滤的稳定游标分页，并以显式事务原子创建 Service 与可选初始 Environment；两个独立 repository 并发创建同一 Service 已验证恰好一个成功、一个冲突。Environment 支持全局及 `service_id` 过滤的稳定游标分页。严格 JSON、415 媒体类型、统一错误、全局 request ID 与不透明 cursor 保持既有边界。直接 SQL 约束测试与收口审阅已完成：17 个函数、100 个子测试分段通过，integration race 与 `make verify` 通过；PR #25 的三项 required CI 已通过，并以 `51fd1d2` 合入 `main`。Compose 本地新 project/卷路径已验证，README 模型/API/演示文档已补齐；容器交付首轮 CI 和演示复走已通过；查询计划实验和 M1 总验收仍待完成。
+- M1 状态：施工包、Atlas 决策、schema、两份 versioned migration、sqlc 基线与 CI 门禁已完成；`LYAPUS_DATABASE_URL`、`pgxpool` 启动 Ping/关闭路径及数据库感知 `/readyz` 已完成并作真实运行验证。三类资源均已具备 repository/service/HTTP CRUD、本地与 required clean-runner 证据。Service 支持全局及 `team_id` 过滤的稳定游标分页，并以显式事务原子创建 Service 与可选初始 Environment；两个独立 repository 并发创建同一 Service 已验证恰好一个成功、一个冲突。Environment 支持全局及 `service_id` 过滤的稳定游标分页。严格 JSON、415 媒体类型、统一错误、全局 request ID 与不透明 cursor 保持既有边界。直接 SQL 约束测试与收口审阅已完成：17 个函数、100 个子测试分段通过，integration race 与 `make verify` 通过；PR #25 的三项 required CI 已通过，并以 `51fd1d2` 合入 `main`。Compose 本地新 project/卷路径已验证，README 模型/API/演示文档已补齐；容器交付首轮 CI 和演示复走已通过；查询计划实验及本地回归已完成，PR #29 首轮四项 CI 已通过，补交后的最新提交门禁和 M1 总验收仍待完成。
 - M1 最小范围：Team、Service、Environment CRUD，PostgreSQL migration/约束/事务/并发正确性，单元与真实数据库测试，Compose 空环境复现，以及一份查询计划优化记录。
 - M1 默认实现：Go 1.26.6、PostgreSQL 16.14、`pgx/v5` + `pgxpool`、chi/v5、sqlc 1.31.1、手写 SQL + repository adapter、identity bigint 和不透明游标。chi 保持标准 HTTP handler；sqlc 生成类型不越过 PostgreSQL adapter。选择理由与适用边界见施工包。
 - Migration 已由 ADR-0004 最终确定：P-0001 完成固定 Atlas Community v1.2.0 的两次 migration（空库 apply、已有库前滚、重复 apply、status 与完整性篡改拦截）、同一 `db/schema.sql` 的 sqlc 1.31.1 解析/生成、本机可复现 Community 构建，以及 PR #8 中 required `atlas-community` CI 实跑。未来触发退出条件时才以新 ADR 记录并回退 `golang-migrate`。
@@ -31,12 +31,30 @@
 
 - 已成立：Service/Environment/归属模型，三类资源 CRUD、校验、统一错误、分页/过滤，关键单元测试、真实数据库 repository 测试和 race，以及 Service + 初始 Environment 事务与并发唯一冲突。
 - 约束实证已成立：PR #25 已补齐本次清单要求的字段 CHECK 插入边界、唯一性范围、外键和引用删除测试；结合既有 migration、事务与并发证据，原始最小项 3 的本地与 CI 证据已具备，已由 PR #25 合入 `main`。未穷尽 NULL、UPDATE 或全部 Unicode 空白行为。
-- 尚未成立：带数据量、SQL、参数及 `EXPLAIN (ANALYZE, BUFFERS)` 的索引前后查询计划记录及 M1 总验收。Compose 交付已通过 PR #27 合并；review-followups 的本地回归及 PR #28 首轮四项 required CI 已通过，最终门禁以最新提交为准。
+- 查询计划记录已具备本地证据，见 [实验报告](../benchmarks/m1-service-list-query-plan.md)；PR #29 首轮四项 required CI 已通过，文档补交后仍须通过最新检查，M1 最终验收和 release 尚未成立。Compose 与 review-followups 已分别由 PR #27、#28 合并。
 - 不阻塞 v0.1：API Token、最小 RBAC、审计日志、复杂幂等/乐观并发、更丰富过滤排序、HTTP E2E、k6 与 pprof 均属于原始“深度增强”，当前未实现也不得写成最小版缺陷。
 
 ## 下一次从这里开始
 
-### 当前接续点：Copilot 审阅后续修复（优先于下方历史交接）
+### 当前接续点：2026-09-29 查询计划本地复盘完成
+
+- 当前分支 `perf/m1-service-query-plan`，基线1405708。仅 Service 按 Team 后续页采用非空 `(created_at, id)` 行比较；schema、migration、API 契约和其他查询未改。四份实验 SQL 与十二份正反序原始结果、报告和学习笔记已随 `bdc9517` 提交，并创建 PR #29。
+- 已有历史/现有索引单次对照、深页谓词正反序测量、同时间桶/深页/末页/空页等价样本。不要把单次索引时间或 SQL 微基准外推为线上固定倍数收益。
+- 生成检查、vet、非缓存普通/race、真实分页 integration、adapter integration race（4.606s）及 make verify 均通过；2026-09-29 经所有者确认配置后的本地收口审阅完成，见 [复盘](sessions/2026-09-29-service-query-plan.md)。当前分支 required CI、合并及 M1 总验收未完成。
+- 2026-09-29 所有者确认两个项目及卷标签后，分别执行 `down --volumes`：`lyapus-integration` 与 `lyapus-query-plan` 的容器、网络、卷均已删除。随后项目/卷列表为空，55433/55434 无监听；当前 shell 已取消两个测试/实验连接变量。实验数据随卷删除，十二份原始测量已归档，未要求删除 /tmp 副本。详见本轮复盘。
+- 下一步：提交本次 CI 证据文档并 push 更新 PR #29，等待最新四项 required CI 通过后再合并，不另开文档 PR。数据库已清理，再跑本地 integration/make verify 须先重建独立测试库并迁移。之后完成 M1 最终空环境/clean-runner 验收与 release，不进入 M2。
+- Atlas 暂保持锁定 Community v1.2.0。查询优化合并后独立评估升级，无相关紧急修复时不阻塞 M1 release；升级门槛见本轮复盘。
+
+### 2026-09-26 旧开发环境清理完成（持续有效的资源记录）
+
+- PR #28 最新四项 required CI 全部通过，已以 `1405708` 合入 main；项目所有者确认 `main...origin/main` 同步、工作区干净，本地及远端修复分支均删除。以下资源记录是合并后发生的新操作。
+- 经确认卷归属和挂载，项目所有者执行 `docker compose -p lyapus-dev down --volumes`：`lyapus-dev-apiserver-1`、`lyapus-dev-postgres-1`、`lyapus-dev_default` 和 `lyapus-dev_postgres_data` 全部 Removed。旧库 `lyapus_dev_test` 和演示数据随卷删除；未提供备份证据，不承诺恢复。
+- 清理后开发 project 容器列表、目标卷列表均为空；55432、8080 无监听；当前 shell 已 `unset LYAPUS_DATABASE_URL`。不是全主机所有 Docker 资源均已清空的证明，也不代表其他 shell 或 `.env` 已清除旧变量。
+- 当前没有已启动的开发 API/数据库，不应直接回读原 Service 1；连接失败是清理后的预期，不是代码回归。镜像未通过本次命令删除，其存在不证明包含最新源码。
+- 未来开发环境按新卷流程建立 `lyapus_dev`，先检查 `.env` 和环境变量覆盖，构建当前源码镜像、启动数据库、显式应用迁移，再启动 API；旧演示记录和 ID 不可假定仍存在。详见 [清理记录](sessions/2026-09-26-dev-cleanup.md) 与 [Compose runbook](../runbooks/compose-delivery.md)。
+- 该清理后开展了独立数据库中的 Service 查询计划实验，最新进展见上方09-29接续点；无需为实验恢复开发环境。M1 总验收尚未完成。
+
+### Copilot 审阅后续修复（合并前历史交接，以以上接续点为准）
 
 - PR #27 以 `8126a09` 合入 main。当前分支 `fix/review-followups` 已提交 `c8a2ad7` 并创建 PR #28；首轮四项 required CI 均通过，具体证据见本轮记录。
 - 已实现：开发库默认名改为 `lyapus_dev`；测试连接前校验 pgx 解析的真实库名并拒绝旧开发库；初始 Environment 改用自身规范化函数；smoke 数字 ID 校验和提取改用结构化 JSON 断言。

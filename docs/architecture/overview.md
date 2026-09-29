@@ -29,6 +29,8 @@ Environment 独立 CRUD 已由 PR #23 通过 required clean runner，并以 squa
 
 ## 与原始目录示意的映射
 
+2026-09-29 查询优化分支仅改变 Service 按 Team 的后续页 SQL：以行比较匹配现有 `(team_id, created_at DESC, id DESC)` 索引范围；sqlc 参数和 adapter/domain/HTTP 边界未变，没有新增组件或 schema migration。本地回归通过，PR #29 首轮四项 CI 已通过，补交后的最新门禁待完成，见 [查询计划报告](../benchmarks/m1-service-list-query-plan.md)。
+
 v3.1 方案书的 M0–M2 目录树是职责与演化方向示意，不是要求第一天逐字建立的固定路径；同一节同时要求“不提前建立空目录”。当前映射如下：
 
 | 原始示意 | 当前实现 | 说明 |

@@ -4,6 +4,8 @@
 
 ## 实际完成
 
+- 2026-09-29，查询优化分支完成100 Team / 100000 Service造数、历史与现有索引对照、深页 OR/行比较正反序测量和选定边界等价验证。仅 Service 按 Team 后续页采用行比较，schema、migration 和公共 API 不变；本地分页 integration、integration race（4.606s）及 make verify 通过。见 [报告](../../benchmarks/m1-service-list-query-plan.md) 与 [收口复盘](../../progress/sessions/2026-09-29-service-query-plan.md)。PR #29 首轮四项 CI 已通过，最新提交门禁/合并及 M1 总验收仍待完成。
+
 - `LYAPUS_DATABASE_URL` 成为必填配置；仅接受 `postgres` 或 `postgresql` URL，配置与日志不输出连接串。
 - `internal/platform/database.Open` 创建 `pgxpool.Pool` 后显式 Ping；Ping 失败时关闭 pool，调用方以五秒启动 context 约束等待时间。
 - HTTP 进程在收到 `SIGINT` 或 `SIGTERM` 后先停止接收 HTTP 流量，再关闭连接池。
@@ -59,11 +61,11 @@
 
 ## 证据
 
-- review-followups：数据库目标防护、初始 Environment 规范化和 CI JSON 精确断言已完成本地修改与回归；integration race 4.435s、`make verify` 通过，开发数据回读成功，临时测试资源已清理。本地收口审阅完成，PR #28 提交 `c8a2ad7` 的四项 required CI（含真实 HTTP smoke）已通过。文档补交后仍须验证最新提交，最终合并状态以 PR 页面为准。详见 [修复记录](../../progress/sessions/review-followups.md)。
+- review-followups：本地修复、integration race（4.435s）、make verify 和文档补交后的最新四项 required CI 已通过，PR #28 以1405708合并。其验证时开发数据仍保留，之后09-26所有者已删除旧开发库及卷，不能沿用该历史状态。详见 [修复记录](../../progress/sessions/review-followups.md) 与 [资源清理](../../progress/sessions/2026-09-26-dev-cleanup.md)。
 
 - Git commit / release：数据库基础设施已由 `df0154d`（PR #10）合入；Team Create/Get repository 已由 `57f19d4`（PR #11）合入；Team CRUD/稳定分页已由 `f4df01f`（PR #13）合入；Team service/创建 API 已由 `8e84c20`（PR #15）合入；Team HTTP read 已由 `284021e`（PR #17）合入；Team HTTP mutate 已由 `de7e2d3`（PR #18）合入；Service Create/Get/List 已由 `43c627d`（PR #20）合入；Service mutation 已由 `41f2651`（PR #21）合入；Environment catalog 已由 `4b311b9`（PR #23）合入；约束测试已由 `51fd1d2`（PR #25）合入；M1 release 待完成。
 - Migration ADR 与 runbook：ADR-0004 与 migration runbook 已完成。
-- 查询计划 benchmark：待完成。
+- 查询计划 benchmark：本地完成，见 [报告](../../benchmarks/m1-service-list-query-plan.md)；PR #29 首轮四项 CI 已通过，不代表补交后的最新门禁或 M1 最终验收已完成。
 - 会话与学习记录：数据库基础设施及 Team、Service、Environment 纵切面会话已记录；M1 总结待完成。
 
 ## 施工包进入 M2 的条件

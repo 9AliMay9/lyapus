@@ -6,10 +6,11 @@
 
 ## 当前范围
 
-- M0 工程基线已经完成终局审计；M1 已完成 migration、数据库基础设施，以及 Team、Service、Environment 三类资源的完整 HTTP CRUD。Environment 独立 CRUD 与 `service_id` 过滤已由 PR #23 以 squash commit `4b311b9` 合入 `main`。数据库约束实证已完成本地验证、收口审阅与 required CI，并由 PR #25 以 `51fd1d2` 合入 `main`；Compose 本地路径已验证，README 演示文档已补齐；容器交付首轮 CI 和演示复走已通过；查询计划实验与 M1 总验收仍待完成。
+- M0 工程基线已经完成终局审计；M1 已完成 migration、数据库基础设施，以及 Team、Service、Environment 三类资源的完整 HTTP CRUD。Environment 独立 CRUD 与 `service_id` 过滤已由 PR #23 以 squash commit `4b311b9` 合入 `main`。数据库约束实证已完成本地验证、收口审阅与 required CI，并由 PR #25 以 `51fd1d2` 合入 `main`；Compose 本地路径已验证，README 演示文档已补齐；容器交付首轮 CI 和演示复走已通过；查询计划实验及业务 SQL 优化已有本地证据，PR #29 首轮四项 CI 已通过，补交后的最新提交门禁与 M1 总验收仍待完成。
 - 近期可投递目标是 M1–M3；M4–M8 是后续演化路线，不是当前阻塞项。
 - 首先做模块化单体；不为制造“微服务感”提前拆分服务。
 - 当前主仓库的规范地址：`github.com/9AliMay9/lyapus`。
+- 2026-09-26 PR #28 合并后，旧 `lyapus-dev` 容器、网络及开发卷已按所有者决定删除，旧库 `lyapus_dev_test` 与演示数据不再保留；55432/8080 已确认无监听。当前无开发 API 可回读，后续按新卷初始化 `lyapus_dev`，不沿用旧库名或演示 ID。当前资源事实与下一步以 [进度入口](progress/current.md) 为准。
 
 ## 长期不变的工程原则
 

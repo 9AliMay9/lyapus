@@ -125,9 +125,9 @@ const listServicesAfterCursorByTeamID = `-- name: ListServicesAfterCursorByTeamI
 SELECT id, team_id, slug, name, description, created_at, updated_at
 FROM services
 WHERE team_id = $1
-  AND (
-    created_at < $2
-    OR (created_at = $2 AND id < $3)
+  AND (created_at, id) < (
+    $2::timestamptz,
+    $3::bigint
   )
 ORDER BY created_at DESC, id DESC
 LIMIT $4

@@ -32,13 +32,13 @@ LIMIT $3;
 -- name: ListServicesAfterCursorByTeamID :many
 SELECT id, team_id, slug, name, description, created_at, updated_at
 FROM services
-WHERE team_id = $1
-  AND (
-    created_at < $2
-    OR (created_at = $2 AND id < $3)
+WHERE team_id = sqlc.arg('team_id')
+  AND (created_at, id) < (
+    sqlc.arg('created_at')::timestamptz,
+    sqlc.arg('id')::bigint
   )
 ORDER BY created_at DESC, id DESC
-LIMIT $4;
+LIMIT sqlc.arg('limit');
 
 -- name: UpdateService :one
 UPDATE services

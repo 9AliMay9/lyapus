@@ -8,7 +8,7 @@
 
 - 从仓库根目录执行，目标数据库与当前工作负载已确认。
 - 本机已有 `.tools/bin/atlas`；缺失时按 `scripts/install-atlas-community.sh` 构建。该脚本需要下载时使用 [临时代理下载](temporary-proxy-downloads.md) 的单命令环境前缀。
-- `LYAPUS_DATABASE_URL` 已在当前 shell 私有设置，且数据库名对 dev/test 操作以 `_test` 结尾。
+- `LYAPUS_DATABASE_URL` 已在当前 shell 私有设置；开发库默认 `lyapus_dev`，一次性测试库以 `_test` 结尾。开发库不应为了通过测试库检查而改成 `_test` 名称。
 - 已阅读本次 schema 变更与生成的 SQL；绝不让应用自动运行 migration。
 
 ## 生成与审阅新 migration
@@ -26,14 +26,9 @@
 
 ## Apply 与状态确认
 
-先确认目标 URL 只指向可操作的测试库，不打印该 URL：
+先确认当前目标的 Compose project、容器、端口、卷和实际数据库名，并通过该目标的 psql 连接执行 `SELECT current_database();`。具体开发与测试命令见 [Compose runbook](compose-delivery.md)。本节命令使用 `LYAPUS_DATABASE_URL`；独立集成测试使用 `LYAPUS_TEST_DATABASE_URL`，实验使用专用变量，不相互覆盖，也不打印连接串。
 
-```bash
-case "${LYAPUS_DATABASE_URL%%\?*}" in
-  *_test) ;;
-  *) echo "refusing to migrate a non-_test database" >&2; exit 1 ;;
-esac
-```
+不能仅用 URL 路径的 `_test` 后缀推断实际连接目标：查询参数可能覆盖库名，编码也可能改变解析结果。Go 集成测试的有效库名防护不包裹 Atlas 命令；Atlas dry-run/apply 前仍须人工确认。清表测试不允许连接开发库或需要保留数据的查询计划实验库。
 
 先 dry-run；`migrate apply` 会校验既有 `atlas.sum`：
 

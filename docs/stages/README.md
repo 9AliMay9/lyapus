@@ -7,4 +7,4 @@
 - `checklist.md`：可勾选的完成项。
 - `outcome.md`：阶段结束后填写的实际结果与证据。
 
-M0 已完成并冻结实际结果。M1 已完成施工包、Atlas migration 决策、schema/sqlc 基线、数据库基础设施，以及 Team、Service、Environment 三类资源的完整 HTTP CRUD；Environment 纵切面已由 PR #23 以 squash commit `4b311b9` 合入 `main`。数据库约束实证已完成本地验证、收口审阅与 required CI，并由 PR #25 以 `51fd1d2` 合入 `main`；Compose 本地路径与 README 演示文档已建立；容器交付首轮 CI 和演示复走已通过；查询计划实验及业务 SQL 优化已有本地证据，PR #29 首轮四项 CI 已通过，补交后的最新提交门禁与 M1 总验收仍待完成。状态与下一步以 `progress/current.md` 为准。M2–M8 继续只保留入口。
+M0 已完成；M1 的三类资源 CRUD、数据库约束/事务/并发、Compose 交付和查询优化已合入 main（PR #29：`fdf8f25`）。2026-10-01，本分支 Atlas `v1.3.0-lyapus.1` 升级专项、应用回归及新卷 API 演示已在本地通过。2026-10-02临时资源已清理；本分支四项 required CI、合并和 release 仍待完成；不声明 M1 已发布或生产就绪。

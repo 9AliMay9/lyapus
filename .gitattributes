@@ -4,3 +4,5 @@
 *.go text eol=lf
 *.yaml text eol=lf
 *.yml text eol=lf
+# Unified diff context markers precede original tabs and represent empty lines.
+scripts/patches/atlas-v1.3.0-dependencies.patch whitespace=-blank-at-eol,-space-before-tab

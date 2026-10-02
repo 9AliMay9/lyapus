@@ -2,7 +2,7 @@
 
 一个以 Go 为主语言、以 OpenTelemetry 为遥测标准、以 SLO 与故障闭环为可靠性核心，并逐步演化为平台工程与 AI 可观测性实践的项目。
 
-M0（工程基线）已经完成。M1 正在施工：当前已有 PostgreSQL migration、`pgxpool` 启动与 readiness、sqlc 基线，以及 Team、Service、Environment 三类资源的完整 HTTP CRUD。Environment 独立 CRUD 与 `service_id` 过滤已由 PR #23 以 squash commit `4b311b9` 合入 `main`。数据库约束测试已通过本地验证、收口审阅及三项 required CI，并由 PR #25 以 squash commit `51fd1d2` 合入 `main`。Compose 本地新 project/新卷交付、隔离测试和中断恢复已验证，README 演示路径已补齐；本次容器交付首轮 CI 与独立 project 演示复走已通过；查询计划实验与本地回归已完成，PR #29 首轮四项 CI 已通过，补交后的最新提交门禁及 M1 最终验收仍待完成。当前也没有消息队列、OpenTelemetry、前端或 AI 功能。
+M0 已完成；M1 的三类资源 CRUD、数据库约束/事务/并发、Compose 交付和查询优化已合入 main（PR #29：`fdf8f25`）。2026-10-01，本分支 Atlas `v1.3.0-lyapus.1` 升级专项、应用回归及新卷 API 演示已在本地通过。2026-10-02临时资源已清理；PR #30 首轮四项 required CI 已通过，文档补交后的最新门禁、合并和 release 仍待完成；不声明 M1 已发布或生产就绪。
 
 ## 前置条件
 

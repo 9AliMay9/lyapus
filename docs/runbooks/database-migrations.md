@@ -8,6 +8,7 @@
 
 - 从仓库根目录执行，目标数据库与当前工作负载已确认。
 - 本机已有 `.tools/bin/atlas`；缺失时按 `scripts/install-atlas-community.sh` 构建。该脚本需要下载时使用 [临时代理下载](temporary-proxy-downloads.md) 的单命令环境前缀。
+- 当前分支脚本产出 `v1.3.0-lyapus.1`：固定上游源码加依赖安全补丁，不是上游release；升级本地验收已完成，PR #30首轮CI已通过，最新门禁待完成。执行前核对 `atlas version` 的实际输出，必要时检查SHA-256和Go构建信息；仅退出0不能证明工具身份。详见 [补丁说明](../../scripts/patches/README.md)。
 - `LYAPUS_DATABASE_URL` 已在当前 shell 私有设置；开发库默认 `lyapus_dev`，一次性测试库以 `_test` 结尾。开发库不应为了通过测试库检查而改成 `_test` 名称。
 - 已阅读本次 schema 变更与生成的 SQL；绝不让应用自动运行 migration。
 
@@ -62,6 +63,8 @@
 ## 已验证证据
 
 Atlas Community v1.2.0、PostgreSQL 16.14 与本 runbook 的 diff/apply/status 核心路径已在 P-0001 和 GitHub-hosted CI 实测。细节见 [ADR-0004](../architecture/decisions/ADR-0004-atlas-community-migrations.md)。
+
+2026-10-01，v1.3.0-lyapus.1已在本地验证空库完整apply、重复apply、旧版第一份迁移接续第二份并保留哨兵、临时副本checksum拒绝及无变更diff。历史迁移与schema未改；PR #30首轮CI已通过，最新门禁尚待验证。详见 [验收记录](../progress/sessions/2026-10-01-m1-final-acceptance.md)。
 
 ### CI 中的 PostgreSQL 启动稳定性
 

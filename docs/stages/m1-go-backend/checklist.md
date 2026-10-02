@@ -64,10 +64,15 @@
 - [x] 根 README 包含数据模型、API 示例和五分钟演示路径（依赖/镜像已准备；独立 project 业务演示已复走，不声明全新主机计时通过）。
 - [x] Service 按 Team 列表查询有100 Team / 100000 Service与索引前后 EXPLAIN 证据，见 [报告](../../benchmarks/m1-service-list-query-plan.md)。
 - [x] 查询优化记录注明环境、数据量、SQL、参数、原始正反序计划、结果和限制；本地 regression/race/make verify 通过。
-- [ ] 查询优化分支最新四项 required CI 通过并合并。
+- [x] 查询优化 PR #29 最新四项 required CI（run36538006370）通过，以 `fdf8f25` 合并。
 - [x] 查询优化 PR #29 提交 `bdc9517` 首轮四项 required CI 通过，见 [运行证据](../../progress/sessions/2026-09-29-service-query-plan.md)；不代表补交后的最新门禁或 M1 总验收已完成。
-- [ ] `outcome.md`、当前架构、学习笔记、进度和会话记录均按实际结果更新。
-- [ ] clean runner 与空 Compose project 完成最终验收。
+- [x] 本地收口的 `outcome.md`、架构、学习笔记、进度与会话已更新；清理/CI/发布结果仍须按发生顺序补记。
+- [x] Atlas 补丁构建身份、独立扫描、空库迁移、旧版接续及哨兵保留、checksum 拒绝和无变更 diff 本地通过。
+- [x] 升级后 integration race 与 make verify 本地通过。
+- [x] 当前源码镜像在独立空 Compose project 完成本地 API 演示、故障恢复和空闲正常退出；覆盖边界见 [复盘](../../progress/sessions/2026-10-01-m1-final-acceptance.md)。
+- [x] 2026-10-02本轮两个临时 project、数据库与卷已删除；列表为空，55433/55434/8081无监听，专用变量已取消，误生成空文件已删除。
+- [x] PR #30 提交 `8ec1040` 首轮四项 required CI 通过（run36942161208），见本轮复盘。
+- [ ] PR #30 文档补交后的最新四项 required 门禁通过。
 - [ ] 原始方案七项最小交付全部成立并发布 M1 v0.1。
 
 ## 不阻塞 v0.1 的增强

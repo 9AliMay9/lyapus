@@ -12,6 +12,8 @@
 
 ## 学习地图
 
+M1收口复习顺序：[工程骨架](go/backend-engineering-baseline.md) → [组件关键语义](data/component-contracts.md) → [变更验证](reliability/change-validation.md) → [生产准入边界](reliability/production-readiness.md)。学习笔记不是命令抄本：应能解释为什么、选择什么、如何验证及何时不适用。
+
 | 目录 | 重点问题 | 主要阶段 |
 | --- | --- | --- |
 | `go/` | 如何写正确、可测、可诊断的 Go 服务？ | M0–M8 |

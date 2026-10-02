@@ -1,12 +1,14 @@
 # M1：常规 Go 后端
 
-状态：Atlas migration、schema/sqlc 基线、数据库基础设施，以及 Team、Service、Environment 三类资源的完整 HTTP CRUD 已完成；Environment 纵切面已由 PR #23 以 squash commit `4b311b9` 合入 `main`。数据库约束实证已完成本地验证、收口审阅与 required CI，并由 PR #25 以 `51fd1d2` 合入 `main`；Compose 本地空 project/空卷路径已验证，README 演示文档已建立；容器交付首轮 CI 和演示复走已通过；查询计划实验和本地回归已完成，PR #29 首轮四项 CI 已通过，补交后的最新提交门禁与 M1 v0.1 总验收尚未完成。
+状态：M0 已完成；M1 的三类资源 CRUD、数据库约束/事务/并发、Compose 交付和查询优化已合入 main（PR #29：`fdf8f25`）。2026-10-01，本分支 Atlas `v1.3.0-lyapus.1` 升级专项、应用回归及新卷 API 演示已在本地通过。2026-10-02临时资源已清理；PR #30 首轮四项 required CI 已通过，文档补交后的最新门禁、合并和 release 仍待完成；不声明 M1 已发布或生产就绪。
 
 施工前依次阅读：
+
+2026-10-01接续：[联合验收计划](atlas-upgrade-acceptance-plan.md)的本地验证已完成，详见[收口复盘](../../progress/sessions/2026-10-01-m1-final-acceptance.md)。当前默认 Atlas 已切换到补丁版，PR #30 首轮 CI 已通过，尚待最新门禁与合并。
 
 1. `plan.md`：目标、范围、顺序和验收证据。
 2. `contracts.md`：数据模型、API、错误、数据库和测试契约。
 3. `checklist.md`：当前唯一的阶段完成清单。
 4. `../../architecture/decisions/ADR-0004-atlas-community-migrations.md` 与 `../../runbooks/database-migrations.md`：已接受的 migration 决策和经过验证的操作路径。
 
-`outcome.md` 只记录实际结果；约束测试的本地、CI 与合并证据已记录；Compose 已有 PR #27 CI 和本地证据；查询计划实验已有本地报告，PR #29 首轮四项 CI 已通过，不把补交后的最新门禁和最终 M1 验收写成已完成。
+`outcome.md` 只记录实际结果；本地、历史 CI 与本分支 CI 分开记载，不以过去的成功替代最新提交门禁。

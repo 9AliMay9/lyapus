@@ -40,5 +40,11 @@ PR #8 的 GitHub-hosted `Verify / atlas-community` 使用同一固定 Community 
 
 ## 关联
 
+### 2026-10-01 维护补记（本地通过，PR #30首轮CI已通过，最新门禁待完成）
+
+上述v1.2.0为最初决策与P-0001历史版本，不是当前工作分支安装脚本的版本。当前采用固定上游v1.3.0源码，加仅修改CLI模块依赖的安全补丁，标识 `v1.3.0-lyapus.1`；本机默认工具已切换。schema真源、versioned SQL、显式迁移及Community范围不变，不引入Cloud或付费能力。
+
+补丁由项目维护，固定基础commit、补丁SHA-256和本地版本；上游修复满足要求后重新验证并优先移除。构建身份、扫描局限、迁移接续、完整性拒绝和应用回归见 [本轮复盘](../../progress/sessions/2026-10-01-m1-final-acceptance.md) 与 [补丁说明](../../../scripts/patches/README.md)。PR #30首轮CI已通过；仍需等待文档补交后的最新门禁。当前required checks为verify、smoke、atlas-community、compose四项，原决策中的三项为当时配置。
+
 - [P-0001：Atlas Community migration 工作流](../proposals/P-0001-atlas-migration-workflow.md)
 - [数据库 migration runbook](../../runbooks/database-migrations.md)

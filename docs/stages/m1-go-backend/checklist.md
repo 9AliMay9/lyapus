@@ -71,7 +71,8 @@
 - [x] 升级后 integration race 与 make verify 本地通过。
 - [x] 当前源码镜像在独立空 Compose project 完成本地 API 演示、故障恢复和空闲正常退出；覆盖边界见 [复盘](../../progress/sessions/2026-10-01-m1-final-acceptance.md)。
 - [x] 2026-10-02本轮两个临时 project、数据库与卷已删除；列表为空，55433/55434/8081无监听，专用变量已取消，误生成空文件已删除。
-- [ ] 当前分支 clean-runner 四项 required CI 及文档补交后的最新门禁通过。
+- [x] PR #30 提交 `8ec1040` 首轮四项 required CI 通过（run36942161208），见本轮复盘。
+- [ ] PR #30 文档补交后的最新四项 required 门禁通过。
 - [ ] 原始方案七项最小交付全部成立并发布 M1 v0.1。
 
 ## 不阻塞 v0.1 的增强

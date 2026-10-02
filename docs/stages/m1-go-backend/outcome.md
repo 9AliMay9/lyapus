@@ -23,7 +23,7 @@
 
 ## 验证
 
-- 2026-10-01，Atlas `v1.3.0-lyapus.1` 本地升级验证与最终空卷演示通过：空库完整迁移、旧版第一份→新版第二份接续并保留哨兵、checksum 拒绝、无变更 diff；integration race（4.496s）与 make verify 通过。新镜像 API 的三类资源读写、Environment 同时间戳两页、引用删除409、依赖恢复、删除204/回读404及空闲退出0均有用户终端证据。Environment 独立 POST 复用既有测试与历史 CI，不冒称本轮手工执行。临时资源已于2026-10-02清理并核对列表/端口，本分支 CI 和 release 尚待完成。见 [正式复盘](../../progress/sessions/2026-10-01-m1-final-acceptance.md)。
+- 2026-10-01，Atlas `v1.3.0-lyapus.1` 本地升级验证与最终空卷演示通过：空库完整迁移、旧版第一份→新版第二份接续并保留哨兵、checksum 拒绝、无变更 diff；integration race（4.496s）与 make verify 通过。新镜像 API 的三类资源读写、Environment 同时间戳两页、引用删除409、依赖恢复、删除204/回读404及空闲退出0均有用户终端证据。Environment 独立 POST 复用既有测试与历史 CI，不冒称本轮手工执行。临时资源已于2026-10-02清理并核对列表/端口，PR #30 首轮 CI 已通过，最新门禁和 release 尚待完成。见 [正式复盘](../../progress/sessions/2026-10-01-m1-final-acceptance.md)。
 
 - 2026-09-11 补充：Compose API 停止后 exit 0、OOMKilled=false，日志确认关闭信号与 server 停止，重启后 readiness 200；独立 `compose` CI job 已实现且静态复查通过，PR #27 首轮实跑及四项 required 已确认。
 
@@ -67,7 +67,7 @@
 
 - Git commit / release：数据库基础设施已由 `df0154d`（PR #10）合入；Team Create/Get repository 已由 `57f19d4`（PR #11）合入；Team CRUD/稳定分页已由 `f4df01f`（PR #13）合入；Team service/创建 API 已由 `8e84c20`（PR #15）合入；Team HTTP read 已由 `284021e`（PR #17）合入；Team HTTP mutate 已由 `de7e2d3`（PR #18）合入；Service Create/Get/List 已由 `43c627d`（PR #20）合入；Service mutation 已由 `41f2651`（PR #21）合入；Environment catalog 已由 `4b311b9`（PR #23）合入；约束测试已由 `51fd1d2`（PR #25）合入；M1 release 待完成。
 - Migration ADR 与 runbook：ADR-0004 与 migration runbook 已完成。
-- 查询计划 benchmark：本地完成，见 [报告](../../benchmarks/m1-service-list-query-plan.md)；PR #29 最新四项 CI 已通过并合并；不代表本轮升级分支 CI 或 M1 release 已完成。
+- 查询计划 benchmark：本地完成，见 [报告](../../benchmarks/m1-service-list-query-plan.md)；PR #29 最新四项 CI 已通过并合并；不替代本轮升级证据；PR #30首轮CI已通过，M1 release尚未完成。
 - 会话与学习记录：数据库基础设施及 Team、Service、Environment 纵切面会话已记录；M1 工程骨架、组件语义、变更验证与生产边界笔记已建立，见 [知识入口](../../knowledge/README.md)。
 
 ## 施工包进入 M2 的条件

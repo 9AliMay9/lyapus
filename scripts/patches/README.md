@@ -13,7 +13,7 @@
 
 临时补丁候选编译成功；govulncheck v1.6.0、漏洞库更新时间2026-09-28 16:43:40 UTC下，源码和二进制扫描均退出0，符号级和包级无命中，仍有7项模块级提示，不能称为所有依赖无漏洞。构建信息保留基础commit及 `vcs.modified=true`。
 
-正式补丁文件已对干净基础源码通过 `git apply --check`。所有者随后通过正式安装脚本重建 `.tools/bin/atlas-v1.3.0-lyapus.1`，Go1.26.6、基础commit不变、`vcs.modified=true`；SHA-256为 `aa7ce349a974cddf071c8d8f5b164a9e535798af1cb65265ca7388c428276295`，与临时实验产物一致。正式产物在上述扫描器/漏洞库下二进制复扫退出0，符号级和包级无命中，仍有7项模块级提示。2026-10-01 默认工具已切换为同哈希补丁版；空库迁移、旧版接续、checksum拒绝、无变更diff、应用回归和新卷API演示已通过。本分支CI仍待验证，不把本地验收等同于发布通过。扫描原始输出见 [归档](../../docs/progress/evidence/m1-atlas-upgrade/README.md)，专项结果见 [复盘](../../docs/progress/sessions/2026-10-01-m1-final-acceptance.md)。
+正式补丁文件已对干净基础源码通过 `git apply --check`。所有者随后通过正式安装脚本重建 `.tools/bin/atlas-v1.3.0-lyapus.1`，Go1.26.6、基础commit不变、`vcs.modified=true`；SHA-256为 `aa7ce349a974cddf071c8d8f5b164a9e535798af1cb65265ca7388c428276295`，与临时实验产物一致。正式产物在上述扫描器/漏洞库下二进制复扫退出0，符号级和包级无命中，仍有7项模块级提示。2026-10-01 默认工具已切换为同哈希补丁版；空库迁移、旧版接续、checksum拒绝、无变更diff、应用回归和新卷API演示已通过。PR #30首轮CI已通过，最新门禁仍待验证，不把本地验收等同于发布通过。扫描原始输出见 [归档](../../docs/progress/evidence/m1-atlas-upgrade/README.md)，专项结果见 [复盘](../../docs/progress/sessions/2026-10-01-m1-final-acceptance.md)。
 
 ## 维护与退出
 

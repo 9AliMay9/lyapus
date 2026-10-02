@@ -139,7 +139,7 @@ docs/benchmarks/m1-service-list-query-plan.md
 
 ## 验收命令
 
-Migration 命令以 ADR-0004 与已实测 runbook 为准；Compose 已完成本地新 project/空卷、独立 README 演示复走及 PR #27 required CI 验证，并以 `8126a09` 合入 main。后续变更仍须重新验证，查询计划本地证据已归档，PR #29 已以 `fdf8f25` 合并；本轮 Atlas 升级后的本地验收已通过，当前分支 CI 与 release 待完成。最终至少能够从仓库根目录安全执行：
+Migration 命令以 ADR-0004 与已实测 runbook 为准；Compose 已完成本地新 project/空卷、独立 README 演示复走及 PR #27 required CI 验证，并以 `8126a09` 合入 main。后续变更仍须重新验证，查询计划本地证据已归档，PR #29 已以 `fdf8f25` 合并；本轮 Atlas 升级后的本地验收已通过，PR #30 首轮 CI 已通过，最新门禁与 release 待完成。最终至少能够从仓库根目录安全执行：
 
 ```bash
 make fmt

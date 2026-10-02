@@ -41,9 +41,24 @@ Atlas工具构建与API镜像不同：后者为Go1.26.6构建的CGO_ENABLED=0运
 
 扫描对象、版本、数据库时点与原始输出见 [扫描归档](../evidence/m1-atlas-upgrade/README.md)。安装脚本本轮 `bash -n`、补丁哈希和干净基础源码 `git apply --check` 通过；未在复盘中再次执行数据库、构建或全量测试。
 
-本轮文档复核：23份新增/修改Markdown的相对文件链接目标均存在，`git diff --check`通过；归档三份报告的SHA-256与临时原件一致。代码抽查确认Service写事务绑定同一sqlc WithTx、显式Commit和Rollback，测试在创建连接前检查pgx解析后的有效库名。上述静态检查不替代尚待执行的本分支CI。
+本轮文档复核：23份新增/修改Markdown的相对文件链接目标均存在，`git diff --check`通过；归档三份报告的SHA-256与临时原件一致。代码抽查确认Service写事务绑定同一sqlc WithTx、显式Commit和Rollback，测试在创建连接前检查pgx解析后的有效库名。上述静态检查不替代CI；首轮CI结果见下方补记。
 
 ## 对原始方案的复核
+
+### 2026-10-02 PR #30 首轮 CI 补记
+
+工具升级 `e6cf98e` 与验收文档 `8ec1040` 已推送并创建 [PR #30](https://github.com/9AliMay9/lyapus/pull/30)。依据所有者提供的 `gh pr checks --required --watch` 输出，[run36942161208](https://github.com/9AliMay9/lyapus/actions/runs/36942161208) 四项成功，0失败/取消/跳过/等待。本条未另行下载日志，不声称独立审计每一步输出。
+
+| Required job | 用时 | 证据 |
+| --- | --- | --- |
+| atlas-community | 1m8s | [job110635936472](https://github.com/9AliMay9/lyapus/actions/runs/36942161208/job/110635936472) |
+| compose | 1m31s | [job110635936734](https://github.com/9AliMay9/lyapus/actions/runs/36942161208/job/110635936734) |
+| smoke | 1m11s | [job110636990725](https://github.com/9AliMay9/lyapus/actions/runs/36942161208/job/110636990725) |
+| verify | 3m49s | [job110635936621](https://github.com/9AliMay9/lyapus/actions/runs/36942161208/job/110635936621) |
+
+结合workflow定义，本轮提供固定补丁工具在clean runner构建/使用、迁移检查、应用回归、HTTP smoke和容器交付成功证据。Atlas独立漏洞扫描、旧版接续与checksum篡改负例仍是本地专项证据，不混称CI覆盖。
+
+本次仅补文档，不重建数据库或重复本地API验收。push更新同一PR后，须等待最新四项required通过；尚未合并或发布，不提前勾选release，不为记录最终绿灯递归追加提交。
 
 已回读外层 `reference/生涯项目方案书v3.1.docx` 的“M1近期最小版”和阶段复盘要求。七项映射如下：
 
@@ -57,7 +72,7 @@ Atlas工具构建与API镜像不同：后者为Go1.26.6构建的CGO_ENABLED=0运
 | 查询计划优化前后记录 | PR29已合并，100 Team/100000 Service及原始正反序证据；本轮无SQL变更，复用而不重跑 |
 | README模型/API/演示路径 | README与Compose runbook已有，本轮按选定路径复走；不声称全新主机实测五分钟 |
 
-本地证据达到选定覆盖；发布仍须资源收口、本分支最新四项CI、合并及release。鉴权/RBAC、容量压测、pprof、备份恢复和后续平台组件不临时升级为M1阻塞项。学习入口见 [工程骨架](../../knowledge/go/backend-engineering-baseline.md)、[组件语义](../../knowledge/data/component-contracts.md)、[变更验证](../../knowledge/reliability/change-validation.md)、[生产边界](../../knowledge/reliability/production-readiness.md)。
+本地证据达到选定覆盖；资源已清理、首轮CI已通过；发布仍须文档补交后的最新四项CI、合并及release。鉴权/RBAC、容量压测、pprof、备份恢复和后续平台组件不临时升级为M1阻塞项。学习入口见 [工程骨架](../../knowledge/go/backend-engineering-baseline.md)、[组件语义](../../knowledge/data/component-contracts.md)、[变更验证](../../knowledge/reliability/change-validation.md)、[生产边界](../../knowledge/reliability/production-readiness.md)。
 
 ## 偏差、风险与误操作复盘
 
@@ -75,4 +90,4 @@ Atlas工具构建与API镜像不同：后者为Go1.26.6构建的CGO_ENABLED=0运
 - 2026-10-02清理补记：所有者先核对两个项目容器与卷标签，再分别执行 `docker compose -p lyapus-integration down --volumes` 和 `docker compose -p lyapus-acceptance down --volumes`。前者容器/网络/卷3项Removed，后者两个容器/网络/卷4项Removed。integration、Atlas接续与acceptance库（含哨兵）随卷删除，未提供备份证据，不承诺恢复；镜像、工具及归档报告未删除。
 - 清理后两个项目及目标卷列表均为空；55433、55434、8081无监听。当前shell已取消 `LYAPUS_TEST_DATABASE_URL`、`LYAPUS_ATLAS_UPGRADE_DATABASE_URL`、`LYAPUS_ACCEPTANCE_DATABASE_URL`。不推断其他shell或全主机资源状态；再次运行integration/make verify须先重建并迁移测试库。两个误生成空文件也已删除，Git状态复查不再列出。
 - 检查暂存范围，排除根目录误生成空文件、二进制和临时目录；同一PR保留工具升级与文档的清晰提交。等待verify、smoke、atlas-community、compose四项required；记录首轮CI后等待最新文档提交门禁，不递归追加“记录最终绿灯”的提交。
-- 当前没有本分支PR/CI/合并/release的证据，不进入M2，不提交或删除用户资源。纯文档修正无需重跑已通过的本地数据库/API链路。
+- PR #30首轮CI已有证据，最新文档门禁、合并及release尚待完成。不进入M2；Git操作仍由所有者执行。纯文档修正无需重跑本地数据库/API。

@@ -4,7 +4,7 @@
 
 - 当前阶段：M0 已完成终局审计；M1 已完成数据库基础设施和 Team、Service、Environment 三类资源的完整 HTTP CRUD 纵切面。Team CRUD/稳定分页施工包已由 PR #13 以 squash commit `f4df01f` 合入 `main`；Team service、创建 API、全局 request ID 与 API smoke 已由 PR #15 以 squash commit `8e84c20` 合入 `main`；Team HTTP read 与 cursor 分页已由 PR #17 以 squash commit `284021e` 合入 `main`；Team HTTP mutate 已由 PR #18 以 squash commit `de7e2d3` 合入 `main`；Service Create/Get/List、初始 Environment 事务创建和并发冲突已由 PR #20 以 squash commit `43c627d` 合入 `main`；Service PATCH/Delete 已由 PR #21 以 squash commit `41f2651` 合入 `main`；Environment 独立 CRUD 与 `service_id` 过滤已由 PR #23 以 squash commit `4b311b9` 合入 `main`。
 - M0 结论：真实实现完整满足仓库内施工包，并基本符合原始 v3.1 工程基线预期，可以进入 M1。
-- M1 状态：M0 已完成；M1 的三类资源 CRUD、数据库约束/事务/并发、Compose 交付和查询优化已合入 main（PR #29：`fdf8f25`）。2026-10-01，本分支 Atlas `v1.3.0-lyapus.1` 升级专项、应用回归及新卷 API 演示已在本地通过。2026-10-02临时资源已清理；PR #30 首轮四项 required CI 已通过，文档补交后的最新门禁、合并和 release 仍待完成；不声明 M1 已发布或生产就绪。
+- M1 状态：M0 已完成；M1 最小交付已通过本地验收、PR #30 最终四项 required CI 和合并后 main CI，并发布 [v0.1.0](https://github.com/9AliMay9/lyapus/releases/tag/v0.1.0)，固定提交 `872d4a679539febd9349899ce7127f71db15d2f3`。包含三类资源 CRUD、数据库约束/事务/并发、Compose 交付、查询优化及固定 Atlas 依赖补丁；这是工程基线，不是生产就绪声明。M2 尚未开始。
 - M1 最小范围：Team、Service、Environment CRUD，PostgreSQL migration/约束/事务/并发正确性，单元与真实数据库测试，Compose 空环境复现，以及一份查询计划优化记录。
 - M1 默认实现：Go 1.26.6、PostgreSQL 16.14、`pgx/v5` + `pgxpool`、chi/v5、sqlc 1.31.1、手写 SQL + repository adapter、identity bigint 和不透明游标。chi 保持标准 HTTP handler；sqlc 生成类型不越过 PostgreSQL adapter。选择理由与适用边界见施工包。
 - Migration 已由 ADR-0004 最终确定：P-0001 完成固定 Atlas Community v1.2.0 的两次 migration（空库 apply、已有库前滚、重复 apply、status 与完整性篡改拦截）、同一 `db/schema.sql` 的 sqlc 1.31.1 解析/生成、本机可复现 Community 构建，以及 PR #8 中 required `atlas-community` CI 实跑。未来触发退出条件时才以新 ADR 记录并回退 `golang-migrate`。
@@ -31,21 +31,19 @@
 
 - 已成立：Service/Environment/归属模型，三类资源 CRUD、校验、统一错误、分页/过滤，关键单元测试、真实数据库 repository 测试和 race，以及 Service + 初始 Environment 事务与并发唯一冲突。
 - 约束实证已成立：PR #25 已补齐本次清单要求的字段 CHECK 插入边界、唯一性范围、外键和引用删除测试；结合既有 migration、事务与并发证据，原始最小项 3 的本地与 CI 证据已具备，已由 PR #25 合入 `main`。未穷尽 NULL、UPDATE 或全部 Unicode 空白行为。
-- 查询计划记录已具备本地证据，见 [实验报告](../benchmarks/m1-service-list-query-plan.md)；PR #29 最新四项 required CI 已通过并合并；本轮最终本地验收已通过，PR #30 首轮 CI 已通过，最新门禁和 release 尚待完成。Compose 与 review-followups 已分别由 PR #27、#28 合并。
+- 查询优化已由PR #29合并；M1最终本地验收、最终PR门禁及main CI均通过，v0.1.0已发布。证据见[发布同步](sessions/2026-10-03-m1-release-sync.md)。
 - 不阻塞 v0.1：API Token、最小 RBAC、审计日志、复杂幂等/乐观并发、更丰富过滤排序、HTTP E2E、k6 与 pprof 均属于原始“深度增强”，当前未实现也不得写成最小版缺陷。
 
 ## 下一次从这里开始
 
-### 当前接续点：2026-10-02 资源清理完成，PR #30 首轮 CI 通过，待文档补交后的最新门禁
+### 当前接续点：2026-10-03 M1已发布，笔记已读完，准备简历与投递
 
-- 当前分支 `chore/m1-final-acceptance`，基线 PR #29 squash `fdf8f25`；其最新四项 required CI 已在 run36538006370 通过。不要再把 PR #29 写成待合并。
-- 默认 Atlas 已切换到 `v1.3.0-lyapus.1`，固定上游 commit 与依赖补丁。源码/二进制扫描符号和包级无命中，仍有7项模块级提示；扫描数据库时点及完整原始报告见 [本轮复盘](sessions/2026-10-01-m1-final-acceptance.md)。
-- 空库迁移、旧版接续与哨兵保留、checksum负例、无变更diff、integration race（4.496s）和 make verify 已完成。当前源码镜像在独立新卷演示 CRUD、Environment 两页、故障恢复、引用删除约束和空闲正常退出，结果符合选定契约。
-- 当前资源：2026-10-02所有者确认归属后删除 `lyapus-integration` 与 `lyapus-acceptance` 的容器、网络及数据卷；项目/目标卷列表为空，55433、55434、8081无监听。integration、Atlas接续和acceptance数据库及哨兵随卷删除；未提供备份，不承诺恢复。三个专用连接变量已在当前shell取消，镜像和归档证据未删除。再次运行 integration/make verify 前须重建并迁移独立测试库。
-- 根目录误生成的零字节文件 `--dir`、`--url` 已由所有者逐一确认删除；助手复查Git状态已无这两个文件，不纳入提交。
-- 下一步：PR #30 的 `8ec1040` 首轮四项 required CI 已通过（run36942161208）。提交本次CI证据并push更新原PR，等待最新门禁后合并、发布。纯文档变化不重走本地数据库/API。
-- 四份学习笔记已覆盖工程骨架、组件语义、变更验证与生产准入。M1 是可投递工程基线，不是生产就绪；不追加 RBAC、容量压测或全新组件作为本轮阻塞项。
-- 之前的 Atlas 调查、漏洞分诊与候选构建过程保留在 [联合验收计划](../stages/m1-go-backend/atlas-upgrade-acceptance-plan.md)，历史“待切换”不代表当前状态。
+- v0.1.0指向 `872d4a679539febd9349899ce7127f71db15d2f3`；PR #30最终门禁run36962289123、main push CI run36963167180均通过。原施工分支已删除，当前发布基线为main。
+- 所有者确认学习笔记已读完；不把阅读完成等同于全部掌握。下一步写初版简历、练习项目讲解，秋招正式岗与实习并行准备；投递或录屏完成均尚无证据，不提前写成已完成。
+- 暂不扩大M1。简历/投递启动后再细化小M2，先同步调用deadline/取消/依赖超时，再考虑重复投递与消费幂等；M2当前没有实现，不提前建组件或声明分布式能力。
+- 10-02已确认integration、acceptance容器/网络/卷删除，55433/55434/8081无监听，三个专用URL变量取消，误生成空文件删除。旧dev卷于09-26删除。以上是当时的资源证据，不是实时探测；若需运行数据库测试必须重新预检、建库及迁移。
+- 本次仅按所有者要求同步发布后文档，没有改业务代码、固定工具补丁、标签或release，也不重跑M1验收。需由所有者将文档改动提交到独立文档分支，不直接推送main；发布标签保持不动。
+- 身份、最终CI链接与接续边界集中见[发布同步记录](sessions/2026-10-03-m1-release-sync.md)。以下接续点均是历史，不再按其中“待合并/待发布”重复操作。
 
 ### 2026-09-29 查询计划本地复盘完成（历史接续点，已由上方更新）
 

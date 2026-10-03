@@ -36,7 +36,7 @@
 | 驱动与连接池 | `pgx/v5`、`pgxpool` | PostgreSQL 原生、支持 context、事务和 SQLSTATE；实际 patch 版本由 `go.mod` 固定。 |
 | 数据访问 | `sqlc` 1.31.1 + 手写 SQL + repository adapter | SQL 仍由项目所有者编写和解释；sqlc 生成 pgx/v5 类型安全调用，repository 负责事务、业务类型映射和错误分类。生成代码不越过 adapter。 |
 | 标识符 | PostgreSQL `bigint generated always as identity` | 简单、无额外生成依赖，便于解释索引与游标；顺序 ID 不是授权边界，未来事件 ID 可独立设计。 |
-| 迁移 | Atlas Community v1.3.0-lyapus.1：固定上游 v1.3.0 加本地依赖安全补丁 | P-0001 的 v1.2.0 决策保留历史；本轮升级本地已验证、CI 待完成，见联合验收计划。同时保留 schema-as-code 和可审阅迁移，不在应用启动时自动迁移，不依赖 Atlas Cloud/Pro。 |
+| 迁移 | Atlas Community v1.3.0-lyapus.1：固定上游 v1.3.0 加本地依赖安全补丁 | P-0001 的 v1.2.0 决策保留历史；本轮升级本地及CI已验证，已随v0.1.0发布，见联合验收计划。同时保留 schema-as-code 和可审阅迁移，不在应用启动时自动迁移，不依赖 Atlas Cloud/Pro。 |
 | 测试数据库 | Compose 独立 project + 名称带 `_test` 的一次性数据库 | 与开发数据隔离；migration 前重建，测试后删除卷。测试代码必须拒绝非测试库。 |
 
 这些是当前阶段的最优默认项，不代表工具流行度或生产能力已经被本项目证明。
@@ -139,7 +139,7 @@ docs/benchmarks/m1-service-list-query-plan.md
 
 ## 验收命令
 
-Migration 命令以 ADR-0004 与已实测 runbook 为准；Compose 已完成本地新 project/空卷、独立 README 演示复走及 PR #27 required CI 验证，并以 `8126a09` 合入 main。后续变更仍须重新验证，查询计划本地证据已归档，PR #29 已以 `fdf8f25` 合并；本轮 Atlas 升级后的本地验收已通过，PR #30 首轮 CI 已通过，最新门禁与 release 待完成。最终至少能够从仓库根目录安全执行：
+Migration 命令以 ADR-0004 与已实测 runbook 为准；Compose 已完成本地新 project/空卷、独立 README 演示复走及 PR #27 required CI 验证，并以 `8126a09` 合入 main。后续变更仍须重新验证，查询计划本地证据已归档，PR #29 已以 `fdf8f25` 合并；本轮 Atlas 升级后的本地验收已通过，PR #30 最终门禁及main CI已通过，已发布v0.1.0。最终至少能够从仓库根目录安全执行：
 
 ```bash
 make fmt
@@ -158,7 +158,7 @@ docker compose -p lyapus-dev up -d --no-build --pull never apiserver
 
 ## 交付证据
 
-- M1 v0.1 Git commit 与 release：待完成。
+- M1 release：[v0.1.0](https://github.com/9AliMay9/lyapus/releases/tag/v0.1.0)，提交 `872d4a679539febd9349899ce7127f71db15d2f3`；最终PR CI和main CI均通过。
 - 迁移工具 ADR：ADR-0004 已 accepted。
 - 数据库 migration runbook：核心 diff/apply/status 路径已在本机与 required CI 实测。
 - PostgreSQL 集成测试：Team Create/Get/List/Update/Delete、唯一冲突、外键引用删除冲突、not-found 映射和游标分页已在本地与 PR #13 clean-runner 验证；Service Create/Get/List、初始 Environment 事务回滚、父资源缺失、唯一冲突、`team_id` 过滤、游标分页和并发重复创建已由本地与 PR #20 clean runner 验证。Service Update/Delete 的字段保留、显式清空、冲突与删除语义已在本地真实 PostgreSQL 验证；PR #21 clean-runner smoke 已验证其 HTTP 纵切面。Environment Create/Get/List/Update/Delete、父资源缺失、同 Service slug 冲突、`service_id` 过滤和游标分页已在本地真实 PostgreSQL、race 及 PR #23 clean runner 下验证。PR #25 已完成直接 SQL 约束行为测试的本地及 required CI 验证；具体覆盖及未验证边界见 `../../progress/sessions/2026-09-10-catalog-db-constraints.md`。PR #25 已以 `51fd1d2` 合入 `main`。

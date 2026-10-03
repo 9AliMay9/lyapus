@@ -1,6 +1,6 @@
 # Atlas 1.3.0 考察与 M1 联合验收计划
 
-状态（2026-10-02）：补丁版已切换为本地默认 Atlas，升级专项、应用回归和新卷 API 演示通过；资源已清理并确认，PR #30 首轮 CI 已通过，最新门禁、合并与 release 待完成。基线 PR #29 squash `fdf8f25`，当前分支 `chore/m1-final-acceptance`。完整证据见 [收口复盘](../../progress/sessions/2026-10-01-m1-final-acceptance.md)。
+状态（2026-10-03）：升级专项、本地验收、最终PR门禁、main CI与资源清理均完成，已随v0.1.0发布（872d4a6）。原chore/m1-final-acceptance分支已合并删除。以下计划与分诊过程保留历史，最终证据见[发布同步](../../progress/sessions/2026-10-03-m1-release-sync.md)。
 
 ## 考察结论
 
@@ -8,7 +8,7 @@
 
 - 旧版：v1.2.0 / `47daa88aea519f7f4c4aab5adfde2beab9b10b13`。
 - 候选：v1.3.0 / `9a6bc601212130aaaefcbc8dd36c710baf9716ff`，tag ref 指向 commit。
-- `cmd/atlas/go.mod` 的 Go 要求从1.25.0升至1.26.4；根模块也要求1.26.4。项目 go.mod 与 Dockerfile 声明1.26.6，满足声明要求；实际主机版本、下载与构建仍待确认。
+- `cmd/atlas/go.mod` 的 Go 要求从1.25.0升至1.26.4；根模块也要求1.26.4。项目 go.mod 与 Dockerfile 声明1.26.6，满足声明要求；后续已以Go1.26.6完成构建，详见验收记录。
 - CLI 依赖更新包括 x/crypto 0.46.0→0.52.0、x/net 0.48.0→0.55.0、x/sys 0.42.0→0.45.0，以及 x/mod、x/sync、x/text。提交7021f1694e49117bef93d05aeb45108cbcb4ea09明确以修复 CVE 为目的。这是升级收益，不是本项目实际漏洞可达性的证明。
 - 完整文件列表未列出 `sql/postgres` 或 `cmd/atlas/internal/cmdapi` 的修改；`sql/migrate/dir.go`、`lex.go` 的变化是 lint 注释，不是执行逻辑。不能因此断言依赖更新毫无行为风险。
 - 新增 `atlasexec` 的 Script / Cloud repo 调用包装，属于 SDK；不等于源码构建的 Community CLI 新增相应付费/Cloud 能力，本项目也不引入该 SDK。
@@ -28,7 +28,7 @@
 
 ## 覆盖与复用矩阵
 
-截至2026-10-01，前八项本地验证已执行，具体覆盖与例外见收口复盘；第九项已由PR #30首轮CI通过，第十项最新门禁待完成。下表保留设计目标，不代替执行证据。
+截至2026-10-01，前八项本地验证已执行，具体覆盖与例外见收口复盘；第九、十项均已通过，最终门禁run36962289123，合并后main CI run36963167180。下表保留设计目标，不代替执行证据。
 
 | 证据目标 | 唯一主验证位置 | 通过条件 | 后续如何复用 |
 | --- | --- | --- | --- |

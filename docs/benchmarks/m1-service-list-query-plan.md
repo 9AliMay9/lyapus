@@ -5,7 +5,7 @@
 在相同数据上分别回答两个问题：历史 `(team_id, id)` 索引与现有排序复合索引有什么差别？已有复合索引时，深页 OR 游标条件能否变为索引范围条件？这不是 HTTP 吞吐或容量压测。
 
 - 实验基线：`1405708`（PR #28）；优化源码、脚本及证据由 `bdc9517`（`perf/m1-service-query-plan`，PR #29）固定。不能将优化结果冒充基线已有能力。
-- PostgreSQL 实验执行输出由项目所有者提供；正反序十二份原始文件由助手直接读取归档。本地回归于 2026-09-29 通过；PR #29 提交 `bdc9517` 的首轮四项 required CI 已通过；文档补交后的最新检查、合并和 M1 最终验收尚未完成。
+- PostgreSQL 实验执行输出由项目所有者提供；正反序十二份原始文件由助手直接读取归档。本地回归于 2026-09-29 通过；PR #29 提交 `bdc9517` 的首轮四项 required CI 已通过；后续最终四项CI（run36538006370）通过，PR #29合并为fdf8f25；M1最终验收和v0.1.0发布也已完成。
 - 采用现有 `(team_id, created_at DESC, id DESC)` 索引，将且仅将 `ListServicesAfterCursorByTeamID` 改为 `(created_at, id) < (cursor_time, cursor_id)`。不修改 schema、历史 migration、API cursor 或其他列表查询。
 - 在本数据集深页中，OR 过滤掉800行；行比较把游标边界纳入 `Index Cond`。正反执行顺序均观察到行比较更快，但耗时明显受顺序影响，不宣称固定倍数提速。
 

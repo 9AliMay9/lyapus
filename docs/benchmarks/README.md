@@ -2,4 +2,4 @@
 
 每份报告必须记录：Git commit、环境、资源限制、数据量、负载拓扑、参数、命令、原始结果、结论和不能外推的边界。
 
-- [M1 Service 按 Team 查询计划](m1-service-list-query-plan.md)：历史索引对照、深页行比较与 OR 正反序测量，本地回归已通过，PR #29 首轮四项 CI 已通过，补交后的最新检查待完成。
+- [M1 Service 按 Team 查询计划](m1-service-list-query-plan.md)：历史索引对照、深页行比较与 OR 正反序测量，本地回归已通过，PR #29 最终四项 CI 已通过并合并为 `fdf8f25`，已纳入v0.1.0。

@@ -2,7 +2,7 @@
 
 一个以 Go 为主语言、以 OpenTelemetry 为遥测标准、以 SLO 与故障闭环为可靠性核心，并逐步演化为平台工程与 AI 可观测性实践的项目。
 
-M0 已完成；M1 的三类资源 CRUD、数据库约束/事务/并发、Compose 交付和查询优化已合入 main（PR #29：`fdf8f25`）。2026-10-01，本分支 Atlas `v1.3.0-lyapus.1` 升级专项、应用回归及新卷 API 演示已在本地通过。2026-10-02临时资源已清理；PR #30 首轮四项 required CI 已通过，文档补交后的最新门禁、合并和 release 仍待完成；不声明 M1 已发布或生产就绪。
+M0 已完成；M1 最小交付已通过本地验收、PR #30 最终四项 required CI 和合并后 main CI，并发布 [v0.1.0](https://github.com/9AliMay9/lyapus/releases/tag/v0.1.0)，固定提交 `872d4a679539febd9349899ce7127f71db15d2f3`。包含三类资源 CRUD、数据库约束/事务/并发、Compose 交付、查询优化及固定 Atlas 依赖补丁；这是工程基线，不是生产就绪声明。M2 尚未开始。
 
 ## 前置条件
 
